@@ -1,12 +1,12 @@
 const { Pool } = require("pg");
 require("dotenv").config();
 
-// Đảm bảo lấy đúng biến process.env.DATABASE_URL
+// Cấu hình hoàn hảo cho cả Supabase và Neon.tech
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: {
     require: true,
-    rejectUnauthorized: false,
+    rejectUnauthorized: false, // Giúp bỏ qua lỗi check chứng chỉ tự ký của Cloud AWS/Neon
   },
   max: 10,
   min: 0,
@@ -16,12 +16,14 @@ const pool = new Pool({
 const poolPromise = pool
   .connect()
   .then((client) => {
-    console.log("✅ Đã kết nối thành công tới PostgreSQL (Supabase)!");
+    // Sửa chữ hiển thị ở đây cho đúng thực tế Neon.tech
+    console.log("✅ Đã kết nối thành công tới PostgreSQL (Neon.tech)!");
     client.release();
     return pool;
   })
   .catch((err) => {
-    console.error("❌ Lỗi kết nối PostgreSQL (Supabase):", err);
+    // Sửa chữ hiển thị ở đây
+    console.error("❌ Lỗi kết nối PostgreSQL (Neon.tech):", err);
     process.exit(1);
   });
 
