@@ -1,0 +1,108 @@
+/* login.css */
+
+/* --- Màu nền tím đậm Gradient --- */
+.bg-login-page {
+  background: radial-gradient(
+    circle at center,
+    #350066 0%,
+    #150030 100%
+  ) !important;
+}
+
+/* --- Card trắng: Bo góc lớn 20px, bóng mờ --- */
+.login-card {
+  border-radius: 20px !important;
+  max-width: 440px;
+  width: 100%;
+}
+
+/* --- Phần Logo: Gradient tím tươi, bo góc --- */
+.logo-box {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #a16bff 0%, #6138ff 100%);
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  font-size: 28px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.brand-name {
+  color: #6138ff;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+/* --- Ô nhập liệu với icon nằm trong --- */
+.input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.input-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #aaa;
+  font-size: 18px;
+}
+
+.input-wrapper .form-control {
+  padding-left: 50px !important; /* Padding trái to để chừa chỗ cho icon */
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  color: #333;
+  transition: all 0.3s ease;
+}
+
+.input-wrapper .form-control:focus {
+  outline: none;
+  border-color: #6138ff;
+  box-shadow: 0 0 0 3px rgba(97, 56, 255, 0.1);
+}
+
+/* Nút hiện mật khẩu */
+.eye-btn {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #aaa;
+  font-size: 16px;
+}
+
+.eye-btn:hover {
+  color: #6138ff;
+}
+
+/* --- Liên kết Quên mật khẩu --- */
+.forgot-link {
+  color: #6138ff;
+  transition: opacity 0.3s;
+}
+
+.forgot-link:hover {
+  opacity: 0.8;
+}
+
+/* --- Nút Đăng nhập: Gradient tím-xanh --- */
+.submit-btn {
+  background: linear-gradient(90deg, #3855ff 0%, #6138ff 100%) !important;
+  color: white;
+  border: none !important;
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.submit-btn:hover {
+  box-shadow: 0 5px 15px rgba(97, 56, 255, 0.3) !important;
+}

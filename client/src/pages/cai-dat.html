@@ -1,0 +1,74 @@
+<div class="card shadow-sm border-0 p-4 mb-4">
+  <h4 class="mb-4">Thông tin cá nhân</h4>
+  <form id="profileForm">
+    <div class="row g-3">
+      <!-- Tên đăng nhập - Readonly -->
+      <div class="col-md-6">
+        <label class="form-label small fw-bold">Tên đăng nhập</label>
+        <input
+          type="text"
+          class="form-control bg-light"
+          id="txtTenDangNhap"
+          readonly
+        />
+      </div>
+      <!-- Họ tên -->
+      <div class="col-md-6">
+        <label class="form-label small fw-bold">Họ và tên</label>
+        <input
+          type="text"
+          class="form-control"
+          id="txtHoTen"
+          placeholder="Nhập họ tên"
+        />
+      </div>
+      <!-- Email -->
+      <div class="col-md-6">
+        <label class="form-label small fw-bold">Email</label>
+        <input
+          type="email"
+          class="form-control"
+          id="txtEmail"
+          placeholder="example@gmail.com"
+        />
+      </div>
+      <!-- Số điện thoại -->
+      <div class="col-md-6">
+        <label class="form-label small fw-bold">Số điện thoại</label>
+        <input
+          type="text"
+          class="form-control"
+          id="txtSDT"
+          placeholder="Nhập số điện thoại"
+        />
+      </div>
+      <div class="col-12 mt-4">
+        <button
+          type="submit"
+          class="btn btn-primary px-4"
+          style="background: #6138ff; border: none"
+        >
+          <i class="fa-solid fa-floppy-disk me-2"></i>Lưu thay đổi
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Phần Đăng xuất giữ nguyên bên dưới -->
+<div class="card shadow-sm border-0 p-4">
+  <h4 class="mb-4">Hệ thống</h4>
+  <div class="list-group list-group-flush">
+    <div
+      class="list-group-item d-flex justify-content-between align-items-center px-0"
+    >
+      <div>
+        <h6 class="mb-0 text-danger">Đăng xuất</h6>
+        <small class="text-muted">Thoát khỏi phiên làm việc hiện tại.</small>
+      </div>
+      <button class="btn btn-outline-danger" id="btnLogout">
+        <i class="fa-solid fa-right-from-bracket me-2"></i>Đăng xuất
+      </button>
+    </div>
+  </div>
+</div>

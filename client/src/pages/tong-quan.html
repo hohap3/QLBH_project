@@ -1,0 +1,138 @@
+<div class="container-fluid p-4">
+  <div class="header-page mb-4">
+    <h2 class="fw-bold mb-1">Tổng quan Dashboard</h2>
+    <p class="text-muted small">
+      ●
+      <span class="text-success fw-medium"
+        >Theo dõi hiệu suất kinh doanh của HP STORE</span
+      >
+    </p>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-md-4">
+      <div class="stat-card p-4 rounded-4 shadow-sm border-0 bg-white h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="stat-icon bg-success-light text-success">
+            <i class="fa-solid fa-dollar-sign"></i>
+          </div>
+          <span
+            class="badge bg-success-light text-success rounded-pill px-3 py-2"
+          >
+            <i class="fa-solid fa-arrow-up me-1"></i> +12.5%
+          </span>
+        </div>
+        <div class="stat-content">
+          <p class="text-muted mb-1 small fw-medium">Doanh thu tháng này</p>
+          <h3 class="fw-bold mb-0" id="totalRevenue">0đ</h3>
+        </div>
+        <div class="stat-progress mt-3">
+          <div class="progress" style="height: 4px">
+            <div class="progress-bar bg-success" style="width: 70%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="stat-card p-4 rounded-4 shadow-sm border-0 bg-white h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="stat-icon bg-primary-light text-primary">
+            <i class="fa-solid fa-cart-shopping"></i>
+          </div>
+          <span
+            class="badge bg-primary-light text-primary rounded-pill px-3 py-2"
+          >
+            <i class="fa-solid fa-arrow-up me-1"></i> +8.2%
+          </span>
+        </div>
+        <div class="stat-content">
+          <p class="text-muted mb-1 small fw-medium">Tổng đơn hàng</p>
+          <h3 class="fw-bold mb-0" id="totalOrders">0</h3>
+        </div>
+        <div class="stat-progress mt-3">
+          <div class="progress" style="height: 4px">
+            <div class="progress-bar bg-primary" style="width: 55%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="stat-card p-4 rounded-4 shadow-sm border-0 bg-white h-100">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div class="stat-icon bg-purple-light text-purple">
+            <i class="fa-solid fa-users"></i>
+          </div>
+          <span
+            class="badge bg-purple-light text-purple rounded-pill px-3 py-2"
+          >
+            <i class="fa-solid fa-arrow-up me-1"></i> +5.4%
+          </span>
+        </div>
+        <div class="stat-content">
+          <p class="text-muted mb-1 small fw-medium">Khách hàng</p>
+          <h3 class="fw-bold mb-0" id="totalCustomers">0</h3>
+        </div>
+        <div class="stat-progress mt-3">
+          <div class="progress" style="height: 4px">
+            <div class="progress-bar bg-purple" style="width: 40%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+        <h5 class="fw-bold mb-4">Phân bổ theo danh mục</h5>
+        <div
+          style="height: 300px; max-width: 350px; margin: auto"
+          class="w-100"
+        >
+          <canvas id="categoryPieChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+        <h5 class="fw-bold mb-4">Sản phẩm bán chạy</h5>
+        <div id="topSellingList" class="d-flex flex-column gap-2">
+          <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="fw-bold mb-0">Doanh thu theo tháng</h5>
+          <span class="badge bg-light text-primary rounded-pill px-3"
+            >2026</span
+          >
+        </div>
+        <div style="height: 320px">
+          <canvas id="monthlyRevenueChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm rounded-4 p-4 h-100">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h5 class="fw-bold mb-0">Đơn hàng theo tháng</h5>
+          <span class="badge bg-light text-purple rounded-pill px-3">2026</span>
+        </div>
+        <div style="height: 320px">
+          <canvas id="monthlyOrdersChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

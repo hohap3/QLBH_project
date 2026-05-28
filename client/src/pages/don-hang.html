@@ -1,0 +1,213 @@
+<div class="container py-4 px-4">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="page-title">
+      <h2>Quản lý đơn hàng</h2>
+      <span
+        ><i class="fa-solid fa-circle text-success" style="font-size: 8px"></i>
+        <span id="orderCount">8</span> đơn hàng tại HP STORE</span
+      >
+    </div>
+    <button class="btn btn-export">
+      <i class="fa-solid fa-download"></i> Xuất báo cáo
+    </button>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search-wrapper">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Tìm kiếm theo mã đơn hoặc tên khách hàng..."
+      />
+    </div>
+    <select class="filter-select">
+      <option selected><i class="fa-solid fa-filter"></i> Tất cả</option>
+      <option>Đã giao</option>
+      <option>Đang giao</option>
+      <option>Đang xử lý</option>
+      <option>Đã hủy</option>
+    </select>
+  </div>
+
+  <!-- Table -->
+  <div class="content-card">
+    <div class="table-responsive">
+      <table class="table mb-0">
+        <thead>
+          <tr>
+            <th>Mã đơn hàng</th>
+            <th>Khách hàng</th>
+            <th>Ngày đặt</th>
+            <th>Số lượng</th>
+            <th>Tổng tiền</th>
+            <th>Trạng thái</th>
+            <th class="text-center">Hành động</th>
+          </tr>
+        </thead>
+        <tbody id="orderTableBody">
+          <!-- Row 1 -->
+          <tr>
+            <td><a href="#" class="order-id">ORD-2026-001</a></td>
+            <td>
+              <div class="fw-bold">Nguyễn Văn A</div>
+              <div class="small text-muted">nguyenvana@gmail.com</div>
+            </td>
+            <td class="text-muted">2026-04-25</td>
+            <td>3 sản phẩm</td>
+            <td class="fw-bold">45.980.000đ</td>
+            <td><span class="status-badge status-delivered">Đã giao</span></td>
+            <td class="text-center">
+              <button class="btn-view">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </td>
+          </tr>
+          <!-- Row 2 -->
+          <tr>
+            <td><a href="#" class="order-id">ORD-2026-002</a></td>
+            <td>
+              <div class="fw-bold">Trần Thị B</div>
+              <div class="small text-muted">tranthib@gmail.com</div>
+            </td>
+            <td class="text-muted">2026-04-26</td>
+            <td>1 sản phẩm</td>
+            <td class="fw-bold">29.990.000đ</td>
+            <td><span class="status-badge status-shipping">Đang giao</span></td>
+            <td class="text-center">
+              <button class="btn-view">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </td>
+          </tr>
+          <!-- Row 3 -->
+          <tr>
+            <td><a href="#" class="order-id">ORD-2026-003</a></td>
+            <td>
+              <div class="fw-bold">Lê Văn C</div>
+              <div class="small text-muted">levanc@gmail.com</div>
+            </td>
+            <td class="text-muted">2026-04-26</td>
+            <td>2 sản phẩm</td>
+            <td class="fw-bold">19.980.000đ</td>
+            <td>
+              <span class="status-badge status-processing">Đang xử lý</span>
+            </td>
+            <td class="text-center">
+              <button class="btn-view">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div
+  class="modal fade"
+  id="orderDetailModal"
+  tabindex="-1"
+  aria-labelledby="orderDetailModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-light">
+        <h5 class="modal-title fw-bold" id="orderDetailModalLabel">
+          Chi tiết đơn hàng:
+          <span id="modalMaDonHang" class="text-primary"></span>
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body py-4">
+        <div class="row g-3 mb-4">
+          <div class="col-md-6">
+            <h6 class="fw-bold text-muted text-uppercase small">
+              Thông tin khách hàng
+            </h6>
+            <div class="p-3 bg-light rounded shadow-sm">
+              <p class="mb-1">
+                <strong>Họ tên:</strong> <span id="modalKhachHang">---</span>
+              </p>
+              <p class="mb-1">
+                <strong>Số điện thoại:</strong> <span id="modalSDT">---</span>
+              </p>
+              <p class="mb-1">
+                <strong>Email:</strong> <span id="modalEmail">---</span>
+              </p>
+              <p class="mb-1">
+                <strong>Địa chỉ giao hàng:</strong>
+                <span id="modalDiaChi">---</span>
+              </p>
+              <p class="mb-0">
+                <strong>Tên đăng nhập:</strong>
+                <span id="modalTenDangNhap" class="badge bg-secondary"
+                  >---</span
+                >
+              </p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <h6 class="fw-bold text-muted text-uppercase small">
+              Thông tin đơn hàng
+            </h6>
+            <div class="p-3 bg-light rounded shadow-sm">
+              <p class="mb-1">
+                <strong>Ngày đặt:</strong> <span id="modalNgayDat">---</span>
+              </p>
+              <p class="mb-1">
+                <strong>Trạng thái:</strong>
+                <span id="modalTrangThai">---</span>
+              </p>
+              <p class="mb-1">
+                <strong>Tổng tiền thanh toán:</strong>
+                <span id="modalTongTien" class="text-danger fw-bold">---</span>
+              </p>
+              <p class="mb-0">
+                <strong>Ghi chú:</strong>
+                <em id="modalGhiChu" class="text-muted">Không có</em>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <h6 class="fw-bold text-muted text-uppercase small mb-2">
+          Danh sách sản phẩm mua
+        </h6>
+        <div class="table-responsive rounded border shadow-sm">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+              <tr>
+                <th>Mã sản phẩm</th>
+                <th class="text-center">Số lượng</th>
+                <th class="text-end">Giá bán</th>
+                <th class="text-end">Giảm giá</th>
+                <th class="text-end">Thành tiền</th>
+              </tr>
+            </thead>
+            <tbody id="modalProductItems"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer bg-light d-flex justify-content-between">
+        <div id="modalActionButtons"></div>
+        <button
+          type="button"
+          class="btn btn-secondary px-4"
+          data-bs-dismiss="modal"
+        >
+          Đóng
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

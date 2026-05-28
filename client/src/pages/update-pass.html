@@ -1,0 +1,63 @@
+<div class="card shadow-sm border-0 p-4 mb-4">
+  <h4 class="mb-4">Đổi mật khẩu</h4>
+  <form id="passwordForm">
+    <div class="row g-3">
+      <!-- Mật khẩu cũ -->
+      <div class="col-12">
+        <label class="form-label small fw-bold">Mật khẩu hiện tại</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light border-end-0"
+            ><i class="fa-solid fa-lock text-muted"></i
+          ></span>
+          <input
+            type="password"
+            class="form-control border-start-0"
+            id="txtOldPassword"
+            placeholder="Nhập mật khẩu cũ"
+          />
+        </div>
+      </div>
+
+      <!-- Mật khẩu mới -->
+      <div class="col-md-6">
+        <label class="form-label small fw-bold">Mật khẩu mới</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light border-end-0"
+            ><i class="fa-solid fa-key text-muted"></i
+          ></span>
+          <input
+            type="password"
+            class="form-control border-start-0"
+            id="txtNewPassword"
+            placeholder="Tối thiểu 6 ký tự"
+          />
+        </div>
+        <div class="form-text small text-muted">
+          Mật khẩu phải có ≥ 6 ký tự, gồm chữ hoa, chữ thường và ký tự đặc biệt.
+        </div>
+      </div>
+
+      <!-- Nhập lại mật khẩu mới -->
+      <div class="col-md-6">
+        <label class="form-label small fw-bold">Xác nhận mật khẩu mới</label>
+        <div class="input-group">
+          <span class="input-group-text bg-light border-end-0"
+            ><i class="fa-solid fa-check-double text-muted"></i
+          ></span>
+          <input
+            type="password"
+            class="form-control border-start-0"
+            id="txtConfirmPassword"
+            placeholder="Nhập lại mật khẩu mới"
+          />
+        </div>
+      </div>
+
+      <div class="col-12 mt-4">
+        <button type="submit" class="btn btn-dark px-4">
+          <i class="fa-solid fa-shield-halved me-2"></i>Cập nhật mật khẩu
+        </button>
+      </div>
+    </div>
+  </form>
+</div>

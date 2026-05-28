@@ -1,0 +1,168 @@
+:root {
+  --primary-color: #00b050; /* Màu xanh của nút xuất báo cáo */
+  --bg-body: #f8faff;
+  --text-main: #1a1a1a;
+}
+
+body {
+  background-color: var(--bg-body);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: var(--text-main);
+}
+
+/* Header Section */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.page-title h2 {
+  font-weight: 800;
+  font-size: 1.8rem;
+  margin-bottom: 5px;
+}
+
+.page-title span {
+  color: #6c757d;
+  font-size: 0.95rem;
+}
+
+.btn-export {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s;
+}
+
+.btn-export:hover {
+  background-color: #008f41;
+  transform: translateY(-2px);
+  color: white;
+}
+
+/* Search & Filter Bar */
+.toolbar {
+  background: white;
+  border-radius: 15px;
+  padding: 15px 20px;
+  display: flex;
+  gap: 15px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  margin-bottom: 25px;
+}
+
+.search-wrapper {
+  position: relative;
+  flex-grow: 1;
+}
+
+.search-wrapper i {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #adb5bd;
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px 15px 10px 45px;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  outline: none;
+}
+
+.filter-select {
+  min-width: 150px;
+  border: 1px solid #0d6efd;
+  border-radius: 12px;
+  padding: 0 15px;
+  color: #495057;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 15px center;
+  background-size: 12px;
+  appearance: none;
+}
+
+/* Table Card */
+.content-card {
+  background: white;
+  border-radius: 15px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.table thead {
+  background-color: #ffffff;
+}
+
+.table thead th {
+  padding: 20px;
+  font-size: 0.85rem;
+  color: #495057;
+  border-bottom: 1px solid #f1f3f5;
+  font-weight: 600;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid #f8f9fa;
+}
+
+.table td {
+  padding: 18px 20px;
+  vertical-align: middle;
+}
+
+/* Order ID link */
+.order-id {
+  color: #0d6efd;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* Status Badges */
+.status-badge {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.status-delivered {
+  background-color: #e6fcf5;
+  color: #20c997;
+} /* Đã giao */
+.status-shipping {
+  background-color: #e7f5ff;
+  color: #339af0;
+} /* Đang giao */
+.status-processing {
+  background-color: #fff4e6;
+  color: #fd7e14;
+} /* Đang xử lý */
+.status-cancelled {
+  background-color: #fff5f5;
+  color: #fa5252;
+} /* Đã hủy */
+
+/* Action button */
+.btn-view {
+  color: #0d6efd;
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  transition: transform 0.2s;
+}
+
+.btn-view:hover {
+  transform: scale(1.2);
+}

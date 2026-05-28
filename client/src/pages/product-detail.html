@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HP STORE - Chi tiết sản phẩm</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="/src/styles/product-detail.css" />
+  </head>
+  <body class="bg-light">
+    <header id="main-header"></header>
+
+    <main class="container my-5">
+      <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/">Trang chủ</a></li>
+          <li class="breadcrumb-item">
+            <a href="#" id="breadcrumb-category">Danh mục</a>
+          </li>
+          <li
+            class="breadcrumb-item active"
+            aria-current="page"
+            id="breadcrumb-product"
+          >
+            Tên sản phẩm
+          </li>
+        </ol>
+      </nav>
+
+      <div class="card border-0 shadow-sm p-4" style="border-radius: 20px">
+        <div class="row g-5">
+          <div class="col-md-6">
+            <div class="img-detail-wrapper text-center">
+              <img
+                src=""
+                id="product-detail-img"
+                class="product-img-large img-fluid"
+                alt="Sản phẩm"
+              />
+            </div>
+          </div>
+
+          <div class="col-md-6 d-flex flex-column justify-content-between">
+            <div>
+              <span
+                class="badge bg-primary-subtle text-primary mb-2 px-3 py-2 rounded-pill fw-bold"
+                id="product-detail-category"
+                style="font-size: 0.85rem"
+                >Danh mục</span
+              >
+              <h2 class="fw-bold text-dark mb-2" id="product-detail-name">
+                Tên sản phẩm công nghệ
+              </h2>
+
+              <div class="d-flex align-items-center gap-3 mb-3">
+                <div class="text-warning small">
+                  <i class="fa fa-star"></i><i class="fa fa-star"></i
+                  ><i class="fa fa-star"></i><i class="fa fa-star"></i
+                  ><i class="fa fa-star"></i>
+                </div>
+                <small class="text-muted"
+                  >| Đã bán: <span id="product-detail-sold">0</span> sản
+                  phẩm</small
+                >
+                <small class="text-muted"
+                  >| Tình trạng:
+                  <span class="text-success fw-bold" id="product-detail-status"
+                    >Còn hàng</span
+                  ></small
+                >
+              </div>
+
+              <hr class="text-muted my-3" />
+              <div class="price-detail my-3" id="product-detail-price">0đ</div>
+
+              <div class="my-4">
+                <h6 class="fw-bold text-secondary">Mô tả ngắn:</h6>
+                <p
+                  class="text-muted"
+                  id="product-detail-desc"
+                  style="line-height: 1.6"
+                >
+                  Đang tải dữ liệu mô tả cho sản phẩm...
+                </p>
+              </div>
+            </div>
+
+            <div class="bg-light p-3 rounded-4 mb-2">
+              <div class="d-flex align-items-center gap-3 mb-3">
+                <span class="fw-bold text-secondary">Số lượng:</span>
+                <div class="input-group width-auto" style="width: 140px">
+                  <button
+                    class="btn btn-outline-secondary rounded-start-pill"
+                    type="button"
+                    id="btn-decrease"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    id="quantity-input"
+                    class="form-control quantity-input"
+                    value="1"
+                    min="1"
+                  />
+                  <button
+                    class="btn btn-outline-secondary rounded-end-pill"
+                    type="button"
+                    id="btn-increase"
+                  >
+                    +
+                  </button>
+                </div>
+                <small class="text-muted"
+                  >(Còn lại <span id="product-detail-stock">0</span> sản phẩm
+                  trong kho)</small
+                >
+              </div>
+
+              <div class="row g-2">
+                <div class="col-12">
+                  <button
+                    class="btn btn-primary w-100 py-3 btn-add-to-cart-lg rounded-pill fw-bold"
+                    id="btn-add-to-cart"
+                  >
+                    <i class="fa-solid fa-cart-plus me-2"></i>Thêm vào giỏ hàng
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row mt-5">
+        <div class="col-lg-8 mb-4">
+          <div
+            class="card border-0 shadow-sm p-4 h-100"
+            style="border-radius: 20px"
+          >
+            <h4 class="fw-bold text-primary mb-4">
+              <i class="fa-solid fa-file-lines me-2"></i>Thông tin chi tiết sản
+              phẩm
+            </h4>
+            <div
+              class="text-muted"
+              style="line-height: 1.8"
+              id="product-full-description"
+            >
+              Nội dung bài viết giới thiệu chi tiết về sản phẩm, các tính năng
+              nổi bật cũng như trải nghiệm sử dụng thực tế sẽ hiển thị tại đây.
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4 mb-4">
+          <div
+            class="card border-0 shadow-sm p-4 h-100"
+            style="border-radius: 20px"
+          >
+            <h5 class="fw-bold text-dark mb-4">
+              <i class="fa-solid fa-gears me-2"></i>Thông số kỹ thuật
+            </h5>
+            <table class="table table-striped align-middle mb-0">
+              <tbody>
+                <tr>
+                  <td class="spec-label">Mã sản phẩm</td>
+                  <td id="spec-id">-</td>
+                </tr>
+                <tr>
+                  <td class="spec-label">Danh mục</td>
+                  <td id="spec-category">-</td>
+                </tr>
+                <tr>
+                  <td class="spec-label">Nhà cung cấp</td>
+                  <td id="spec-vendor">-</td>
+                </tr>
+                <tr>
+                  <td class="spec-label">Đơn vị tính</td>
+                  <td id="spec-unit">-</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <section class="mt-5 pt-3">
+        <div class="mb-4">
+          <h3 class="fw-bold text-primary mb-1">Sản phẩm tương tự</h3>
+          <p class="text-muted mb-0">
+            Các thiết bị công nghệ cùng ngành hàng có thể bạn quan tâm
+          </p>
+        </div>
+        <div
+          class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4"
+          id="related-products-container"
+        ></div>
+      </section>
+    </main>
+
+    <div id="footer-shared"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script type="module" src="/src/JS/common/header.js"></script>
+    <script type="module" src="/src/JS/product-detail.js"></script>
+
+    <script type="module">
+      import { loadFooter } from "/src/JS/common/footer.js";
+
+      document.addEventListener("DOMContentLoaded", () => {
+        loadFooter();
+      });
+    </script>
+  </body>
+</html>

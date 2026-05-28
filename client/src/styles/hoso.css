@@ -1,0 +1,53 @@
+:root {
+  --primary-color: #6f42c1;
+  --secondary-color: #0d6efd;
+}
+
+.nav-pills .nav-link.active {
+  background-color: #0d6efd;
+}
+.profile-sidebar {
+  background: #fff;
+  border-radius: 15px;
+}
+.profile-content {
+  background: #fff;
+  border-radius: 15px;
+}
+
+.navbar-brand img {
+  height: 40px;
+}
+.search-bar {
+  border-radius: 20px;
+  padding-left: 20px;
+}
+.btn-cart {
+  border-radius: 12px;
+  background: var(--secondary-color);
+  color: white;
+}
+.user-dropdown {
+  color: white;
+  border-radius: 20px;
+  padding: 5px 20px;
+}
+
+footer {
+  background-color: white;
+  border-top: 1px solid #dee2e6;
+  margin-top: 50px;
+}
+.footer-title {
+  font-weight: bold;
+  color: var(--primary-color);
+  margin-bottom: 20px;
+}
+.footer-link {
+  text-decoration: none;
+  color: #6c757d;
+  transition: 0.3s;
+}
+.footer-link:hover {
+  color: var(--primary-color);
+}

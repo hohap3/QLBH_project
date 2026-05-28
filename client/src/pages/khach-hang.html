@@ -1,0 +1,89 @@
+<div class="container py-4 px-4">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="page-title">
+      <h2>Quản lý khách hàng</h2>
+      <span
+        ><i class="fa-solid fa-circle text-danger" style="font-size: 8px"></i>
+        <span id="totalCount">0</span> khách hàng tại HP STORE</span
+      >
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="search-container position-relative">
+    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+    <input
+      type="text"
+      class="form-control search-input border-0"
+      id="searchKH"
+      placeholder="Tìm kiếm khách hàng..."
+    />
+  </div>
+
+  <!-- Table -->
+  <div class="content-card">
+    <div class="table-responsive">
+      <table class="table mb-0 align-middle">
+        <thead>
+          <tr>
+            <th>Khách hàng</th>
+            <th>Liên hệ</th>
+            <th>Đơn hàng</th>
+            <th>Đơn gần nhất</th>
+            <th>Hạng</th>
+            <th class="text-center">Hành động</th>
+          </tr>
+        </thead>
+        <tbody id="customerTableBody">
+          <!-- Dữ liệu render từ JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div
+  class="modal fade"
+  id="customerDetailModal"
+  tabindex="-1"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div
+      class="modal-content"
+      style="
+        border-radius: 16px;
+        border: none;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      "
+    >
+      <div
+        class="modal-header bg-light"
+        style="border-top-left-radius: 16px; border-top-right-radius: 16px"
+      >
+        <h5 class="modal-title fw-bold text-dark">
+          <i class="fa-solid fa-address-card me-2 text-primary"></i>Hồ Sơ Chi
+          Tiết Khách Hàng
+        </h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body p-4" id="detailModalContent"></div>
+      <div class="modal-footer border-0">
+        <button
+          type="button"
+          class="btn btn-secondary px-4"
+          data-bs-dismiss="modal"
+          style="border-radius: 8px"
+        >
+          Đóng lại
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,168 @@
+<div class="container-fluid py-4 px-4">
+  <!-- Header & Stats -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold">Quản Lý Nhà Cung Cấp</h3>
+    <button class="btn btn-primary shadow-sm" id="btnAddSupplier">
+      <i class="fa-solid fa-plus me-2"></i>Thêm Nhà Cung Cấp
+    </button>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card p-3 border-start border-primary border-4">
+        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+          Tổng Nhà Cung Cấp
+        </div>
+        <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalSuppliers">
+          0
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter & Search -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-9">
+          <div class="input-group">
+            <span class="input-group-text bg-white"
+              ><i class="fa-solid fa-magnifying-glass text-muted"></i
+            ></span>
+            <input
+              type="text"
+              id="searchSupplier"
+              class="form-control border-start-0"
+              placeholder="Tìm theo Mã, Tên, SĐT..."
+            />
+          </div>
+        </div>
+        <div class="col-md-3">
+          <select class="form-select" id="filterStatus">
+            <option value="">-- Tất cả trạng thái --</option>
+            <option value="1">Đang hoạt động</option>
+            <option value="0">Ngừng hợp tác</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Table -->
+  <div class="table-container shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4">Mã NCC</th>
+            <th>Tên Nhà Cung Cấp</th>
+            <th>Liên Hệ (SĐT/Email)</th>
+            <th>Địa Chỉ</th>
+            <th>Trạng Thái</th>
+            <th class="text-end pe-4">Thao Tác</th>
+          </tr>
+        </thead>
+        <tbody id="supplierTableBody">
+          <!-- Dữ liệu sẽ đổ vào đây từ JS -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Form (Thêm/Sửa) -->
+<div class="modal fade" id="supplierModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="supplierForm">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold" id="modalTitle">Thêm Nhà Cung Cấp</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-semibold"
+                >Mã Nhà Cung Cấp <span class="text-danger">*</span></label
+              >
+              <input
+                type="text"
+                id="maNCC"
+                class="form-control"
+                placeholder="Ví dụ: NCC001"
+                required
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold"
+                >Tên Nhà Cung Cấp <span class="text-danger">*</span></label
+              >
+              <input
+                type="text"
+                id="tenNCC"
+                class="form-control"
+                placeholder="Nhập tên công ty/cá nhân"
+                required
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Số Điện Thoại</label>
+              <input
+                type="tel"
+                id="sdt"
+                class="form-control"
+                placeholder="Số điện thoại duy nhất"
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Email</label>
+              <input
+                type="email"
+                id="email"
+                class="form-control"
+                placeholder="Email liên hệ"
+              />
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-semibold">Địa Chỉ</label>
+              <textarea
+                id="diaChi"
+                class="form-control"
+                rows="2"
+                placeholder="Số nhà, đường, tỉnh thành..."
+              ></textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Trạng Thái</label>
+              <div class="form-check form-switch mt-2">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="trangThai"
+                  checked
+                />
+                <label class="form-check-label" for="trangThai"
+                  >Kích hoạt hoạt động</label
+                >
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+            Hủy
+          </button>
+          <button type="submit" class="btn btn-primary px-4">
+            Lưu Thông Tin
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

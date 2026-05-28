@@ -1,0 +1,167 @@
+:root {
+  --primary-gradient: linear-gradient(135deg, #8a2be2, #ff0080);
+  --bg-color: #f8faff;
+}
+
+body {
+  background-color: var(--bg-color);
+  font-family: "Segoe UI", sans-serif;
+  color: #333;
+}
+
+/* Header Styles */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.page-title h2 {
+  font-weight: 800;
+  margin-bottom: 0;
+  color: #1a1a1a;
+}
+
+.page-title span {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.btn-add {
+  background: var(--primary-gradient);
+  border: none;
+  color: white;
+  padding: 10px 24px;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: all 0.3s;
+  box-shadow: 0 4px 15px rgba(255, 0, 128, 0.2);
+}
+
+.btn-add:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 0, 128, 0.3);
+  color: white;
+}
+
+/* Search Box */
+.search-container {
+  background: white;
+  border-radius: 15px;
+  padding: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+  margin-bottom: 25px;
+}
+
+.search-input {
+  border: 1px solid #eee;
+  border-radius: 10px;
+  padding: 12px 15px 12px 45px;
+  background: #fff;
+  width: 100%;
+}
+
+.search-icon {
+  position: absolute;
+  left: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #aaa;
+}
+
+/* Table Container */
+.content-card {
+  background: white;
+  border-radius: 20px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+}
+
+.table thead {
+  background-color: #fafbfc;
+}
+
+.table thead th {
+  border-bottom: none;
+  padding: 20px;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid #f1f1f1;
+  transition: background 0.2s;
+}
+
+.table tbody tr:hover {
+  background-color: #fcfdfe;
+}
+
+.table td {
+  padding: 15px 20px;
+  vertical-align: middle;
+}
+
+/* Avatar */
+.avatar-circle {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  margin-right: 15px;
+}
+
+/* Hạng Badges */
+.badge-vip {
+  background: #fff8e6;
+  color: #ffa800;
+  border: 1px solid #ffeeba;
+  padding: 6px 16px;
+  font-weight: 700;
+}
+
+.badge-normal {
+  background: #f3f4f6;
+  color: #6b7280;
+  border: 1px solid #e5e7eb;
+  padding: 6px 16px;
+  font-weight: 600;
+}
+
+/* Action Buttons */
+.btn-action {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 5px;
+  border: none;
+  transition: all 0.2s;
+}
+
+.btn-view {
+  color: #3b82f6;
+  background: #eff6ff;
+}
+.btn-edit {
+  color: #10b981;
+  background: #ecfdf5;
+}
+.btn-delete {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+.btn-action:hover {
+  transform: scale(1.1);
+}

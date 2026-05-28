@@ -1,0 +1,97 @@
+/* register.css */
+
+/* --- Nền Gradient đặc trưng --- */
+.bg-register-page {
+  background: radial-gradient(
+    circle at center,
+    #350066 0%,
+    #150030 100%
+  ) !important;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px 20px;
+}
+
+/* --- Card trắng bo góc lớn --- */
+.register-card {
+  background-color: white;
+  width: 100%;
+  max-width: 480px;
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+}
+
+/* --- Tiêu đề & Brand --- */
+.brand-name {
+  color: #6138ff;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+/* --- Input Styling (Icon nằm trong) --- */
+.input-wrapper {
+  position: relative;
+  margin-top: 5px;
+}
+
+.input-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #adb5bd;
+  font-size: 16px;
+}
+
+.input-wrapper .form-control {
+  padding: 12px 15px 12px 45px !important;
+  border: 1px solid #dee2e6;
+  border-radius: 10px;
+  background-color: #fff;
+  transition: all 0.2s ease-in-out;
+}
+
+.input-wrapper .form-control:focus {
+  border-color: #a16bff;
+  box-shadow: 0 0 0 4px rgba(161, 107, 255, 0.1);
+}
+
+/* --- Nút ẩn/hiện mật khẩu --- */
+.eye-btn {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #adb5bd;
+  cursor: pointer;
+}
+
+/* --- Nút Đăng ký (Màu hồng tím theo res.jpg) --- */
+.submit-btn-register {
+  background: linear-gradient(90deg, #e91e63 0%, #9c27b0 100%) !important;
+  color: white;
+  border: none !important;
+  border-radius: 10px;
+  padding: 14px;
+  font-weight: 600;
+  margin-top: 20px;
+  transition: opacity 0.3s;
+}
+
+.submit-btn-register:hover {
+  opacity: 0.9;
+  box-shadow: 0 8px 20px rgba(233, 30, 99, 0.3);
+}
+
+/* --- Link đăng nhập --- */
+.login-link {
+  color: #6138ff;
+  text-decoration: none;
+  font-weight: 600;
+}

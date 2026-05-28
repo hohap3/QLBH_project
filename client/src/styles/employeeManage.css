@@ -1,0 +1,86 @@
+body {
+  background-color: #f8f9fa;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.table-container {
+  background-color: #ffffff;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.form-control:focus,
+.form-select:focus {
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+
+.text-xs {
+  font-size: 0.7rem;
+}
+
+/* Hiệu ứng mượt mà khi hover vào các dòng của bảng nhân viên */
+.table hover tbody tr {
+  transition: background-color 0.2s ease-in-out;
+}
+
+.bg-success-subtle {
+  background-color: #d1e7dd !important;
+  color: #0f5132 !important;
+}
+.bg-danger-subtle {
+  background-color: #f8d7da !important;
+  color: #842029 !important;
+}
+.warehouse-container {
+  padding: 2rem;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+.filter-card {
+  background: #ffffff;
+  border-radius: 12px;
+}
+
+/* Thiết lập chiều cao cố định cho Sidebar bằng chiều cao màn hình */
+.sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 100;
+  height: 100vh;
+}
+
+/* Tinh chỉnh thanh cuộn của sidebarMenu mượt mà và thẩm mỹ hơn */
+#sidebarMenu::-webkit-scrollbar {
+  width: 5px; /* Độ rộng thanh cuộn nhỏ gọn */
+}
+
+#sidebarMenu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+#sidebarMenu::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* Màu của thanh cuộn */
+  border-radius: 4px;
+}
+
+#sidebarMenu::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Đảm bảo khối nội dung chính không bị che khuất do Sidebar dùng position: fixed */
+@media (min-width: 768px) {
+  .sidebar + div {
+    margin-left: 25%; /* Khớp với col-md-3 */
+  }
+}
+@media (min-width: 992px) {
+  .sidebar + div {
+    margin-left: 25%; /* Khớp với col-lg-3 */
+  }
+}
+
+#empEmail {
+  color: white;
+}

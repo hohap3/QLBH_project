@@ -1,0 +1,83 @@
+:root {
+  --primary-color: #6366f1; /* Màu chủ đạo xu hướng công nghệ */
+  --bg-light: #f8f9fa;
+}
+
+body {
+  background-color: var(--bg-light);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Thẻ khối góc bo tròn hiện đại */
+.checkout-card {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  background-color: #ffffff;
+}
+
+.card-title-custom {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333333;
+  border-bottom: 2px solid #f1f3f5;
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+
+/* Thiết kế vùng chọn Phương thức và Vận chuyển */
+.selection-box {
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  padding: 15px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+}
+
+.selection-box:hover {
+  border-color: var(--primary-color);
+  background-color: #fcfcff;
+}
+
+/* Ẩn radio gốc, dùng CSS class của Bootstrap để bắt sự kiện active */
+.real-radio:checked + .selection-box {
+  border-color: var(--primary-color);
+  background-color: #f5f6ff;
+}
+
+.real-radio:checked + .selection-box .check-icon {
+  color: var(--primary-color);
+  visibility: visible;
+}
+
+.check-icon {
+  visibility: hidden;
+  font-size: 1.2rem;
+}
+
+/* Định dạng ảnh sản phẩm nhỏ trong tóm tắt đơn hàng */
+.product-checkout-img {
+  width: 55px;
+  height: 55px;
+  object-fit: contain;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+/* Tối ưu thanh cuộn khi giỏ hàng có nhiều hàng hóa */
+.style-scroll {
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.style-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.style-scroll::-webkit-scrollbar-thumb {
+  background-color: #dee2e6;
+  border-radius: 4px;
+}

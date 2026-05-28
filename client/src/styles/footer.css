@@ -1,0 +1,18 @@
+footer {
+  background-color: white;
+  border-top: 1px solid #dee2e6;
+  margin-top: 50px;
+}
+.footer-title {
+  font-weight: bold;
+  color: var(--primary-color);
+  margin-bottom: 20px;
+}
+.footer-link {
+  text-decoration: none;
+  color: #6c757d;
+  transition: 0.3s;
+}
+.footer-link:hover {
+  color: var(--primary-color);
+}

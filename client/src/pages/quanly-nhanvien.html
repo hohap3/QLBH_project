@@ -1,0 +1,150 @@
+<main class="container-fluid py-4 px-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="fw-bold text-dark">
+      <i class="fa-solid fa-users-gear me-2 text-primary"></i>Quản Lý Nhân Viên
+    </h3>
+    <button class="btn btn-primary shadow-sm" id="btnAddEmployee">
+      <i class="fa-solid fa-user-plus me-2"></i>Thêm Nhân Viên Mới
+    </button>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div
+        class="card p-3 border-0 border-start border-primary border-4 shadow-sm"
+      >
+        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+          Tổng số nhân viên
+        </div>
+        <div class="h4 mb-0 font-weight-bold text-gray-800" id="totalEmployees">
+          0
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb-4 border-0 shadow-sm">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-md-9">
+          <div class="input-group">
+            <span class="input-group-text bg-white border-end-0"
+              ><i class="fa-solid fa-magnifying-glass text-muted"></i
+            ></span>
+            <input
+              type="text"
+              id="searchEmployee"
+              class="form-control border-start-0"
+              placeholder="Tìm theo Mã, Tên đăng nhập, Họ tên, SĐT..."
+            />
+          </div>
+        </div>
+        <div class="col-md-3">
+          <select class="form-select" id="filterStatus">
+            <option value="">-- Tất cả trạng thái --</option>
+            <option value="1">Đang hoạt động</option>
+            <option value="0">Đang bị khóa</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-container shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-4">Mã NV</th>
+            <th>Tên Đăng Nhập</th>
+            <th>Thông Tin Nhân Viên</th>
+            <th>Liên Hệ</th>
+            <th>Ngày Gia Nhập</th>
+            <th>Trạng Thái</th>
+            <th class="text-end pe-4">Thao Tác</th>
+          </tr>
+        </thead>
+        <tbody id="employeeTableBody">
+          <tr>
+            <td colspan="7" class="text-center py-5">
+              <div class="spinner-border text-primary" role="status"></div>
+              <p class="mt-2 mb-0 text-muted">
+                Đang tải danh sách nhân viên...
+              </p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<div class="modal fade" id="employeeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="employeeForm">
+        <div class="modal-header">
+          <h5 class="modal-title fw-bold" id="modalTitle">Thêm Nhân Viên</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body p-4">
+          <div class="row g-3">
+            <div class="col-md-12" id="usernameWrapper">
+              <label class="form-label fw-semibold"
+                >Tên Đăng Nhập <span class="text-danger">*</span></label
+              >
+              <input
+                type="text"
+                id="tenDangNhap"
+                class="form-control"
+                placeholder="Nhập tên tài khoản"
+                required
+              />
+            </div>
+
+            <div class="col-md-12">
+              <label class="form-label fw-semibold">Họ Và Tên</label>
+              <input
+                type="text"
+                id="hoTen"
+                class="form-control"
+                placeholder="Nhập đầy đủ họ tên"
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Số Điện Thoại</label>
+              <input
+                type="tel"
+                id="sdt"
+                class="form-control"
+                placeholder="Ví dụ: 0912345678"
+              />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">Email</label>
+              <input
+                type="email"
+                id="email"
+                class="form-control"
+                placeholder="name@company.com"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+            Hủy
+          </button>
+          <button type="submit" class="btn btn-primary px-4">
+            Lưu Dữ Liệu
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

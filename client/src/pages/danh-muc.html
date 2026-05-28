@@ -1,0 +1,147 @@
+<div class="container-fluid py-4 px-4">
+  <div class="row mb-4 align-items-center">
+    <div class="col">
+      <h2 class="fw-bold text-dark mb-1">Quản Lý Danh Mục</h2>
+      <p class="text-muted mb-0">
+        <i class="fa-solid fa-layer-group me-1"></i>
+        Có <span id="totalCategories" class="fw-bold text-primary">0</span> nhóm
+        sản phẩm trong hệ thống
+      </p>
+    </div>
+    <div class="col-auto">
+      <button
+        class="btn btn-primary px-4 py-2 shadow-sm rounded-pill"
+        id="btnAddCategory"
+      >
+        <i class="fa-solid fa-plus me-2"></i>Thêm Danh Mục
+      </button>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-5 col-lg-4">
+      <div class="input-group shadow-sm rounded-pill overflow-hidden">
+        <span class="input-group-text bg-white border-0 ps-4">
+          <i class="fa-solid fa-magnifying-glass text-muted"></i>
+        </span>
+        <input
+          type="text"
+          class="form-control border-0 py-2"
+          id="searchCategory"
+          placeholder="Tìm tên hoặc mã danh mục..."
+        />
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="row row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4 g-4"
+    id="categoryGrid"
+  >
+    <div class="col">
+      <div class="card h-100 border-0 shadow-sm category-card">
+        <div class="card-body p-4 pb-2">
+          <div
+            class="category-icon-box bg-light text-primary rounded-3 d-flex align-items-center justify-content-center mb-3"
+            style="width: 48px; height: 48px"
+          >
+            <i class="fa-solid fa-box-archive fs-4"></i>
+          </div>
+          <h5 class="fw-bold mb-1">Tên Danh Mục</h5>
+          <code class="text-uppercase small fw-bold mb-3 d-block text-muted"
+            >ID: CATEGORY_ID</code
+          >
+          <p class="card-text text-muted small line-clamp-3">
+            Mô tả danh mục...
+          </p>
+        </div>
+        <div class="card-footer bg-transparent border-0 p-4 pt-0">
+          <div class="d-flex gap-2">
+            <button
+              class="btn btn-outline-primary btn-sm rounded-pill flex-fill btn-edit"
+              data-id="ID_HERE"
+            >
+              <i class="fa-regular fa-pen-to-square me-1"></i> Sửa
+            </button>
+            <button
+              class="btn btn-outline-danger btn-sm rounded-pill flex-fill btn-delete"
+              data-id="ID_HERE"
+            >
+              <i class="fa-regular fa-trash-can me-1"></i> Xóa
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="categoryModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg">
+        <div class="modal-header border-0 pb-0">
+          <h5 class="modal-title fw-bold" id="modalTitle">Thêm Danh Mục Mới</h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <form id="categoryForm">
+          <div class="modal-body p-4">
+            <div class="mb-3">
+              <label class="form-label small fw-bold text-uppercase text-muted"
+                >Mã Danh Mục</label
+              >
+              <input
+                type="text"
+                class="form-control bg-light border-0 py-2"
+                id="maDanhMuc"
+                name="MaDanhMuc"
+                placeholder="Ví dụ: HEADPHONE"
+                required
+              />
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-bold text-uppercase text-muted"
+                >Tên Danh Mục</label
+              >
+              <input
+                type="text"
+                class="form-control bg-light border-0 py-2"
+                id="tenDanhMuc"
+                name="TenDanhMuc"
+                placeholder="Ví dụ: Tai nghe Gaming"
+                required
+              />
+            </div>
+            <div class="mb-0">
+              <label class="form-label small fw-bold text-uppercase text-muted"
+                >Mô Tả</label
+              >
+              <textarea
+                class="form-control bg-light border-0"
+                id="moTaDanhMuc"
+                name="MoTa"
+                rows="4"
+                placeholder="Nhập mô tả ngắn về danh mục này..."
+              ></textarea>
+            </div>
+          </div>
+          <div class="modal-footer border-0 p-4 pt-0">
+            <button
+              type="button"
+              class="btn btn-light rounded-pill px-4"
+              data-bs-dismiss="modal"
+            >
+              Hủy
+            </button>
+            <button type="submit" class="btn btn-primary rounded-pill px-4">
+              Lưu Dữ Liệu
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

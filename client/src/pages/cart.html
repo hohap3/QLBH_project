@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Giỏ hàng của bạn - HP STORE</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="/src/styles/cart.css" />
+  </head>
+  <body>
+    <header id="main-header"></header>
+
+    <main class="container my-5">
+      <h4 class="fw-bold mb-4 text-purple">
+        <i class="fa-solid fa-cart-shopping me-2"></i>Giỏ hàng của bạn
+      </h4>
+
+      <div class="row g-4">
+        <div class="col-lg-8">
+          <div class="card cart-card p-4">
+            <div class="table-responsive">
+              <table class="table align-middle mb-0">
+                <thead class="text-muted small border-bottom">
+                  <tr>
+                    <th scope="col" style="min-width: 300px">Sản phẩm</th>
+                    <th scope="col" class="text-center">Số lượng</th>
+                    <th scope="col" class="text-end">Số tiền</th>
+                    <th scope="col" class="text-center">Xóa</th>
+                  </tr>
+                </thead>
+                <tbody id="cart-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <div
+            class="card cart-card p-4 bg-white position-sticky"
+            style="top: 90px"
+          >
+            <h5 class="fw-bold border-bottom pb-3 mb-3">Tóm tắt đơn hàng</h5>
+            <div class="d-flex justify-content-between mb-2 text-secondary">
+              <span>Tạm tính:</span>
+              <span id="cart-subtotal">0 đ</span>
+            </div>
+            <div class="d-flex justify-content-between mb-3 text-secondary">
+              <span>Giảm giá tích lũy:</span>
+              <span class="text-success" id="cart-discount">-0 đ</span>
+            </div>
+            <hr />
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <span class="fw-bold text-dark">Tổng tiền toán:</span>
+              <h4 class="fw-bold text-danger mb-0" id="cart-total">0 đ</h4>
+            </div>
+
+            <button
+              class="btn btn-primary w-100 btn-checkout text-white"
+              id="btn-trigger-checkout"
+            >
+              <i class="fa-solid fa-credit-card me-2"></i>Tiến hành thanh toán
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="py-5">
+      <div class="container">
+        <div class="row">
+          <div class="col-lg-4 mb-4">
+            <h5 class="footer-title">HP STORE</h5>
+            <p class="text-muted small">
+              Chuyên cung cấp các thiết bị công nghệ chính hãng với giá cả cạnh
+              tranh nhất thị trường. Sự hài lòng của bạn là mục tiêu của chúng
+              tôi.
+            </p>
+            <div class="d-flex gap-3">
+              <a href="#" class="text-primary"
+                ><i class="fab fa-facebook fa-xl"></i
+              ></a>
+              <a href="#" class="text-danger"
+                ><i class="fab fa-youtube fa-xl"></i
+              ></a>
+              <a href="#" class="text-info"
+                ><i class="fab fa-twitter fa-xl"></i
+              ></a>
+            </div>
+          </div>
+          <div class="col-lg-2 col-6 mb-4">
+            <h6 class="fw-bold">Danh mục</h6>
+            <ul class="list-unstyled">
+              <li><a href="#" class="footer-link">Điện thoại</a></li>
+              <li><a href="#" class="footer-link">Laptop</a></li>
+              <li><a href="#" class="footer-link">Máy tính bảng</a></li>
+              <li><a href="#" class="footer-link">Phụ kiện</a></li>
+            </ul>
+          </div>
+          <div class="col-lg-2 col-6 mb-4">
+            <h6 class="fw-bold">Chính sách</h6>
+            <ul class="list-unstyled">
+              <li><a href="#" class="footer-link">Bảo hành</a></li>
+              <li><a href="#" class="footer-link">Đổi trả</a></li>
+              <li><a href="#" class="footer-link">Vận chuyển</a></li>
+              <li><a href="#" class="footer-link">Thanh toán</a></li>
+            </ul>
+          </div>
+          <div class="col-lg-4 mb-4">
+            <h6 class="fw-bold">Liên hệ</h6>
+            <p class="text-muted small mb-1">
+              <i class="fa fa-map-marker-alt me-2"></i> 123 Đường ABC, Quận 1,
+              TP.HCM
+            </p>
+            <p class="text-muted small mb-1">
+              <i class="fa fa-phone me-2"></i> 0901.234.567
+            </p>
+            <p class="text-muted small mb-1">
+              <i class="fa fa-envelope me-2"></i> hotro@hpstore.vn
+            </p>
+          </div>
+        </div>
+        <hr />
+        <div class="text-center text-muted small">
+          © 2026 HP STORE. Tất cả quyền được bảo lưu.
+        </div>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script type="module" src="/src/JS/common/header.js"></script>
+    <script type="module" src="/src/JS/cart.js"></script>
+  </body>
+</html>
