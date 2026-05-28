@@ -1,35 +1,31 @@
-const sql = require("mssql");
+const { Pool } = require("pg");
 require("dotenv").config();
 
-const config = {
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  server: process.env.DB_SERVER,
-  database: process.env.DB_DATABASE, // Khớp với file .env đã sửa
-  port: parseInt(process.env.DB_PORT) || 1433, // Mặc định 1433 nếu 1500 lỗi
-  options: {
-    encrypt: false,
-    trustServerCertificate: true,
+// Cấu hình kết nối bằng đường dẫn DATABASE_URL của Supabase
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false, // Bắt buộc phải có để kết nối an toàn lên Cloud Supabase
   },
-  pool: {
-    max: 10,
-    min: 0,
-    idleTimeoutMillis: 30000,
-  },
-};
+  max: 10,
+  min: 0,
+  idleTimeoutMillis: 30000,
+});
 
-const poolPromise = new sql.ConnectionPool(config)
+// Giữ nguyên tên poolPromise để file server.js không bị lỗi khi import
+const poolPromise = pool
   .connect()
-  .then((pool) => {
-    console.log("✅ Đã kết nối thành công tới SQL Server!");
-    return pool;
+  .then((client) => {
+    console.log("✅ Đã kết nối thành công tới PostgreSQL (Supabase)!");
+    client.release(); // Giải phóng client ngay sau khi test kết nối thành công
+    return pool; // Trả về pool để thực hiện các truy vấn sau này
   })
   .catch((err) => {
-    console.error("❌ Lỗi kết nối SQL Server:", err);
+    console.error("❌ Lỗi kết nối PostgreSQL (Supabase):", err);
     process.exit(1);
   });
 
 module.exports = {
-  sql,
-  poolPromise,
+  pool, // Xuất thêm pool để dùng trực tiếp trong controllers
+  poolPromise, // Giữ nguyên để phục vụ file server.js
 };
