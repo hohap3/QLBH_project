@@ -1,16 +1,15 @@
 import axios from "axios";
 import Swal from "sweetalert2";
 
-const BASE_URL = "http://localhost:3000/api";
+const BASE_URL = "https://qlbh-project.onrender.com/api";
 const DEFAULT_IMAGE = "/img/default.jpg";
 
-// ─── BIẾN TOÀN CỤC QUẢN LÝ TRẠNG THÁI PHÂN TRANG ───
 let currentProductPage = 1;
 let currentCategory = "all";
 let currentBestSellerPage = 1;
-const LIMIT = 8; // Đặt cứng 8 sản phẩm trên một trang theo yêu cầu
+const LIMIT = 8;
 
-// Hàm tìm kiếm gợi ý (Giữ nguyên logic của bạn)
+// Hàm tìm kiếm gợi ý
 async function searchProducts() {
   const searchInput = document.getElementById("search-input");
   const suggestionsBox = document.getElementById("search-suggestions");
@@ -27,12 +26,12 @@ async function searchProducts() {
         `${BASE_URL}/productsClient/search?q=${encodeURIComponent(keyword)}`,
       );
       const products = await res.json();
-      if (products.length > 0) {
+      if (products && products.length > 0) {
         suggestionsBox.innerHTML = products
           .map(
             (sp) => `
                     <a href="/src/pages/product-detail.html?id=${sp.MaSP}" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-2">
-                        <img src="${BASE_URL.replace("/api", "")}/uploads/products/${sp.HinhAnh}" alt="${sp.TenSP}" style="width: 40px; height: 40px; object-fit: contain;">
+                        <img src="${BASE_URL.replace("/api", "")}/uploads/products/${sp.HinhAnh}" alt="${sp.TenSP}" style="width: 40px; height: 40px; object-fit: contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
                         <div class="overflow-hidden">
                             <div class="fw-bold text-truncate" style="font-size: 0.9rem;">${sp.TenSP}</div>
                             <div class="text-primary small fw-bold">${new Intl.NumberFormat("vi-VN").format(sp.GiaBan)}đ</div>
@@ -69,13 +68,12 @@ async function loadProducts(maDM = "all", page = 1) {
     '<div class="text-center w-100 my-4"><div class="spinner-border text-primary"></div></div>';
 
   try {
-    // Gửi kèm các tham số page và limit lên API backend
     const res = await fetch(
       `${BASE_URL}/productsClient?category=${maDM}&page=${page}&limit=${LIMIT}`,
     );
     const data = await res.json();
 
-    // SỬA LỖI: Ưu tiên đọc mảng products và tổng số trang totalPages từ Object của Backend trả về
+    // Đồng bộ cấu trúc bóc tách mảng từ Postgres endpoint
     const products =
       data.products || data.data || (Array.isArray(data) ? data : []);
     const totalPages =
@@ -124,14 +122,14 @@ async function loadProducts(maDM = "all", page = 1) {
       })
       .join("");
 
-    // Gọi hàm dựng thanh chuyển trang UI
     if (paginationContainer) {
       renderPaginationUI(
         paginationContainer,
         totalPages,
         currentProductPage,
-        (targetPage) => {
-          loadProducts(currentCategory, targetPage);
+        async (targetPage) => {
+          // Tối ưu UX: Đợi API trả data xong mới cuộn trang lên mượt mà
+          await loadProducts(currentCategory, targetPage);
           productContainer.scrollIntoView({ behavior: "smooth" });
         },
       );
@@ -158,7 +156,6 @@ async function loadBestSellers(page = 1) {
     );
     const data = await response.json();
 
-    // SỬA LỖI: Đồng bộ hóa cấu trúc đọc Object tương tự như hàm loadProducts
     const products =
       data.products || data.data || (Array.isArray(data) ? data : []);
     const totalPages =
@@ -197,25 +194,25 @@ async function loadBestSellers(page = 1) {
       })
       .join("");
 
-    // Dựng thanh chuyển trang cho khối bán chạy
     if (paginationContainer) {
       renderPaginationUI(
         paginationContainer,
         totalPages,
         currentBestSellerPage,
-        (targetPage) => {
-          loadBestSellers(targetPage);
+        async (targetPage) => {
+          await loadBestSellers(targetPage);
+          container.scrollIntoView({ behavior: "smooth" });
         },
       );
     }
   } catch (error) {
     console.error("Lỗi khi tải sản phẩm bán chạy:", error);
+    container.innerHTML = `<p class="text-center text-danger">Không thể tải dữ liệu.</p>`;
   }
 }
 
 // ─── 3. HÀM TỰ ĐỘNG DỰNG GIAO DIỆN THANH PHÂN TRANG ───
 function renderPaginationUI(container, totalPages, currentPage, onPageChange) {
-  // Nếu tổng số trang nhỏ hơn hoặc bằng 1, ẩn luôn thanh phân trang
   if (totalPages <= 1) {
     container.innerHTML = "";
     return;
@@ -251,7 +248,6 @@ function renderPaginationUI(container, totalPages, currentPage, onPageChange) {
 
   container.innerHTML = html;
 
-  // SỬA LỖI EVENT DELEGATION: Định vị lại và bắt sự kiện chính xác theo class chuẩn
   container.querySelectorAll(".page-item-link").forEach((link) => {
     link.onclick = function (e) {
       e.preventDefault();
@@ -268,7 +264,7 @@ function renderPaginationUI(container, totalPages, currentPage, onPageChange) {
   });
 }
 
-// Hàm khởi tạo danh mục (Giữ nguyên logic của bạn)
+// Hàm khởi tạo danh mục
 async function renderCategoryButtons() {
   try {
     const res = await fetch(`${BASE_URL}/categories`);
@@ -283,23 +279,25 @@ async function renderCategoryButtons() {
     btnAll.dataset.id = "all";
     btnAll.onclick = function () {
       updateActiveButton(this);
-      loadProducts("all", 1); // Reset về trang 1 khi đổi danh mục
+      loadProducts("all", 1);
     };
     filterContainer.appendChild(btnAll);
 
-    categories.forEach((dm) => {
-      const btn = document.createElement("button");
-      btn.className = "btn filter-btn";
-      btn.innerText = dm.TenDanhMuc;
-      btn.dataset.id = dm.MaDanhMuc;
+    if (categories && Array.isArray(categories)) {
+      categories.forEach((dm) => {
+        const btn = document.createElement("button");
+        btn.className = "btn filter-btn";
+        btn.innerText = dm.TenDanhMuc;
+        btn.dataset.id = dm.MaDanhMuc;
 
-      btn.onclick = function () {
-        updateActiveButton(this);
-        const id = this.dataset.id;
-        loadProducts(id, 1); // Reset về trang 1 khi đổi danh mục
-      };
-      filterContainer.appendChild(btn);
-    });
+        btn.onclick = function () {
+          updateActiveButton(this);
+          const id = this.dataset.id;
+          loadProducts(id, 1);
+        };
+        filterContainer.appendChild(btn);
+      });
+    }
   } catch (err) {
     console.error("Lỗi tải danh mục:", err);
   }
@@ -312,10 +310,12 @@ function updateActiveButton(activeBtn) {
   activeBtn.classList.add("active");
 }
 
-// Khởi chạy khi DOM sẵn sàng
+// Khởi chạy đồng thời tăng tốc độ tải
 document.addEventListener("DOMContentLoaded", () => {
-  loadBestSellers(1);
-  renderCategoryButtons();
-  loadProducts("all", 1);
-  searchProducts();
+  Promise.all([
+    loadBestSellers(1),
+    renderCategoryButtons(),
+    loadProducts("all", 1),
+    searchProducts(),
+  ]).catch((err) => console.error("Lỗi khởi tạo ứng dụng:", err));
 });

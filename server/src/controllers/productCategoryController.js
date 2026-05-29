@@ -13,7 +13,7 @@ const productCategoryController = {
     }
   },
 
-  // API Lấy chi tiết 1 danh mục (Cực kỳ quan trọng để đổ dữ liệu vào Form Sửa)
+  // API Lấy chi tiết 1 danh mục
   getCategoryById: async (req, res) => {
     try {
       const { id } = req.params;
@@ -32,7 +32,6 @@ const productCategoryController = {
   // API Thêm danh mục
   addCategory: async (req, res) => {
     try {
-      // Kiểm tra dữ liệu đầu vào cơ bản
       if (!req.body.MaDanhMuc || !req.body.TenDanhMuc) {
         return res
           .status(400)
@@ -41,8 +40,8 @@ const productCategoryController = {
       await categoryModel.createCategory(req.body);
       res.status(201).json({ message: "Thêm danh mục thành công" });
     } catch (error) {
-      // Kiểm tra lỗi trùng khóa chính (Primary Key)
-      if (error.number === 2627) {
+      // SỬA LỖI: Cập nhật mã lỗi trùng Khóa chính (Unique/Primary Key violation) của Postgres là '23505'
+      if (error.code === "23505") {
         return res.status(409).json({ message: "Mã danh mục này đã tồn tại" });
       }
       res
@@ -81,13 +80,11 @@ const productCategoryController = {
       }
       res.status(200).json({ message: "Xóa danh mục thành công" });
     } catch (error) {
-      // Lỗi 547 là lỗi ràng buộc khóa ngoại (Foreign Key) trong SQL Server
-      if (error.number === 547) {
-        return res
-          .status(400)
-          .json({
-            message: "Không thể xóa vì danh mục này đã có sản phẩm thuộc về!",
-          });
+      // SỬA LỖI: Cập nhật mã lỗi ràng buộc Khóa ngoại (Foreign Key violation) của Postgres là '23503'
+      if (error.code === "23503") {
+        return res.status(400).json({
+          message: "Không thể xóa vì danh mục này đã có sản phẩm thuộc về!",
+        });
       }
       res
         .status(500)
