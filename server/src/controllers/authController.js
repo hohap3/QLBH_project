@@ -37,7 +37,7 @@ exports.register = async (req, res) => {
       email: email,
       phone: phone,
       diaChi: address || null,
-      maVaiTro: "Client", // 🟢 ĐH ĐÃ SỬA: Thay vì trả về true/false, gán chuỗi chuẩn đồng bộ với Model
+      maVaiTro: "Client",
     };
 
     await AuthModel.createND(newUser);
@@ -48,7 +48,6 @@ exports.register = async (req, res) => {
     });
   } catch (error) {
     console.error("REGISTER ERROR:", error);
-    // 🟢 CẢI TIẾN: Trả error.message về client để hiển thị chi tiết nguyên nhân gây lỗi 500 (ví dụ: thiếu cột, sai kiểu dữ liệu...)
     return res.status(500).json({
       message: "Lỗi hệ thống khi đăng ký!",
       error: error.message,
@@ -75,15 +74,33 @@ exports.login = async (req, res) => {
         .json({ message: "Tài khoản hoặc email không tồn tại!" });
     }
 
+    // Đảm bảo so khớp chuẩn kiểu dữ liệu boolean thực tế từ Postgres
     if (user.trangthai === false || user.trangthai === 0) {
       return res.status(403).json({
         message: "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin!",
       });
     }
 
+    // Đảm bảo thuộc tính matkhauhash lấy ra viết chữ thường đồng bộ với Postgres
+    if (!user.matkhauhash) {
+      return res.status(500).json({
+        message:
+          "Không tìm thấy trường mật khẩu băm từ Database! Kiểm tra lại tên cột.",
+      });
+    }
+
     const isMatch = await bcrypt.compare(password, user.matkhauhash);
     if (!isMatch) {
       return res.status(401).json({ message: "Mật khẩu không chính xác!" });
+    }
+
+    // Kiểm tra dự phòng nếu thiếu biến môi trường trên Render
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({
+        message: "Lỗi cấu hình Server!",
+        error:
+          "Biến môi trường JWT_SECRET chưa được cấu hình trên Render Dashboard!",
+      });
     }
 
     const token = jwt.sign(
@@ -111,7 +128,11 @@ exports.login = async (req, res) => {
     if (error.status === 403) {
       return res.status(403).json({ message: error.message });
     }
-    return res.status(500).json({ message: "Lỗi server nội bộ!" });
+    // 🟢 ĐV ĐÃ SỬA: Ép Server trả lỗi thật về F12 Network Response để xử lý dứt điểm
+    return res.status(500).json({
+      message: "Lỗi server nội bộ!",
+      error: error.message,
+    });
   }
 };
 
@@ -141,8 +162,9 @@ exports.verifyRole = async (req, res) => {
     });
   } catch (error) {
     console.error("VERIFY ROLE ERROR:", error);
-    return res
-      .status(500)
-      .json({ message: "Lỗi kiểm tra quyền hạn hệ thống!" });
+    return res.status(500).json({
+      message: "Lỗi kiểm tra quyền hạn hệ thống!",
+      error: error.message,
+    });
   }
 };
