@@ -63,7 +63,7 @@ class AuthModel {
       // 🟢 ĐÃ CẬP NHẬT: Ép chặt mavaitro luôn là 'Client' ở tham số $7 để tăng tính bảo mật
       const insertUserSql = `
         INSERT INTO nguoidung (mand, tendangnhap, matkhauhash, hoten, email, sdt, mavaitro, trangthai, ngaytao)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, 1, NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, true, NOW())
       `;
       const userParams = [
         data.maND,
