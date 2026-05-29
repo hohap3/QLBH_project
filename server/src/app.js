@@ -35,7 +35,7 @@ app.use("/api/orders", orderRoutes);
 
 app.use(
   "/uploads/products",
-  express.static(path.join(__dirname, "src/public/uploads/products")),
+  express.static(path.join(process.cwd(), "src/public/uploads/products")),
 );
 
 app.use("/api/thongke", thongkeRoutes);
@@ -49,14 +49,18 @@ app.use("/api/warehouse", warehouseRoutes);
 
 // Test route
 app.get("/", (req, res) => {
-  res.send("Backend QLBH đang hoạt động!");
+  res.send("Backend QLBH đang hoạt động ổn định trên Render!");
 });
 
+// Centralized Error Handler (Middleware xử lý lỗi tập trung)
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res
-    .status(500)
-    .json({ message: "Đã xảy ra lỗi hệ thống!", error: err.message });
+  console.error("🔥 Hệ thống gặp lỗi:", err.stack);
+  res.status(500).json({
+    message: "Đã xảy ra lỗi hệ thống trên server!",
+    error:
+      process.env.NODE_ENV === "production"
+        ? "Internal Server Error"
+        : err.message,
+  });
 });
-
 module.exports = app;
