@@ -11,7 +11,6 @@ class AuthModel {
 
       const user = result.rows[0];
 
-      // Lưu ý: Postgres trả về kiểu BOOLEAN thực sự (true/false) hoặc số 0/1 tùy cấu trúc, check cả 2 cho chắc chắn
       if (user && (user.trangthai === false || user.trangthai === 0)) {
         const error = new Error(
           "Tài khoản này đã bị khóa. Vui lòng liên hệ Admin!",
@@ -46,7 +45,7 @@ class AuthModel {
         "SELECT tendangnhap, email FROM nguoidung WHERE tendangnhap = $1 OR email = $2",
         [username, email],
       );
-      return result.rows; // Trả về mảng các tài khoản trùng lặp
+      return result.rows;
     } catch (error) {
       throw error;
     }
@@ -54,14 +53,14 @@ class AuthModel {
 
   // 4. Tạo tài khoản mới ứng dụng Transaction của PostgreSQL
   static async createND(data) {
-    // Để chạy Transaction trong node-postgres, ta bắt buộc phải lấy ra 1 client riêng biệt
+    // Lấy 1 client riêng biệt từ pool để đảm bảo tiến trình Transaction liền mạch
     const client = await pool.connect();
 
     try {
       // Bắt đầu Giao dịch
       await client.query("BEGIN");
 
-      // Lệnh 1: Thêm tài khoản mới vào bảng nguoidung (Dùng NOW() thay cho GETDATE())
+      // 🟢 ĐÃ CẬP NHẬT: Ép chặt mavaitro luôn là 'Client' ở tham số $7 để tăng tính bảo mật
       const insertUserSql = `
         INSERT INTO nguoidung (mand, tendangnhap, matkhauhash, hoten, email, sdt, mavaitro, trangthai, ngaytao)
         VALUES ($1, $2, $3, $4, $5, $6, $7, 1, NOW())
@@ -73,11 +72,11 @@ class AuthModel {
         data.fullname,
         data.email,
         data.phone,
-        data.maVaiTro,
+        "Client", // Gán cứng giá trị 'Client' tại đây thay vì dùng data.maVaiTro động
       ];
       await client.query(insertUserSql, userParams);
 
-      // Lệnh 2: Thêm thông tin vào bảng khachhang (Có bổ sung thêm cột diachi của bạn)
+      // Lệnh 2: Thêm thông tin tương ứng vào bảng khachhang
       const insertCustomerSql = `
         INSERT INTO khachhang (makh, hoten, sdt, email, diachi, mand, ngaytao, diemtichluy)
         VALUES ($1, $2, $3, $4, $5, $6, NOW(), 0)
@@ -87,7 +86,7 @@ class AuthModel {
         data.fullname,
         data.phone,
         data.email,
-        data.diaChi, // Dữ liệu địa chỉ truyền từ req.body
+        data.diaChi || null, // Đảm bảo đồng bộ cho phép nhận giá trị null nếu người dùng không điền address
         data.maND,
       ];
       await client.query(insertCustomerSql, customerParams);
@@ -96,7 +95,7 @@ class AuthModel {
       await client.query("COMMIT");
       return { success: true };
     } catch (err) {
-      // Nếu xuất hiện bất kỳ lỗi nào, hoàn tác (Rollback) lại toàn bộ dữ liệu
+      // Nếu xuất hiện bất kỳ lỗi nào ở 1 trong 2 lệnh, hoàn tác (Rollback) toàn bộ dữ liệu ngay lập tức
       await client.query("ROLLBACK");
       throw err;
     } finally {
