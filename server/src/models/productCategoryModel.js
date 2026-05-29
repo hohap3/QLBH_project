@@ -5,11 +5,11 @@ const productCategoryModel = {
   // Lấy tất cả danh mục
   getAllCategories: async () => {
     try {
-      // Postgres truy vấn trực tiếp từ đối tượng pool
+      // Thử nghiệm viết thường, không bọc nháy kép để Postgres tự nhận diện linh hoạt
       const result = await pool.query(
-        'SELECT "MaDanhMuc", "TenDanhMuc", "MoTa" FROM "DANHMUC"',
+        "SELECT madanhmuc, tendanhmuc, mota FROM danhmuc",
       );
-      return result.rows; // Trả về mảng dữ liệu nằm trong rows
+      return result.rows;
     } catch (error) {
       throw error;
     }
