@@ -30,11 +30,11 @@ async function searchProducts() {
         suggestionsBox.innerHTML = products
           .map(
             (sp) => `
-                    <a href="/src/pages/product-detail.html?id=${sp.MaSP}" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-2">
-                        <img src="${BASE_URL.replace("/api", "")}/uploads/products/${sp.HinhAnh}" alt="${sp.TenSP}" style="width: 40px; height: 40px; object-fit: contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
+                    <a href="/src/pages/product-detail.html?id=${sp.masp}" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-2">
+                        <img src="${BASE_URL.replace("/api", "")}/uploads/products/${sp.HinhAnh}" alt="${sp.tensp}" style="width: 40px; height: 40px; object-fit: contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
                         <div class="overflow-hidden">
-                            <div class="fw-bold text-truncate" style="font-size: 0.9rem;">${sp.TenSP}</div>
-                            <div class="text-primary small fw-bold">${new Intl.NumberFormat("vi-VN").format(sp.GiaBan)}đ</div>
+                            <div class="fw-bold text-truncate" style="font-size: 0.9rem;">${sp.tensp}</div>
+                            <div class="text-primary small fw-bold">${new Intl.NumberFormat("vi-VN").format(sp.giaban)}đ</div>
                         </div>
                     </a>
                 `,
@@ -90,29 +90,29 @@ async function loadProducts(maDM = "all", page = 1) {
     productContainer.innerHTML = products
       .map((sp) => {
         const imgPath =
-          sp.HinhAnh && sp.HinhAnh !== "NULL" && sp.HinhAnh !== ""
-            ? `${BASE_URL.replace("/api", "")}/uploads/products/${sp.HinhAnh}`
+          sp.hinhanh && sp.hinhanh !== "NULL" && sp.hinhanh !== ""
+            ? `${BASE_URL.replace("/api", "")}/uploads/products/${sp.hinhanh}`
             : DEFAULT_IMAGE;
 
         return `
                 <div class="col-lg-3 col-md-6 mb-4">
                     <div class="card h-100 border-0 shadow-sm product-card" style="border-radius: 20px; overflow: hidden; transition: transform 0.2s;">
-                        <a href="/src/pages/product-detail.html?id=${sp.MaSP}" class="text-decoration-none text-dark">
+                        <a href="/src/pages/product-detail.html?id=${sp.masp}" class="text-decoration-none text-dark">
                             <div class="img-container p-4 text-center" style="background: linear-gradient(180deg, #f0f3ff 0%, #ffffff 100%); position: relative;">
                                 <div class="wishlist-btn" style="position: absolute; top: 15px; right: 15px; cursor: pointer; color: #ccc;">
                                     <i class="fa-regular fa-heart"></i>
                                 </div>
-                                <img src="${imgPath}" class="card-img-top mx-auto" alt="${sp.TenSP || "Sản phẩm"}" style="width: 130px; height: 130px; object-fit: contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
+                                <img src="${imgPath}" class="card-img-top mx-auto" alt="${sp.tensp || "Sản phẩm"}" style="width: 130px; height: 130px; object-fit: contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
                             </div>
                             <div class="card-body">
-                                <small class="text-primary fw-bold">${sp.TenDanhMuc || "Công nghệ"}</small>
-                                <h6 class="fw-bold text-truncate mt-1 mb-2">${sp.TenSP}</h6>
+                                <small class="text-primary fw-bold">${sp.tendanhmuc || "Công nghệ"}</small>
+                                <h6 class="fw-bold text-truncate mt-1 mb-2">${sp.tensp}</h6>
                                 <div class="mb-2">
                                     <small class="text-warning"><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i></small>
                                     <small class="text-muted">(156)</small>
                                 </div>
                                 <div class="price-text mb-2" style="color: #6366f1; font-size: 1.25rem; font-weight: 700;">
-                                    ${new Intl.NumberFormat("vi-VN").format(sp.GiaBan)}đ
+                                    ${new Intl.NumberFormat("vi-VN").format(sp.giaban)}đ
                                 </div>
                             </div>
                         </a>
@@ -171,21 +171,21 @@ async function loadBestSellers(page = 1) {
     container.innerHTML = products
       .map((sp) => {
         const imgPath =
-          sp.HinhAnh && sp.HinhAnh !== "NULL" && sp.HinhAnh !== ""
-            ? `${BASE_URL.replace("/api", "")}/uploads/products/${sp.HinhAnh}`
+          sp.hinhanh && sp.hinhanh !== "NULL" && sp.hinhanh !== ""
+            ? `${BASE_URL.replace("/api", "")}/uploads/products/${sp.hinhanh}`
             : DEFAULT_IMAGE;
 
         return `
                 <div class="col-lg-3 col-md-6 mb-4">
                     <div class="card h-100 border-0 shadow-sm product-card" style="border-radius: 15px; overflow: hidden;">
-                        <a href="/src/pages/product-detail.html?id=${sp.MaSP}" class="text-decoration-none text-dark">
+                        <a href="/src/pages/product-detail.html?id=${sp.masp}" class="text-decoration-none text-dark">
                             <div class="p-3 text-center bg-white">
-                                <img src="${imgPath}" class="card-img-top mx-auto" alt="${sp.TenSP}" style="height: 160px; width: 100%; object-fit: contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
+                                <img src="${imgPath}" class="card-img-top mx-auto" alt="${sp.tensp}" style="height: 160px; width: 100%; object-fit: contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
                             </div>
                             <div class="card-body">
-                                <h6 class="card-title text-truncate fw-bold mb-1">${sp.TenSP}</h6>
-                                <h5 class="text-primary fw-bold mb-2">${new Intl.NumberFormat("vi-VN").format(sp.GiaBan)}đ</h5>
-                                <p class="small text-muted mb-0"><i class="fa-solid fa-fire text-danger me-1"></i>Đã bán: ${sp.TongDaBan || 0}</p> 
+                                <h6 class="card-title text-truncate fw-bold mb-1">${sp.tensp}</h6>
+                                <h5 class="text-primary fw-bold mb-2">${new Intl.NumberFormat("vi-VN").format(sp.giaban)}đ</h5>
+                                <p class="small text-muted mb-0"><i class="fa-solid fa-fire text-danger me-1"></i>Đã bán: ${sp.tongdaban || 0}</p> 
                             </div>
                         </a>    
                     </div>

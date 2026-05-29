@@ -1,5 +1,5 @@
-const BASE_URL = "http://localhost:3000/api";
-const IMAGE_BASE_URL = "http://localhost:3000/uploads/products";
+const BASE_URL = "https://qlbh-project.onrender.com/api";
+const IMAGE_BASE_URL = "https://qlbh-project.onrender.com/uploads/products";
 const DEFAULT_IMAGE = "/img/default.jpg";
 import Swal from "sweetalert2";
 
@@ -22,34 +22,34 @@ document.addEventListener("DOMContentLoaded", async () => {
     const sp = await res.json();
     currentProductData = sp;
 
-    // Đổ dữ liệu ra các thẻ HTML tương ứng
-    document.getElementById("breadcrumb-category").innerText = sp.TenDanhMuc;
-    document.getElementById("breadcrumb-product").innerText = sp.TenSP;
+    // Đổ dữ liệu ra các thẻ HTML tương ứng (Đồng bộ chữ thường theo Postgres)
+    document.getElementById("breadcrumb-category").innerText = sp.tendanhmuc;
+    document.getElementById("breadcrumb-product").innerText = sp.tensp;
 
     const imgElement = document.getElementById("product-detail-img");
     imgElement.src =
-      sp.HinhAnh && sp.HinhAnh !== "NULL"
-        ? `${IMAGE_BASE_URL}/${sp.HinhAnh}`
+      sp.hinhanh && sp.hinhanh !== "NULL" && sp.hinhanh !== ""
+        ? `${IMAGE_BASE_URL}/${sp.hinhanh}`
         : DEFAULT_IMAGE;
-    imgElement.alt = sp.TenSP;
+    imgElement.alt = sp.tensp;
 
     document.getElementById("product-detail-category").innerText =
-      sp.TenDanhMuc;
-    document.getElementById("product-detail-name").innerText = sp.TenSP;
+      sp.tendanhmuc;
+    document.getElementById("product-detail-name").innerText = sp.tensp;
     document.getElementById("product-detail-sold").innerText =
-      sp.TongDaBan || 0;
-    document.getElementById("product-detail-stock").innerText = sp.SoLuongTon;
+      sp.tongdaban || 0;
+    document.getElementById("product-detail-stock").innerText = sp.soluongton;
     document.getElementById("product-detail-price").innerText =
-      `${new Intl.NumberFormat("vi-VN").format(sp.GiaBan)}đ`;
+      `${new Intl.NumberFormat("vi-VN").format(sp.giaban)}đ`;
     document.getElementById("product-detail-desc").innerText =
-      sp.MoTa || "Chưa có mô tả chi tiết cho sản phẩm này.";
+      sp.mota || "Chưa có mô tả chi tiết cho sản phẩm này.";
 
     // Cập nhật trạng thái Kho hàng & Giao diện Nút mua hàng tương ứng
     const statusElement = document.getElementById("product-detail-status");
     const btnAddToCart = document.getElementById("btn-add-to-cart");
     const quantityInput = document.getElementById("quantity-input");
 
-    if (sp.SoLuongTon > 0) {
+    if (sp.soluongton > 0) {
       statusElement.innerText = "Còn hàng";
       statusElement.className = "text-success fw-bold";
     } else {
@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (btnAddToCart) {
         btnAddToCart.disabled = true;
         btnAddToCart.innerHTML = `<i class="fa-solid fa-ban me-2"></i>Hết hàng`;
-        btnAddToCart.className = "btn btn-secondary w-100 py-3 disabled"; // Chuyển sang màu xám
+        btnAddToCart.className = "btn btn-secondary w-100 py-3 disabled";
       }
 
       // 3. Khóa ô nhập số lượng
@@ -71,15 +71,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     }
 
-    document.getElementById("spec-id").innerText = sp.MaSP;
-    document.getElementById("spec-category").innerText = sp.TenDanhMuc;
-    document.getElementById("spec-vendor").innerText = sp.TenNCC;
-    document.getElementById("spec-unit").innerText = sp.DonViTinh || "Cái";
+    document.getElementById("spec-id").innerText = sp.masp;
+    document.getElementById("spec-category").innerText = sp.tendanhmuc;
+    document.getElementById("spec-vendor").innerText = sp.tenncc;
+    document.getElementById("spec-unit").innerText = sp.donvitinh || "Cái";
 
-    setupQuantityEvents(sp.SoLuongTon);
+    setupQuantityEvents(sp.soluongton);
 
     // Chờ tải xong xuôi sản phẩm liên quan rồi mới kích hoạt sự kiện nút bấm giỏ hàng
-    await loadRelatedProducts(sp.MaDanhMuc, sp.MaSP);
+    await loadRelatedProducts(sp.madanhmuc, sp.masp);
 
     setupAddToCartButton();
   } catch (err) {
@@ -90,7 +90,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 function setupAddToCartButton() {
   const btnAddToCart = document.getElementById("btn-add-to-cart");
-  if (!btnAddToCart || btnAddToCart.disabled) return; // Không gán sự kiện nếu nút đã bị disabled do hết hàng
+  if (!btnAddToCart || btnAddToCart.disabled) return;
 
   btnAddToCart.addEventListener("click", () => {
     if (!currentProductData) return;
@@ -103,8 +103,16 @@ function setupAddToCartButton() {
 }
 
 function executeAddProductToCart(product, quantityToBuy) {
+  // Chuẩn hóa linh hoạt hỗ trợ cả đối tượng viết hoa hoặc viết thường từ hàm truyền vào
+  const stock =
+    product.soluongton !== undefined ? product.soluongton : product.SoLuongTon;
+  const maSP = product.masp || product.MaSP;
+  const tenSP = product.tensp || product.TenSP;
+  const giaBan = product.giaban || product.GiaBan;
+  const hinhAnh = product.hinhanh || product.HinhAnh;
+
   // Chặn trường hợp cố tình gọi hàm khi hàng trong kho bằng 0
-  if (product.SoLuongTon <= 0) {
+  if (stock <= 0) {
     Swal.fire(
       "Hết hàng",
       "Sản phẩm này hiện tại đã hết hàng trong kho!",
@@ -131,26 +139,27 @@ function executeAddProductToCart(product, quantityToBuy) {
   const currentUserId = userData.MaND || userData.id;
   const userCartKey = `hpstore_cart_${currentUserId}`;
   let userCart = JSON.parse(localStorage.getItem(userCartKey)) || [];
-  const existIndex = userCart.findIndex((item) => item.MaSP === product.MaSP);
+  const existIndex = userCart.findIndex((item) => item.MaSP === maSP);
 
   if (existIndex > -1) {
     const newQty = userCart[existIndex].SoLuong + quantityToBuy;
 
-    if (newQty > product.SoLuongTon) {
+    if (newQty > stock) {
       Swal.fire(
         "Vượt quá số lượng",
-        `Trong kho chỉ còn tối đa ${product.SoLuongTon} sản phẩm.`,
+        `Trong kho chỉ còn tối đa ${stock} sản phẩm.`,
         "error",
       );
       return;
     }
     userCart[existIndex].SoLuong = newQty;
   } else {
+    // Giữ nguyên key viết hoa lưu vào LocalStorage để không làm gãy trang Giỏ hàng hiện tại của bạn
     userCart.push({
-      MaSP: product.MaSP,
-      TenSP: product.TenSP,
-      GiaBan: product.GiaBan,
-      HinhAnh: product.HinhAnh,
+      MaSP: maSP,
+      TenSP: tenSP,
+      GiaBan: giaBan,
+      HinhAnh: hinhAnh,
       SoLuong: quantityToBuy,
     });
   }
@@ -189,7 +198,6 @@ function setupQuantityEvents(maxStock) {
   const btnDecrease = document.getElementById("btn-decrease");
   const btnIncrease = document.getElementById("btn-increase");
 
-  // Nếu hết hàng thì không gán sự kiện tăng giảm nữa
   if (maxStock <= 0) {
     if (btnDecrease) btnDecrease.onclick = null;
     if (btnIncrease) btnIncrease.onclick = null;
@@ -238,15 +246,14 @@ async function loadRelatedProducts(categoryId, currentProductId) {
 
     relatedProducts.forEach((sp) => {
       const imgUrl =
-        sp.HinhAnh && sp.HinhAnh !== "NULL"
-          ? `${IMAGE_BASE_URL}/${sp.HinhAnh}`
+        sp.hinhanh && sp.hinhanh !== "NULL" && sp.hinhanh !== ""
+          ? `${IMAGE_BASE_URL}/${sp.hinhanh}`
           : DEFAULT_IMAGE;
 
       const targetObjectString = encodeURIComponent(JSON.stringify(sp));
 
-      // 🟢 ĐÃ UPDATE: Kiểm tra sản phẩm liên quan xem còn hàng hay không để đổi trạng thái nút bấm nhanh
       let actionButtonHtml = "";
-      if (sp.SoLuongTon > 0) {
+      if (sp.soluongton > 0) {
         actionButtonHtml = `
           <button class="btn btn-primary w-100 rounded-pill btn-sm py-2" onclick="window.quickAddToCart('${targetObjectString}')">
               <i class="fa fa-shopping-cart me-1" style="font-size: 0.85rem;"></i>Thêm vào giỏ
@@ -261,16 +268,16 @@ async function loadRelatedProducts(categoryId, currentProductId) {
       const itemHtml = `
                 <div class="col">
                     <div class="card h-100 border-0 shadow-sm" style="border-radius: 15px; overflow: hidden; transition: transform 0.2s;">
-                        <a href="product-detail.html?id=${sp.MaSP}" class="text-decoration-none">
+                        <a href="product-detail.html?id=${sp.masp}" class="text-decoration-none">
                             <div class="text-center p-3" style="background: #fdfdfd; height: 160px; display: flex; align-items: center; justify-content: center;">
-                                <img src="${imgUrl}" class="card-img-top p-2" alt="${sp.TenSP}" style="max-height: 100%; object-fit: contain;">
+                                <img src="${imgUrl}" class="card-img-top p-2" alt="${sp.tensp}" style="max-height: 100%; object-fit: contain;">
                             </div>
                         </a>
                         <div class="card-body d-flex flex-column justify-content-between">
                             <div>
-                                <small class="text-primary fw-bold d-block mb-1" style="font-size: 0.8rem;">${sp.TenDanhMuc}</small>
-                                <a href="product-detail.html?id=${sp.MaSP}" class="text-decoration-none text-dark">
-                                    <h6 class="card-title text-truncate fw-bold mb-1" style="font-size: 0.95rem;">${sp.TenSP}</h6>
+                                <small class="text-primary fw-bold d-block mb-1" style="font-size: 0.8rem;">${sp.tendanhmuc}</small>
+                                <a href="product-detail.html?id=${sp.masp}" class="text-decoration-none text-dark">
+                                    <h6 class="card-title text-truncate fw-bold mb-1" style="font-size: 0.95rem;">${sp.tensp}</h6>
                                 </a>
                                 <div class="d-flex align-items-center mb-2">
                                     <small class="text-warning me-1" style="font-size:0.7rem;">
@@ -280,7 +287,7 @@ async function loadRelatedProducts(categoryId, currentProductId) {
                                 </div>
                             </div>
                             <div>
-                                <h5 class="text-primary fw-bold mb-2" style="font-size:1.05rem;">${new Intl.NumberFormat("vi-VN").format(sp.GiaBan)}đ</h5>
+                                <h5 class="text-primary fw-bold mb-2" style="font-size:1.05rem;">${new Intl.NumberFormat("vi-VN").format(sp.giaban)}đ</h5>
                                 ${actionButtonHtml}
                             </div>
                         </div>
