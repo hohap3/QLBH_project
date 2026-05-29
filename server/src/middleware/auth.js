@@ -14,8 +14,11 @@ const verifyToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Lưu thông tin user đã giải mã (maND, username, role) vào request
+    // Lưu thông tin user đã giải mã vào request
     req.user = decoded;
+
+    // Tạo cơ chế fallback: Đảm bảo dù controller dùng req.user.maND hay req.user.mand cũng không bị gãy
+    req.user.maND = decoded.maND || decoded.mand;
 
     next();
   } catch (error) {
@@ -26,9 +29,12 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-// 2. Middleware kiểm tra quyền Manager/Admin (Giữ nguyên của bạn)
+// 2. Middleware kiểm tra quyền Manager/Admin
 const isAdmin = (req, res, next) => {
-  if (!req.user || req.user.role !== "Manager") {
+  // Lấy quyền linh hoạt từ 'role' hoặc 'mavaitro' phòng trừ lệch chuẩn chữ hoa/thường
+  const userRole = req.user ? req.user.role || req.user.mavaitro : null;
+
+  if (!req.user || userRole !== "Manager") {
     return res.status(403).json({
       message: "Truy cập bị từ chối. Yêu cầu quyền Quản trị viên (Manager)!",
     });
@@ -36,9 +42,11 @@ const isAdmin = (req, res, next) => {
   next();
 };
 
-// 3. Middleware MỚI: Kiểm tra quyền Nhân viên (Employee)
+// 3. Middleware kiểm tra quyền Nhân viên (Employee)
 const isEmployee = (req, res, next) => {
-  if (!req.user || req.user.role !== "Employee") {
+  const userRole = req.user ? req.user.role || req.user.mavaitro : null;
+
+  if (!req.user || userRole !== "Employee") {
     return res.status(403).json({
       message: "Truy cập bị từ chối. Yêu cầu quyền Nhân viên (Employee)!",
     });
@@ -47,10 +55,11 @@ const isEmployee = (req, res, next) => {
 };
 
 // 4. Middleware CẢI TIẾN: Phân quyền linh hoạt theo mảng (Khuyên dùng)
-// Giúp bạn kiểm tra nhanh nếu một API cho phép cả Manager và Employee cùng vào
 const authorizeRoles = (...allowedRoles) => {
   return (req, res, next) => {
-    if (!req.user || !allowedRoles.includes(req.user.role)) {
+    const userRole = req.user ? req.user.role || req.user.mavaitro : null;
+
+    if (!req.user || !allowedRoles.includes(userRole)) {
       return res
         .status(403)
         .json({ message: "Bạn không có quyền thực hiện hành động này!" });

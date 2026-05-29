@@ -3,6 +3,9 @@ import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import Swal from "sweetalert2";
 import axios from "axios";
 
+// Đổi URL này thành domain Render của bạn khi deploy (ví dụ: https://qlbh-project.onrender.com/api)
+const BASE_URL = "https://qlbh-project.onrender.com/api";
+
 async function handleLoginPage() {
   const savedUser = localStorage.getItem("hpstore_user");
   const passwordInput = document.querySelector("#password");
@@ -26,21 +29,20 @@ async function handleLoginPage() {
         });
 
         // Gửi token lên Backend kiểm tra xem có bị sửa đổi hay tài khoản bị khóa không
-        const response = await axios.get(
-          "http://localhost:3000/api/auth/verify-role",
-          {
-            headers: { Authorization: `Bearer ${userData.token}` },
-          },
-        );
+        const response = await axios.get(`${BASE_URL}/auth/verify-role`, {
+          headers: { Authorization: `Bearer ${userData.token}` },
+        });
 
         Swal.close();
+
+        // Nhận thuộc tính chữ thường (.role) phản hồi từ Controller mới
         const realRole = response.data.role;
 
-        // Cập nhật lại role chuẩn từ database vào localStorage đề phòng trước đó bị sửa đổi bậy
+        // Cập nhật lại role chuẩn từ database vào localStorage
         userData.role = realRole;
         localStorage.setItem("hpstore_user", JSON.stringify(userData));
 
-        // Tiến hành điều hướng dựa trên role thực tế từ Database trả về
+        // Tiến hành điều hướng dựa trên role thực tế
         if (realRole === "Manager" || realRole === "ADMIN") {
           window.location.href = "/src/pages/dashboard.html";
         } else if (realRole === "Employee" || realRole === "STAFF") {
@@ -48,7 +50,7 @@ async function handleLoginPage() {
         } else {
           window.location.href = window.location.origin;
         }
-        return; // Ngắt luồng, không render form đăng nhập nữa
+        return; // Ngắt luồng, không chạy đoạn dựng Form phía dưới
       }
     } catch (e) {
       Swal.close();
@@ -116,23 +118,20 @@ async function handleLoginPage() {
         },
       });
 
-      const response = await axios.post(
-        "http://localhost:3000/api/auth/login",
-        {
-          identifier: username,
-          password: password,
-        },
-      );
+      const response = await axios.post(`${BASE_URL}/auth/login`, {
+        identifier: username,
+        password: password,
+      });
 
       if (response.status === 200) {
         const { token, user } = response.data;
 
-        // Đồng bộ dữ liệu map trơn tru theo Database mới cập nhật
+        // 🟢 ĐÃ FIX: Áp dụng mapping theo đúng dữ liệu chữ thường trả về từ Postgres
         const userData = {
-          id: user.maND || user.MaND,
-          username: user.username || user.TenDangNhap,
-          name: user.fullname || user.HoTen,
-          role: user.role || user.MaVaiTro,
+          id: user.maND, // Nhận từ user.maND của authController mới
+          username: user.username, // Nhận từ user.username
+          name: user.fullname, // Nhận từ user.fullname
+          role: user.role, // Nhận từ user.role
           token: token,
           loginAt: new Date().toISOString(),
         };

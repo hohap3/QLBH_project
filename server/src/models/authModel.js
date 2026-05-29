@@ -1,95 +1,107 @@
-const { poolPromise, sql } = require("../config/database");
+const { pool } = require("../config/database");
 
 class AuthModel {
+  // 1. Tìm người dùng bằng tên đăng nhập hoặc email
   static async findByIdentifier(identifier) {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("identifier", sql.VarChar(100), identifier)
-      .query(
-        "SELECT * FROM NGUOIDUNG WHERE TenDangNhap = @identifier OR Email = @identifier",
+    try {
+      const result = await pool.query(
+        "SELECT * FROM nguoidung WHERE tendangnhap = $1 OR email = $1",
+        [identifier],
       );
 
-    const user = result.recordset[0];
+      const user = result.rows[0];
 
-    if (user && user.TrangThai === false) {
-      // Bạn có thể quăng một Error có thông báo rõ ràng
-      const error = new Error(
-        "Tài khoản này đã bị khóa. Vui lòng liên hệ Admin!",
-      );
-      error.status = 403; // Forbidden
+      // Lưu ý: Postgres trả về kiểu BOOLEAN thực sự (true/false) hoặc số 0/1 tùy cấu trúc, check cả 2 cho chắc chắn
+      if (user && (user.trangthai === false || user.trangthai === 0)) {
+        const error = new Error(
+          "Tài khoản này đã bị khóa. Vui lòng liên hệ Admin!",
+        );
+        error.status = 403;
+        throw error;
+      }
+
+      return user;
+    } catch (error) {
       throw error;
     }
-
-    return user;
   }
 
+  // 2. Tìm người dùng bằng mã (Dùng để verify token)
   static async findByMaND(maND) {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("maND", sql.VarChar(20), maND)
-      .query(
-        "SELECT MaND, TenDangNhap, HoTen, MaVaiTro, TrangThai FROM NGUOIDUNG WHERE MaND = @maND",
+    try {
+      const result = await pool.query(
+        "SELECT mand, tendangnhap, hoten, mavaitro, trangthai FROM nguoidung WHERE mand = $1",
+        [maND],
       );
-
-    return result.recordset[0];
+      return result.rows[0];
+    } catch (error) {
+      throw error;
+    }
   }
 
+  // 3. Kiểm tra trùng lặp tài khoản / email
   static async checkDuplicate(username, email) {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("username", sql.VarChar(50), username)
-      .input("email", sql.VarChar(100), email)
-      .query(
-        "SELECT TenDangNhap, Email FROM NGUOIDUNG WHERE TenDangNhap = @username OR Email = @email",
+    try {
+      const result = await pool.query(
+        "SELECT tendangnhap, email FROM nguoidung WHERE tendangnhap = $1 OR email = $2",
+        [username, email],
       );
-    return result.recordset;
+      return result.rows; // Trả về mảng các tài khoản trùng lặp
+    } catch (error) {
+      throw error;
+    }
   }
 
+  // 4. Tạo tài khoản mới ứng dụng Transaction của PostgreSQL
   static async createND(data) {
-    const pool = await poolPromise;
-    // Khởi tạo Transaction để đảm bảo tính toàn vẹn dữ liệu
-    const transaction = new sql.Transaction(pool);
+    // Để chạy Transaction trong node-postgres, ta bắt buộc phải lấy ra 1 client riêng biệt
+    const client = await pool.connect();
 
     try {
-      await transaction.begin();
+      // Bắt đầu Giao dịch
+      await client.query("BEGIN");
 
-      const request = new sql.Request(transaction);
+      // Lệnh 1: Thêm tài khoản mới vào bảng nguoidung (Dùng NOW() thay cho GETDATE())
+      const insertUserSql = `
+        INSERT INTO nguoidung (mand, tendangnhap, matkhauhash, hoten, email, sdt, mavaitro, trangthai, ngaytao)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 1, NOW())
+      `;
+      const userParams = [
+        data.maND,
+        data.username,
+        data.passwordHash,
+        data.fullname,
+        data.email,
+        data.phone,
+        data.maVaiTro,
+      ];
+      await client.query(insertUserSql, userParams);
 
-      // 1. Thêm vào bảng NGUOIDUNG
-      await request
-        .input("MaND", sql.VarChar(20), data.maND)
-        .input("TenDangNhap", sql.VarChar(50), data.username)
-        .input("MatKhauHash", sql.VarChar(255), data.passwordHash)
-        .input("HoTen", sql.NVarChar(100), data.fullname)
-        .input("Email", sql.VarChar(100), data.email)
-        .input("SDT", sql.VarChar(15), data.phone)
-        .input("MaVaiTro", sql.VarChar(20), data.maVaiTro).query(`
-                INSERT INTO NGUOIDUNG (MaND, TenDangNhap, MatKhauHash, HoTen, Email, SDT, MaVaiTro, TrangThai, NgayTao)
-                VALUES (@MaND, @TenDangNhap, @MatKhauHash, @HoTen, @Email, @SDT, @MaVaiTro, 1, GETDATE())
-            `);
+      // Lệnh 2: Thêm thông tin vào bảng khachhang (Có bổ sung thêm cột diachi của bạn)
+      const insertCustomerSql = `
+        INSERT INTO khachhang (makh, hoten, sdt, email, diachi, mand, ngaytao, diemtichluy)
+        VALUES ($1, $2, $3, $4, $5, $6, NOW(), 0)
+      `;
+      const customerParams = [
+        data.maKH,
+        data.fullname,
+        data.phone,
+        data.email,
+        data.diaChi, // Dữ liệu địa chỉ truyền từ req.body
+        data.maND,
+      ];
+      await client.query(insertCustomerSql, customerParams);
 
-      // 2. Thêm vào bảng KHACHHANG (Truyền các thuộc tính giống nhau)
-      // Giả sử MaKH bạn tự sinh hoặc dùng chung với MaND (tùy nghiệp vụ)
-      // Ở đây tôi ví dụ MaKH là data.maKH hoặc dùng tiền tố KH + MaND
-      await request.input(
-        "MaKH",
-        sql.VarChar(20),
-        data.maKH || `KH${data.maND}`,
-      ).query(`
-                INSERT INTO KHACHHANG (MaKH, HoTen, SDT, Email, MaND, NgayTao, DiemTichLuy)
-                VALUES (@MaKH, @HoTen, @SDT, @Email, @MaND, GETDATE(), 0)
-            `);
-
-      // Hoàn tất giao dịch
-      await transaction.commit();
+      // Hoàn tất giao dịch thành công
+      await client.query("COMMIT");
       return { success: true };
     } catch (err) {
-      // Nếu có lỗi, hoàn tác lại toàn bộ (không lưu NGUOIDUNG nếu KHACHHANG lỗi)
-      if (transaction) await transaction.rollback();
+      // Nếu xuất hiện bất kỳ lỗi nào, hoàn tác (Rollback) lại toàn bộ dữ liệu
+      await client.query("ROLLBACK");
       throw err;
+    } finally {
+      // Giải phóng client trả về lại cho pool
+      client.release();
     }
   }
 }

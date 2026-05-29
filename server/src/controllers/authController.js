@@ -2,6 +2,7 @@ const AuthModel = require("../models/authModel");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
+// 1. Xử lý Đăng ký thành viên
 exports.register = async (req, res) => {
   try {
     const { fullname, username, email, phone, password, address } = req.body;
@@ -12,11 +13,13 @@ exports.register = async (req, res) => {
         .json({ message: "Vui lòng cung cấp đầy đủ thông tin!" });
     }
 
+    // Kiểm tra trùng lặp tài khoản (So sánh thuộc tính chữ thường từ Postgres trả về)
     const duplicates = await AuthModel.checkDuplicate(username, email);
     if (duplicates && duplicates.length > 0) {
-      const isUserTaken = duplicates.some((u) => u.TenDangNhap === username);
-      if (isUserTaken)
+      const isUserTaken = duplicates.some((u) => u.tendangnhap === username);
+      if (isUserTaken) {
         return res.status(400).json({ message: "Tên đăng nhập đã tồn tại!" });
+      }
       return res.status(400).json({ message: "Email này đã được sử dụng!" });
     }
 
@@ -34,7 +37,7 @@ exports.register = async (req, res) => {
       fullname: fullname,
       email: email,
       phone: phone,
-      diaChi: address || null, // Đồng bộ cho phép nhận giá trị null theo nghiệp vụ cấu trúc bảng
+      diaChi: address || null, // Cho phép NULL
       maVaiTro: username === "admin" ? "Manager" : "Client",
     };
 
@@ -53,6 +56,7 @@ exports.register = async (req, res) => {
   }
 };
 
+// 2. Xử lý Đăng nhập tài khoản
 exports.login = async (req, res) => {
   try {
     const { identifier, password } = req.body;
@@ -66,26 +70,29 @@ exports.login = async (req, res) => {
     const user = await AuthModel.findByIdentifier(identifier);
 
     if (!user) {
-      return res.status(401).json({ message: "Tài khoản không tồn tại!" });
+      return res
+        .status(401)
+        .json({ message: "Tài khoản hoặc email không tồn tại!" });
     }
 
-    // Kiểm tra trạng thái tài khoản trực tiếp
-    if (user.TrangThai === false || user.TrangThai === 0) {
+    // Kiểm tra trạng thái bằng thuộc tính chữ thường từ Postgres
+    if (user.trangthai === false || user.trangthai === 0) {
       return res.status(403).json({
         message: "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin!",
       });
     }
 
-    const isMatch = await bcrypt.compare(password, user.MatKhauHash);
+    const isMatch = await bcrypt.compare(password, user.matkhauhash);
     if (!isMatch) {
       return res.status(401).json({ message: "Mật khẩu không chính xác!" });
     }
 
+    // Ký kết JSON Web Token (Sử dụng dữ liệu chữ thường của Postgres)
     const token = jwt.sign(
       {
-        maND: user.MaND,
-        username: user.TenDangNhap,
-        role: user.MaVaiTro,
+        maND: user.mand,
+        username: user.tendangnhap,
+        role: user.mavaitro,
       },
       process.env.JWT_SECRET,
       { expiresIn: "24h" },
@@ -95,25 +102,27 @@ exports.login = async (req, res) => {
       message: "Đăng nhập thành công!",
       token,
       user: {
-        maND: user.MaND,
-        username: user.TenDangNhap,
-        fullname: user.HoTen,
-        role: user.MaVaiTro,
+        maND: user.mand,
+        username: user.tendangnhap,
+        fullname: user.hoten,
+        role: user.mavaitro,
       },
     });
   } catch (error) {
     console.error("LOGIN ERROR:", error);
+    // Nếu ném lỗi chặn từ tầng Model (Ví dụ lỗi tài khoản bị khóa trong model)
+    if (error.status === 403) {
+      return res.status(403).json({ message: error.message });
+    }
     return res.status(500).json({ message: "Lỗi server nội bộ!" });
   }
 };
 
-// XỬ LÝ XÁC THỰC THỜI GIAN THỰC TỪ TRÌNH DUYỆT ───
+// 3. Thẩm định quyền hạn thời gian thực
 exports.verifyRole = async (req, res) => {
   try {
-    // req.user được lấy ra từ middleware giải mã token thành công trước đó
-    const { maND } = req.user;
+    const { maND } = req.user; // Lấy ra từ middleware auth.js giải mã token trước đó
 
-    // Truy vấn dữ liệu tươi mới nhất từ Database để chống gian lận
     const user = await AuthModel.findByMaND(maND);
 
     if (!user) {
@@ -122,18 +131,16 @@ exports.verifyRole = async (req, res) => {
         .json({ message: "Tài khoản không tồn tại trên hệ thống!" });
     }
 
-    // Trường hợp Admin khóa tài khoản khi User đang lướt Web
-    if (user.TrangThai === false || user.TrangThai === 0) {
+    if (user.trangthai === false || user.trangthai === 0) {
       return res
         .status(403)
         .json({ message: "Tài khoản của bạn đã bị khóa bất ngờ!" });
     }
 
-    // Trả về vai trò tuyệt đối an toàn lấy từ SQL Server
     return res.status(200).json({
-      role: user.MaVaiTro,
-      username: user.TenDangNhap,
-      fullname: user.HoTen,
+      role: user.mavaitro,
+      username: user.tendangnhap,
+      fullname: user.hoten,
     });
   } catch (error) {
     console.error("VERIFY ROLE ERROR:", error);

@@ -1,14 +1,17 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap";
 import Swal from "sweetalert2";
-import axios from "axios"; // Import axios
+import axios from "axios";
+
+// Đổi URL này thành domain Render khi bạn deploy (ví dụ: https://qlbh-project.onrender.com/api)
+const BASE_URL = "https://qlbh-project.onrender.com/api";
 
 const checkLoggedIn = () => {
   const userData = JSON.parse(localStorage.getItem("hpstore_user"));
 
   if (userData && userData.token) {
-    // Nếu đã đăng nhập thành công, tự động chuyển hướng về trang chủ index.html
-    window.location.href = "/src/pages/index.html";
+    // Nếu đã đăng nhập thành công, tự động chuyển hướng về trang chủ
+    window.location.href = "/index.html";
   }
 };
 
@@ -36,6 +39,9 @@ function handleRegisterPage() {
       termsCheckbox.checked = true;
     });
   }
+
+  // Nếu không tìm thấy form đăng ký thì dừng xử lý để tránh lỗi JS trên các trang khác
+  if (!registerForm) return;
 
   // 2. Xử lý gửi form với Axios
   registerForm.addEventListener("submit", async (e) => {
@@ -86,7 +92,9 @@ function handleRegisterPage() {
     const passwordRegex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>]).{6,}$/;
     if (!passwordRegex.test(password)) {
-      showError("Mật khẩu không đạt yêu cầu!");
+      showError(
+        "Mật khẩu phải từ 6 ký tự, bao gồm chữ hoa, chữ thường và ký tự đặc biệt!",
+      );
       return;
     }
 
@@ -112,17 +120,14 @@ function handleRegisterPage() {
         },
       });
 
-      // Gọi API bằng Axios
-      const response = await axios.post(
-        "http://localhost:3000/api/auth/register",
-        {
-          fullname,
-          username,
-          email,
-          phone,
-          password,
-        },
-      );
+      // Gọi API bằng Axios theo hằng số BASE_URL
+      const response = await axios.post(`${BASE_URL}/auth/register`, {
+        fullname,
+        username,
+        email,
+        phone,
+        password,
+      });
 
       // Xử lý phản hồi thành công
       Swal.fire({
@@ -132,10 +137,11 @@ function handleRegisterPage() {
         confirmButtonColor: "#e91e63",
         timer: 2000,
       }).then(() => {
-        window.location.href = "./login.html"; // Chuyển hướng sang trang Login
+        window.location.href = "login.html"; // Chuyển hướng sang trang Login chung thư mục
       });
     } catch (error) {
-      // Xử lý lỗi từ Server (Ví dụ: Email đã tồn tại)
+      console.error("Lỗi đăng ký:", error);
+      // Xử lý lỗi trả về từ PostgreSQL / Server thông qua Controller
       const errorMessage =
         error.response?.data?.message || "Không thể kết nối đến máy chủ!";
       showError(errorMessage);
