@@ -287,8 +287,8 @@ async function renderCategoryButtons() {
       categories.forEach((dm) => {
         const btn = document.createElement("button");
         btn.className = "btn filter-btn";
-        btn.innerText = dm.TenDanhMuc;
-        btn.dataset.id = dm.MaDanhMuc;
+        btn.innerText = dm.tendanhmuc;
+        btn.dataset.id = dm.madanhmuc;
 
         btn.onclick = function () {
           updateActiveButton(this);
