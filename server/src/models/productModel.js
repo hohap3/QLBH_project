@@ -1,123 +1,149 @@
-const { poolPromise, sql } = require("../config/database");
+const { pool } = require("../config/database");
 
 class ProductModel {
   // 1. LẤY SẢN PHẨM BÁN CHẠY (CÓ PHÂN TRANG)
   static async getBestSellers(page = 1, limit = 8) {
-    const pool = await poolPromise;
-    const offset = (page - 1) * limit;
+    try {
+      const offset = (page - 1) * limit;
 
-    // Truy vấn 1: Đếm tổng số lượng sản phẩm bán chạy để tính tổng số trang
-    const countResult = await pool.request().query(`
-            SELECT COUNT(DISTINCT sp.MaSP) as Total FROM SANPHAM sp
-            INNER JOIN CHITIET_DONHANG ct ON sp.MaSP = ct.MaSP
-        `);
-    const totalItems = countResult.recordset[0].Total;
+      // Truy vấn 1: Tính tổng số lượng mặt hàng đã từng phát sinh lượt bán
+      const countResult = await pool.query(`
+        SELECT COUNT(DISTINCT sp.masp) as total FROM sanpham sp
+        INNER JOIN chitiet_donhang ct ON sp.masp = ct.masp
+      `);
+      const totalItems = parseInt(countResult.rows[0].total) || 0;
 
-    // Truy vấn 2: Lấy dữ liệu phân trang thực tế dựa trên OFFSET & FETCH NEXT
-    const result = await pool
-      .request()
-      .input("offset", sql.Int, offset)
-      .input("limit", sql.Int, limit).query(`
-                SELECT 
-                    sp.MaSP, sp.TenSP, sp.GiaBan, sp.HinhAnh, 
-                    SUM(ct.SoLuong) as TongDaBan
-                FROM SANPHAM sp
-                LEFT JOIN CHITIET_DONHANG ct ON sp.MaSP = ct.MaSP
-                GROUP BY sp.MaSP, sp.TenSP, sp.GiaBan, sp.HinhAnh
-                ORDER BY TongDaBan DESC, sp.MaSP ASC
-                OFFSET @offset ROWS
-                FETCH NEXT @limit ROWS ONLY
-            `);
+      // Truy vấn 2: Lấy dữ liệu thực tế bằng LIMIT và OFFSET của Postgres
+      const result = await pool.query(
+        `
+        SELECT 
+          sp.masp, sp.tensp, sp.giaban, sp.hinhanh, 
+          COALESCE(SUM(ct.soluong), 0) as tongdaban
+        FROM sanpham sp
+        LEFT JOIN chitiet_donhang ct ON sp.masp = ct.masp
+        GROUP BY sp.masp, sp.tensp, sp.giaban, sp.hinhanh
+        ORDER BY tongdaban DESC, sp.masp ASC
+        LIMIT $1 OFFSET $2
+      `,
+        [limit, offset],
+      );
 
-    return {
-      products: result.recordset,
-      totalItems: totalItems,
-    };
+      return {
+        products: result.rows,
+        totalItems: totalItems,
+      };
+    } catch (error) {
+      throw error;
+    }
   }
 
   // 2. LẤY TẤT CẢ SẢN PHẨM HOẶC THEO DANH MỤC (CÓ PHÂN TRANG)
   static async getProducts(maDM = null, page = 1, limit = 8) {
-    const pool = await poolPromise;
-    const offset = (page - 1) * limit;
+    try {
+      const offset = (page - 1) * limit;
+      let countQuery = `SELECT COUNT(*) as total FROM sanpham sp WHERE 1=1`;
+      let dataQuery = `
+        SELECT sp.*, dm.tendanhmuc 
+        FROM sanpham sp
+        JOIN danhmuc dm ON sp.madanhmuc = dm.madanhmuc
+        WHERE 1=1
+      `;
+      const params = [];
 
-    let countQuery = `SELECT COUNT(*) as Total FROM SANPHAM sp WHERE 1=1`;
-    let dataQuery = `
-            SELECT sp.*, dm.TenDanhMuc 
-            FROM SANPHAM sp
-            JOIN DANHMUC dm ON sp.MaDanhMuc = dm.MaDanhMuc
-            WHERE 1=1
-        `;
+      // Lọc danh mục nếu có tham số hợp lệ
+      if (
+        maDM &&
+        maDM !== "all" &&
+        maDM !== "undefined" &&
+        maDM.trim() !== ""
+      ) {
+        params.push(maDM);
+        countQuery += ` AND sp.madanhmuc = $1`;
+        dataQuery += ` AND sp.madanhmuc = $1`;
+      }
 
-    const requestCount = pool.request();
-    const requestData = pool.request();
+      // Đếm tổng số lượng dòng
+      const countResult = await pool.query(countQuery, params);
+      const totalItems = parseInt(countResult.rows[0].total) || 0;
 
-    // Lọc danh mục nếu có tham số hợp lệ
-    if (maDM && maDM !== "all" && maDM !== "undefined" && maDM.trim() !== "") {
-      countQuery += ` AND sp.MaDanhMuc = @maDM`;
-      dataQuery += ` AND sp.MaDanhMuc = @maDM`;
+      // Gắn thêm LIMIT, OFFSET cho câu lệnh lấy data
+      const dataParams = [...params];
+      dataParams.push(limit);
+      dataParams.push(offset);
 
-      requestCount.input("maDM", sql.VarChar, maDM);
-      requestData.input("maDM", sql.VarChar, maDM);
+      dataQuery += ` ORDER BY sp.masp ASC LIMIT $${dataParams.length - 1} OFFSET $${dataParams.length}`;
+      const resultData = await pool.query(dataQuery, dataParams);
+
+      return {
+        products: resultData.rows,
+        totalItems: totalItems,
+      };
+    } catch (error) {
+      throw error;
     }
-
-    // Đếm tổng số dòng
-    const countResult = await requestCount.query(countQuery);
-    const totalItems = countResult.recordset[0].Total;
-
-    // Thêm mệnh đề phân trang bắt buộc phải có ORDER BY trong SQL Server
-    dataQuery += ` ORDER BY sp.MaSP ASC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`;
-
-    requestData.input("offset", sql.Int, offset);
-    requestData.input("limit", sql.Int, limit);
-
-    const resultData = await requestData.query(dataQuery);
-
-    return {
-      products: resultData.recordset,
-      totalItems: totalItems,
-    };
   }
 
-  // 3. TÌM KIẾM SẢN PHẨM GỢI Ý (Giữ nguyên logic của bạn)
+  // 3. TÌM KIẾM SẢN PHẨM GỢI Ý
   static async searchProducts(keyword) {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("keyword", sql.NVarChar, `%${keyword}%`).query(`
-                SELECT TOP 5 MaSP, TenSP, GiaBan, HinhAnh 
-                FROM SANPHAM 
-                WHERE TenSP LIKE @keyword
-            `);
-    return result.recordset;
+    try {
+      // Thay đổi TOP 5 của SQL Server bằng LIMIT 5 đặt ở cuối trong Postgres
+      const result = await pool.query(
+        `
+        SELECT masp, tensp, giaban, hinhanh 
+        FROM sanpham 
+        WHERE tensp ILIKE $1
+        LIMIT 5
+      `,
+        [`%${keyword}%`],
+      ); // Dùng ILIKE để tìm kiếm không phân biệt hoa thường tiếng Việt
+
+      return result.rows;
+    } catch (error) {
+      throw error;
+    }
   }
 
-  // 4. CHI TIẾT SẢN PHẨM (Giữ nguyên logic của bạn)
+  // 4. CHI TIẾT SẢN PHẨM
   static async getProductById(maSP) {
-    const pool = await poolPromise;
-    const result = await pool.request().input("maSP", sql.VarChar, maSP).query(`
-                SELECT sp.*, dm.TenDanhMuc, ncc.TenNCC,
-                       (SELECT ISNULL(SUM(SoLuong), 0) FROM CHITIET_DONHANG WHERE MaSP = sp.MaSP) as TongDaBan
-                FROM SANPHAM sp
-                JOIN DANHMUC dm ON sp.MaDanhMuc = dm.MaDanhMuc
-                JOIN NHACUNGCAP ncc ON sp.MaNCC = ncc.MaNCC
-                WHERE sp.MaSP = @maSP
-            `);
-    return result.recordset[0];
+    try {
+      // Thay đổi ISNULL thành COALESCE
+      const result = await pool.query(
+        `
+        SELECT sp.*, dm.tendanhmuc, ncc.tenncc,
+          (SELECT COALESCE(SUM(soluong), 0) FROM chitiet_donhang WHERE masp = sp.masp) as tongdaban
+        FROM sanpham sp
+        JOIN danhmuc dm ON sp.madanhmuc = dm.madanhmuc
+        JOIN nhacungcap ncc ON sp.mancc = ncc.mancc
+        WHERE sp.masp = $1
+      `,
+        [maSP],
+      );
+
+      return result.rows[0];
+    } catch (error) {
+      throw error;
+    }
   }
 
-  // 5. SẢN PHẨM LIÊN QUAN (Giữ nguyên logic của bạn)
+  // 5. SẢN PHẨM LIÊN QUAN
   static async getRelatedProducts(maDanhMuc, currentMaSP) {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("maDanhMuc", sql.VarChar, maDanhMuc)
-      .input("currentMaSP", sql.VarChar, currentMaSP).query(`
-                SELECT TOP 4 sp.MaSP, sp.TenSP, sp.GiaBan, sp.HinhAnh, dm.TenDanhMuc,sp.SoLuongTon
-                FROM SANPHAM sp
-                JOIN DANHMUC dm ON sp.MaDanhMuc = dm.MaDanhMuc
-                WHERE sp.MaDanhMuc = @maDanhMuc AND sp.MaSP != @currentMaSP
-            `);
-    return result.recordset;
+    try {
+      // Thay đổi TOP 4 của SQL Server thành LIMIT 4 ở cuối câu lệnh
+      const result = await pool.query(
+        `
+        SELECT sp.masp, sp.tensp, sp.giaban, sp.hinhanh, dm.tendanhmuc, sp.soluongton
+        FROM sanpham sp
+        JOIN danhmuc dm ON sp.madanhmuc = dm.madanhmuc
+        WHERE sp.madanhmuc = $1 AND sp.masp != $2
+        LIMIT 4
+      `,
+        [maDanhMuc, currentMaSP],
+      );
+
+      return result.rows;
+    } catch (error) {
+      throw error;
+    }
   }
 }
 

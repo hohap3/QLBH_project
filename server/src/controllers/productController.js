@@ -30,7 +30,7 @@ exports.getProducts = async (req, res) => {
     const limit = parseInt(req.query.limit) || 8;
 
     console.log(
-      `Backend nhận được lọc - Danh mục: ${maDM}, Trang: ${page}, Số lượng: ${limit}`,
+      `Backend nhận lọc - Danh mục: ${maDM}, Trang: ${page}, Số lượng: ${limit}`,
     );
 
     const { products, totalItems } = await ProductModel.getProducts(
@@ -46,7 +46,7 @@ exports.getProducts = async (req, res) => {
       totalPages: Math.ceil(totalItems / limit),
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
 
@@ -58,7 +58,7 @@ exports.searchProducts = async (req, res) => {
     const products = await ProductModel.searchProducts(q);
     res.json(products);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: "Lỗi server", error: error.message });
   }
 };
 
