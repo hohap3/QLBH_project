@@ -13,7 +13,6 @@ exports.register = async (req, res) => {
         .json({ message: "Vui lòng cung cấp đầy đủ thông tin!" });
     }
 
-    // Kiểm tra trùng lặp tài khoản (So sánh thuộc tính chữ thường từ Postgres trả về)
     const duplicates = await AuthModel.checkDuplicate(username, email);
     if (duplicates && duplicates.length > 0) {
       const isUserTaken = duplicates.some((u) => u.tendangnhap === username);
@@ -37,8 +36,8 @@ exports.register = async (req, res) => {
       fullname: fullname,
       email: email,
       phone: phone,
-      diaChi: address || null, // Cho phép NULL
-      maVaiTro: username === "admin" ? "Manager" : "Client",
+      diaChi: address || null,
+      maVaiTro: "Client", // 🟢 ĐH ĐÃ SỬA: Thay vì trả về true/false, gán chuỗi chuẩn đồng bộ với Model
     };
 
     await AuthModel.createND(newUser);
@@ -49,6 +48,7 @@ exports.register = async (req, res) => {
     });
   } catch (error) {
     console.error("REGISTER ERROR:", error);
+    // 🟢 CẢI TIẾN: Trả error.message về client để hiển thị chi tiết nguyên nhân gây lỗi 500 (ví dụ: thiếu cột, sai kiểu dữ liệu...)
     return res.status(500).json({
       message: "Lỗi hệ thống khi đăng ký!",
       error: error.message,
@@ -75,7 +75,6 @@ exports.login = async (req, res) => {
         .json({ message: "Tài khoản hoặc email không tồn tại!" });
     }
 
-    // Kiểm tra trạng thái bằng thuộc tính chữ thường từ Postgres
     if (user.trangthai === false || user.trangthai === 0) {
       return res.status(403).json({
         message: "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin!",
@@ -87,7 +86,6 @@ exports.login = async (req, res) => {
       return res.status(401).json({ message: "Mật khẩu không chính xác!" });
     }
 
-    // Ký kết JSON Web Token (Sử dụng dữ liệu chữ thường của Postgres)
     const token = jwt.sign(
       {
         maND: user.mand,
@@ -110,7 +108,6 @@ exports.login = async (req, res) => {
     });
   } catch (error) {
     console.error("LOGIN ERROR:", error);
-    // Nếu ném lỗi chặn từ tầng Model (Ví dụ lỗi tài khoản bị khóa trong model)
     if (error.status === 403) {
       return res.status(403).json({ message: error.message });
     }
@@ -121,7 +118,7 @@ exports.login = async (req, res) => {
 // 3. Thẩm định quyền hạn thời gian thực
 exports.verifyRole = async (req, res) => {
   try {
-    const { maND } = req.user; // Lấy ra từ middleware auth.js giải mã token trước đó
+    const { maND } = req.user;
 
     const user = await AuthModel.findByMaND(maND);
 
