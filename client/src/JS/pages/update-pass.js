@@ -1,5 +1,6 @@
 import axios from "axios";
 import Swal from "sweetalert2";
+import { BASE_URL } from "/src/JS/common/header";
 
 export async function initUpdatePass() {
   const passwordForm = document.getElementById("passwordForm");
@@ -50,14 +51,11 @@ export async function initUpdatePass() {
       }
 
       try {
-        const response = await axios.put(
-          "http://localhost:3000/api/user/change-password",
-          {
-            MaND: userStorage.id || userStorage.MaND, // Hỗ trợ linh hoạt cả 2 trường định danh
-            OldPassword: oldPass,
-            NewPassword: newPass,
-          },
-        );
+        const response = await axios.put(`${BASE_URL}/user/change-password`, {
+          MaND: userStorage.id || userStorage.MaND, // Hỗ trợ linh hoạt cả 2 trường định danh
+          OldPassword: oldPass,
+          NewPassword: newPass,
+        });
 
         // 🟢 ĐÃ UPDATE: Chờ người dùng bấm "OK" trên hộp thoại thông báo rồi mới thực hiện chuỗi đăng xuất
         await Swal.fire({

@@ -1,89 +1,82 @@
-const { sql, poolPromise } = require("../config/database");
+const { pool } = require("../config/database");
 
 const userModel = {
-  // Lấy thông tin chi tiết người dùng bằng MaND
+  // 1. Lấy thông tin chi tiết người dùng bằng mand
   getUserById: async (maND) => {
     try {
-      const pool = await poolPromise; // Chờ kết nối thành công
-      const result = await pool
-        .request()
-        .input("MaND", sql.VarChar, maND)
-        .query(
-          "SELECT MaND, TenDangNhap, HoTen, Email, SDT, MaVaiTro FROM NGUOIDUNG WHERE MaND = @MaND",
-        );
+      // Postgres chuyển tên bảng/cột thành chữ thường: nguoidung, mand, tendangnhap...
+      const query = `
+        SELECT mand, tendangnhap, hoten, email, sdt, mavaitro 
+        FROM nguoidung 
+        WHERE mand = $1
+      `;
+      const result = await pool.query(query, [maND]);
 
-      return result.recordset[0]; // Trả về bản ghi đầu tiên tìm thấy
+      // Trả về bản ghi đầu tiên nếu tìm thấy, ngược lại trả về null
+      return result.rows.length > 0 ? result.rows[0] : null;
     } catch (error) {
-      console.error("Lỗi tại userModel:", error);
+      console.error("Lỗi tại userModel (getUserById):", error);
       throw error;
     }
   },
 
-  // Kiểm tra trùng lặp Email hoặc SDT với người dùng KHÁC
+  // 2. Kiểm tra trùng lặp Email hoặc SDT với người dùng KHÁC
   checkDuplicate: async (maND, email, sdt) => {
     try {
-      const pool = await poolPromise;
-      const result = await pool
-        .request()
-        .input("MaND", sql.NVarChar, maND)
-        .input("Email", sql.VarChar, email)
-        .input("SDT", sql.VarChar, sdt).query(`
-                    SELECT 
-                        (SELECT COUNT(*) FROM NGUOIDUNG WHERE Email = @Email AND MaND <> @MaND) AS EmailCount,
-                        (SELECT COUNT(*) FROM NGUOIDUNG WHERE SDT = @SDT AND MaND <> @MaND) AS SDTCount
-                `);
-      return result.recordset[0];
+      // Viết lại câu lệnh lồng để đếm số lượng trùng lặp
+      const query = `
+        SELECT 
+          (SELECT COUNT(*)::int FROM nguoidung WHERE email = $2 AND mand <> $1) AS emailcount,
+          (SELECT COUNT(*)::int FROM nguoidung WHERE sdt = $3 AND mand <> $1) AS sdtcount
+      `;
+      const result = await pool.query(query, [maND, email, sdt]);
+      return result.rows[0];
     } catch (error) {
+      console.error("Lỗi tại userModel (checkDuplicate):", error);
       throw error;
     }
   },
 
-  // Cập nhật thông tin
+  // 3. Cập nhật thông tin
   updateUser: async (maND, data) => {
     try {
-      const pool = await poolPromise;
-      await pool
-        .request()
-        .input("MaND", sql.NVarChar, maND)
-        .input("HoTen", sql.NVarChar, data.HoTen)
-        .input("Email", sql.VarChar, data.Email)
-        .input("SDT", sql.VarChar, data.SDT).query(`
-                    UPDATE NGUOIDUNG 
-                    SET HoTen = @HoTen, Email = @Email, SDT = @SDT 
-                    WHERE MaND = @MaND
-                `);
+      const query = `
+        UPDATE nguoidung 
+        SET hoten = $2, email = $3, sdt = $4 
+        WHERE mand = $1
+      `;
+      await pool.query(query, [maND, data.HoTen, data.Email, data.SDT]);
       return true;
     } catch (error) {
+      console.error("Lỗi tại userModel (updateUser):", error);
       throw error;
     }
   },
 
+  // 4. Lấy Hash mật khẩu để đối chiếu
   getPassword: async (maND) => {
     try {
-      const pool = await poolPromise;
-      const result = await pool
-        .request()
-        .input("MaND", sql.NVarChar, maND)
-        .query("SELECT MatKhauHash FROM NGUOIDUNG WHERE MaND = @MaND");
-      return result.recordset[0] ? result.recordset[0].MatKhauHash : null;
+      const query = `SELECT matkhauhash FROM nguoidung WHERE mand = $1`;
+      const result = await pool.query(query, [maND]);
+      return result.rows.length > 0 ? result.rows[0].matkhauhash : null;
     } catch (error) {
+      console.error("Lỗi tại userModel (getPassword):", error);
       throw error;
     }
   },
 
-  // Hàm cập nhật mật khẩu mới
+  // 5. Hàm cập nhật mật khẩu mới
   updatePassword: async (maND, newHash) => {
     try {
-      const pool = await poolPromise;
-      await pool
-        .request()
-        .input("MaND", sql.NVarChar, maND)
-        .input("NewHash", sql.VarChar, newHash)
-        .query(
-          "UPDATE NGUOIDUNG SET MatKhauHash = @NewHash WHERE MaND = @MaND",
-        );
+      const query = `
+        UPDATE nguoidung 
+        SET matkhauhash = $2 
+        WHERE mand = $1
+      `;
+      await pool.query(query, [maND, newHash]);
       return true;
     } catch (error) {
+      console.error("Lỗi tại userModel (updatePassword):", error);
       throw error;
     }
   },
