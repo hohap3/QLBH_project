@@ -1,48 +1,52 @@
 // src/JS/cart.js
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 
 // FIX PATH: File trong thư mục public được map thẳng ra root '/'
-const DEFAULT_IMAGE = '/img/default.jpg'; 
+const DEFAULT_IMAGE = "/img/default.jpg";
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Kích hoạt vẽ giỏ hàng ngay khi người dùng truy cập trang cart.html
-    renderCartPage();
-    
-    const checkoutBtn = document.getElementById('btn-trigger-checkout');
-    if (checkoutBtn) {
-        checkoutBtn.addEventListener('click', handleCheckoutRedirect);
-    }
+document.addEventListener("DOMContentLoaded", () => {
+  // Kích hoạt vẽ giỏ hàng ngay khi người dùng truy cập trang cart.html
+  renderCartPage();
+
+  const checkoutBtn = document.getElementById("btn-trigger-checkout");
+  if (checkoutBtn) {
+    checkoutBtn.addEventListener("click", handleCheckoutRedirect);
+  }
 });
 
-// Hàm bổ trợ lấy Key giỏ hàng động dựa theo trạng thái đăng nhập
+// 🟢 GIỮ NGUYÊN: Hàm lấy Key động theo user để đảm bảo giỏ hàng lưu tách biệt theo từng tài khoản
 function getCartKey() {
-    const userData = JSON.parse(localStorage.getItem('hpstore_user'));
-    if (userData && (userData.MaND || userData.id)) {
-        return `hpstore_cart_${userData.MaND || userData.id}`;
-    }
-    return 'hpstore_cart_guest'; 
+  const userData = JSON.parse(localStorage.getItem("hpstore_user"));
+  if (userData && (userData.MaND || userData.id)) {
+    return `hpstore_cart_${userData.MaND || userData.id}`;
+  }
+  return "hpstore_cart_guest";
 }
 
 function updateCartBadgeCount() {
-    const cartKey = getCartKey();
-    const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
-    const totalItems = cart.reduce((sum, item) => sum + (parseInt(item.SoLuong) || 0), 0);
-    
-    const badge = document.getElementById('cart-count');
-    if (badge) {
-        badge.innerText = totalItems;
-    }
+  const cartKey = getCartKey();
+  const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+  // 🟢 ĐỒNG BỘ: Chuyển sang chữ thường 'item.soLuong' phục vụ logic data mới
+  const totalItems = cart.reduce(
+    (sum, item) => sum + (parseInt(item.SoLuong) || 0),
+    0,
+  );
+
+  const badge = document.getElementById("cart-count");
+  if (badge) {
+    badge.innerText = totalItems;
+  }
 }
 
 function renderCartPage() {
-    const tableBody = document.getElementById('cart-table-body');
-    if (!tableBody) return;
+  const tableBody = document.getElementById("cart-table-body");
+  if (!tableBody) return;
 
-    const cartKey = getCartKey();
-    const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+  const cartKey = getCartKey();
+  const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
 
-    if (cart.length === 0) {
-        tableBody.innerHTML = `
+  if (cart.length === 0) {
+    tableBody.innerHTML = `
             <tr>
                 <td colspan="4" class="text-center py-5">
                     <i class="fa-solid fa-bag-shopping text-muted mb-3" style="font-size: 3rem; opacity:0.3;"></i>
@@ -51,31 +55,34 @@ function renderCartPage() {
                 </td>
             </tr>
         `;
-        updateSummary(0);
-        return;
-    }
+    updateSummary(0);
+    return;
+  }
 
-    let subTotal = 0;
-    
-    const htmlRows = cart.map((item) => {
-        const giaBan = parseFloat(item.GiaBan) || 0;
-        const soLuong = parseInt(item.SoLuong) || 0;
-        const itemTotal = giaBan * soLuong;
-        
-        subTotal += itemTotal;
-        
-        const imgPath = (item.HinhAnh && item.HinhAnh !== 'NULL') 
-            ? `http://localhost:3000/uploads/products/${item.HinhAnh}` 
-            : DEFAULT_IMAGE;
+  let subTotal = 0;
 
-        return `
-            <tr data-masp="${item.MaSP || ''}">
+  const htmlRows = cart
+    .map((item) => {
+      // 🟢 ĐỒNG BỘ: Chuyển đổi gọi thuộc tính bằng chữ thường
+      const giaBan = parseFloat(item.GiaBan) || 0;
+      const soLuong = parseInt(item.SoLuong) || 0;
+      const itemTotal = giaBan * soLuong;
+
+      subTotal += itemTotal;
+
+      const imgPath =
+        item.hinhAnh && item.hinhAnh !== "NULL"
+          ? `https://qlbh-project.onrender.com/uploads/products/${item.HinhAnh}`
+          : DEFAULT_IMAGE;
+
+      return `
+            <tr data-masp="${item.MaSP || ""}">
                 <td>
                     <div class="d-flex align-items-center gap-3">
-                        <img src="${imgPath}" class="product-cart-img" alt="${item.TenSP || 'Sản phẩm'}" style="width:70px; height:70px; object-fit:contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}'">
+                        <img src="${imgPath}" class="product-cart-img" alt="${item.TenSP || "Sản phẩm"}" style="width:70px; height:70px; object-fit:contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}'">
                         <div>
-                            <h6 class="fw-bold text-dark mb-1 text-truncate" style="max-width: 250px;">${item.TenSP || 'Không rõ tên'}</h6>
-                            <small class="text-muted d-block">Đơn giá: ${giaBan.toLocaleString('vi-VN')} đ</small>
+                            <h6 class="fw-bold text-dark mb-1 text-truncate" style="max-width: 250px;">${item.TenSP || "Không rõ tên"}</h6>
+                            <small class="text-muted d-block">Đơn giá: ${giaBan.toLocaleString("vi-VN")} đ</small>
                         </div>
                     </div>
                 </td>
@@ -88,7 +95,7 @@ function renderCartPage() {
                         </div>
                     </div>
                 </td>
-                <td class="text-end fw-bold text-dark">${itemTotal.toLocaleString('vi-VN')} đ</td>
+                <td class="text-end fw-bold text-dark">${itemTotal.toLocaleString("vi-VN")} đ</td>
                 <td class="text-center">
                     <button class="btn btn-sm text-danger" onclick="removeCartItem('${item.MaSP}')">
                         <i class="fa-regular fa-trash-can fs-5"></i>
@@ -96,112 +103,136 @@ function renderCartPage() {
                 </td>
             </tr>
         `;
-    }).join('');
+    })
+    .join("");
 
-    tableBody.innerHTML = htmlRows;
-    updateSummary(subTotal);
-    updateCartBadgeCount();
+  tableBody.innerHTML = htmlRows;
+  updateSummary(subTotal);
+  updateCartBadgeCount();
 }
 
 function updateSummary(subTotal) {
-    const subtotalEl = document.getElementById('cart-subtotal');
-    const totalEl = document.getElementById('cart-total');
-    
-    if (subtotalEl) subtotalEl.innerText = `${subTotal.toLocaleString('vi-VN')} đ`;
-    if (totalEl) totalEl.innerText = `${subTotal.toLocaleString('vi-VN')} đ`;
+  const subtotalEl = document.getElementById("cart-subtotal");
+  const totalEl = document.getElementById("cart-total");
+
+  if (subtotalEl)
+    subtotalEl.innerText = `${subTotal.toLocaleString("vi-VN")} đ`;
+  if (totalEl) totalEl.innerText = `${subTotal.toLocaleString("vi-VN")} đ`;
 }
 
-window.changeQty = function(maSP, delta) {
-    const cartKey = getCartKey();
-    let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
-    const itemIndex = cart.findIndex(item => item.MaSP === maSP);
+window.changeQty = function (maSP, delta) {
+  const cartKey = getCartKey();
+  let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+  const itemIndex = cart.findIndex((item) => item.MaSP === maSP);
 
-    if (itemIndex > -1) {
-        let currentQty = parseInt(cart[itemIndex].SoLuong) || 1;
-        currentQty += delta;
-        
-        if (currentQty <= 0) {
-            // 🟢 TÍCH HỢP: Hỏi xác nhận bằng SweetAlert2 khi giảm số lượng về 0
-            Swal.fire({
-                title: 'Xóa sản phẩm?',
-                text: "Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#6366f1',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Đúng, xóa đi!',
-                cancelButtonText: 'Hủy'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    cart.splice(itemIndex, 1);
-                    localStorage.setItem(cartKey, JSON.stringify(cart));
-                    renderCartPage();
-                    
-                    // Thông báo Toast nhỏ góc màn hình cho mượt
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Đã xóa sản phẩm',
-                        toast: true,
-                        position: 'top-end',
-                        showConfirmButton: false,
-                        timer: 2000
-                    });
-                }
-            });
-        } else {
-            cart[itemIndex].SoLuong = currentQty;
-            localStorage.setItem(cartKey, JSON.stringify(cart));
-            renderCartPage();
-        }
-    }
-}
+  if (itemIndex > -1) {
+    let currentQty = parseInt(cart[itemIndex].SoLuong) || 1;
+    currentQty += delta;
 
-window.removeCartItem = function(maSP) {
-    const cartKey = getCartKey();
-    let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
-    
-    // 🟢 TÍCH HỢP: Xác nhận khi chủ động bấm vào icon Thùng rác
-    Swal.fire({
-        title: 'Bỏ sản phẩm này?',
-        text: "Sản phẩm sẽ được xóa khỏi danh sách giỏ hàng của bạn.",
-        icon: 'question',
+    if (currentQty <= 0) {
+      // 🟢 TÍCH HỢP: Hỏi xác nhận bằng SweetAlert2 khi giảm số lượng về 0
+      Swal.fire({
+        title: "Xóa sản phẩm?",
+        text: "Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?",
+        icon: "warning",
         showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Xóa ngay',
-        cancelButtonText: 'Giữ lại'
-    }).then((result) => {
+        confirmButtonColor: "#6366f1",
+        cancelButtonColor: "#6c757d",
+        confirmButtonText: "Đúng, xóa đi!",
+        cancelButtonText: "Hủy",
+      }).then((result) => {
         if (result.isConfirmed) {
-            cart = cart.filter(item => item.MaSP !== maSP);
-            localStorage.setItem(cartKey, JSON.stringify(cart));
-            renderCartPage();
+          cart.splice(itemIndex, 1);
+          localStorage.setItem(cartKey, JSON.stringify(cart));
+          renderCartPage();
 
-            Swal.fire({
-                icon: 'success',
-                title: 'Đã cập nhật giỏ hàng',
-                toast: true,
-                position: 'top-end',
-                showConfirmButton: false,
-                timer: 1500
-            });
+          // Thông báo Toast nhỏ góc màn hình cho mượt
+          Swal.fire({
+            icon: "success",
+            title: "Đã xóa sản phẩm",
+            toast: true,
+            position: "top-end",
+            showConfirmButton: false,
+            timer: 2000,
+          });
         }
-    });
-}
+      });
+    } else {
+      cart[itemIndex].SoLuong = currentQty;
+      localStorage.setItem(cartKey, JSON.stringify(cart));
+      renderCartPage();
+    }
+  }
+};
+
+window.removeCartItem = function (maSP) {
+  const cartKey = getCartKey();
+  let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+
+  // 🟢 TÍCH HỢP: Xác nhận khi chủ động bấm vào icon Thùng rác
+  Swal.fire({
+    title: "Bỏ sản phẩm này?",
+    text: "Sản phẩm sẽ được xóa khỏi danh sách giỏ hàng của bạn.",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonColor: "#d33",
+    cancelButtonColor: "#6c757d",
+    confirmButtonText: "Xóa ngay",
+    cancelButtonText: "Giữ lại",
+  }).then((result) => {
+    if (result.isConfirmed) {
+      cart = cart.filter((item) => item.MaSP !== maSP);
+      localStorage.setItem(cartKey, JSON.stringify(cart));
+      renderCartPage();
+
+      Swal.fire({
+        icon: "success",
+        title: "Đã cập nhật giỏ hàng",
+        toast: true,
+        position: "top-end",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+    }
+  });
+};
 
 function handleCheckoutRedirect() {
-    const cartKey = getCartKey();
-    const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
-    
-    if (cart.length === 0) {
-        // 🟢 TÍCH HỢP: Thông báo lỗi giỏ hàng trống bằng SweetAlert2
-        Swal.fire({
-            icon: 'warning',
-            title: 'Giỏ hàng trống',
-            text: 'Vui lòng thêm sản phẩm vào giỏ hàng trước khi tiến hành thanh toán!',
-            confirmButtonColor: '#6366f1'
-        });
-        return;
-    }
-    // FIX PATH: Điều hướng trang checkout chuẩn từ root
-    window.location.href = '/src/pages/checkout.html';
+  // 1. Kiểm tra trạng thái đăng nhập hệ thống trước tiên
+  const userData = JSON.parse(localStorage.getItem("hpstore_user"));
+  if (!userData || !userData.token) {
+    // 🟢 THAY ĐỔI MỚI: Hiện SweetAlert thông báo thay vì chuyển hướng thẳng
+    Swal.fire({
+      icon: "info",
+      title: "Yêu cầu đăng nhập",
+      text: "Vui lòng đăng nhập tài khoản của bạn để tiến hành thanh toán đơn hàng!",
+      showCancelButton: true,
+      confirmButtonColor: "#6366f1",
+      cancelButtonColor: "#6c757d",
+      confirmButtonText: "Đăng nhập ngay",
+      cancelButtonText: "Hủy",
+    }).then((result) => {
+      if (result.isConfirmed) {
+        window.location.href = "/src/pages/login.html";
+      }
+    });
+    return;
+  }
+
+  // 2. Kiểm tra số lượng phần tử có trong giỏ hàng
+  const cartKey = getCartKey();
+  const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+
+  if (cart.length === 0) {
+    Swal.fire({
+      icon: "warning",
+      title: "Giỏ hàng trống",
+      text: "Vui lòng thêm sản phẩm vào giỏ hàng trước khi tiến hành thanh toán!",
+      confirmButtonColor: "#6366f1",
+    });
+    return;
+  }
+
+  // Điều hướng sang trang thanh toán nếu hợp lệ dữ liệu
+  window.location.href = "/src/pages/checkout.html";
 }

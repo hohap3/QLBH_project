@@ -148,7 +148,10 @@ export function checkLoginStatus() {
     const currentUserId = userData.MaND || userData.id;
     const userCart =
       JSON.parse(localStorage.getItem(`hpstore_cart_${currentUserId}`)) || [];
-    const totalItems = userCart.reduce((sum, item) => sum + item.SoLuong, 0);
+    const totalItems = userCart.reduce(
+      (sum, item) => sum + (parseInt(item.SoLuong) || 0),
+      0,
+    );
 
     const badge = document.getElementById("cart-count");
     if (badge) {
@@ -188,13 +191,13 @@ export function handleLogout(e) {
       if (userData) {
         const currentUserId = userData.MaND || userData.id;
         // 2. Xóa sạch giỏ hàng của tài khoản này khỏi máy tính
-        localStorage.removeItem(`hpstore_cart_${currentUserId}`);
+        // localStorage.removeItem(`hpstore_cart_${currentUserId}`);
       }
 
       // 3. Xóa session đăng nhập tài khoản
       localStorage.removeItem("hpstore_user");
       localStorage.removeItem("current_employee_page");
-      localStorage.removeItem("current_employee_page");
+
       // Điều hướng về trang chủ
       window.location.href = "/";
     }
