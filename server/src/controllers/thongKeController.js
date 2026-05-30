@@ -4,8 +4,6 @@ const ThongKeController = {
   getStatsCategory: async (req, res) => {
     try {
       const data = await ThongKeModel.getSanPhamTheoDanhMuc();
-
-      // Trả về định dạng JSON mà Chart.js mong muốn
       res.status(200).json({
         success: true,
         data: data,
@@ -14,7 +12,7 @@ const ThongKeController = {
       console.error("Lỗi lấy thống kê danh mục:", error);
       res.status(500).json({
         success: false,
-        message: "Lỗi hệ thống khi lấy dữ liệu biểu đồ",
+        message: "Lỗi hệ thống khi lấy dữ liệu biểu đồ danh mục",
       });
     }
   },
@@ -27,9 +25,11 @@ const ThongKeController = {
         data: stats,
       });
     } catch (error) {
-      res
-        .status(500)
-        .json({ success: false, message: "Lỗi lấy số liệu tổng quan" });
+      console.error("Lỗi lấy tổng quan dashboard:", error);
+      res.status(500).json({
+        success: false,
+        message: "Lỗi hệ thống khi lấy số liệu tổng quan",
+      });
     }
   },
 
@@ -38,18 +38,35 @@ const ThongKeController = {
       const data = await ThongKeModel.getTopSellingProducts();
       res.status(200).json({ success: true, data: data });
     } catch (error) {
-      res.status(500).json({ success: false, message: "Lỗi lấy top sản phẩm" });
+      console.error("Lỗi lấy top sản phẩm:", error);
+      res
+        .status(500)
+        .json({ success: false, message: "Lỗi hệ thống khi lấy top sản phẩm" });
     }
   },
 
   getMonthlyStats: async (req, res) => {
     try {
-      const data = await ThongKeModel.getOrdersByMonth();
-      res.status(200).json({ success: true, data: data });
+      const dbData = await ThongKeModel.getOrdersByMonth();
+      const currentMonth = new Date().getMonth() + 1;
+
+      // 🟢 TỐI ƯU/FIX ĐỒNG BỘ: Chuẩn hóa mảng từ Tháng 1 -> hiện tại (Điền số 0 nếu tháng đó trống đơn)
+      const formattedData = Array.from({ length: currentMonth }, (_, index) => {
+        const monthNum = index + 1;
+        const matched = dbData.find((item) => item.month === monthNum);
+        return {
+          label: `T${monthNum}`,
+          value: matched ? parseInt(matched.orderCount) : 0,
+        };
+      });
+
+      res.status(200).json({ success: true, data: formattedData });
     } catch (error) {
-      res
-        .status(500)
-        .json({ success: false, message: "Lỗi lấy thống kê theo tháng" });
+      console.error("Lỗi lấy thống kê đơn hàng theo tháng:", error);
+      res.status(500).json({
+        success: false,
+        message: "Lỗi hệ thống khi lấy thống kê đơn hàng theo tháng",
+      });
     }
   },
 

@@ -4,7 +4,7 @@ const ThongKeModel = {
   // Lấy số lượng sản phẩm phân bổ theo từng danh mục
   getSanPhamTheoDanhMuc: async () => {
     try {
-      const pool = await poolPromise; // Chờ kết nối tới SQL Server
+      const pool = await poolPromise;
       const query = `
                 SELECT 
                     D.TenDanhMuc AS label, 
@@ -14,7 +14,7 @@ const ThongKeModel = {
                 GROUP BY D.MaDanhMuc, D.TenDanhMuc
             `;
       const result = await pool.request().query(query);
-      return result.recordset; // SQL Server trả về dữ liệu trong recordset
+      return result.recordset;
     } catch (error) {
       throw error;
     }
@@ -23,14 +23,15 @@ const ThongKeModel = {
   getQuickStats: async () => {
     try {
       const pool = await poolPromise;
+      // 🟢 FIX LOGIC: Doanh thu thực tế nên lấy tổng tiền từ HOADON thay vì tất cả DONHANG
       const query = `
                 SELECT 
-                    (SELECT SUM(TongTien) FROM DONHANG WHERE TrangThai != 'Đã hủy') as DoanhThu,
+                    ISNULL((SELECT SUM(TongTien) FROM HOADON), 0) as DoanhThu,
                     (SELECT COUNT(MaDonHang) FROM DONHANG) as TongDonHang,
                     (SELECT COUNT(MaKH) FROM KHACHHANG) as TongKhachHang
             `;
       const result = await pool.request().query(query);
-      return result.recordset[0]; // Trả về 1 dòng duy nhất chứa 3 con số
+      return result.recordset[0];
     } catch (error) {
       throw error;
     }
@@ -67,7 +68,7 @@ const ThongKeModel = {
                     MONTH(NgayDat) AS month, 
                     COUNT(MaDonHang) AS orderCount
                 FROM DONHANG
-                WHERE YEAR(NgayDat) = @Year AND MONTH(NgayDat) <= @Month
+                WHERE YEAR(NgayDat) = @Year AND MONTH(NgayDat) <= @Month AND TrangThai != N'Đã hủy'
                 GROUP BY MONTH(NgayDat)
                 ORDER BY MONTH(NgayDat) ASC
             `;

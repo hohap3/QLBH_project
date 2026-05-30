@@ -1,5 +1,6 @@
+// src/JS/auth-guard.js
 import Swal from "sweetalert2";
-import axios from "axios"; // Đảm bảo dự án của bạn đã cài đặt hoặc import được axios ở front-end
+import axios from "axios";
 
 // Ẩn nội dung body ngay lập tức để tránh tình trạng giao diện bị nhấp nháy (FOUC) trước khi check quyền
 document.body.style.display = "none";
@@ -23,9 +24,9 @@ export async function checkAuth(allowedRoles) {
       return redirectToLogin("Phiên đăng nhập không hợp lệ!");
     }
 
-    // ─── BƯỚC NÂNG CẤP QUAN TRỌNG: GỬI TOKEN LÊN BACKEND ĐỂ THẨM ĐỊNH QUYỀN THỰC ───
+    // ─── ĐỒNG BỘ URL: Chuyển sang domain Render thực tế giống các module khác ───
     const response = await axios.get(
-      "http://localhost:3000/api/auth/verify-role",
+      "https://qlbh-project.onrender.com/api/auth/verify-role",
       {
         headers: {
           Authorization: `Bearer ${user.token}`,
@@ -33,7 +34,7 @@ export async function checkAuth(allowedRoles) {
       },
     );
 
-    // Lấy vai trò thực tế chuẩn xác được Backend giải mã từ Token trong SQL Server
+    // Lấy vai trò thực tế chuẩn xác được Backend giải mã từ Token trong SQL Server/PostgreSQL
     const realRole = response.data.role;
 
     // Cập nhật lại thông tin chuẩn vào localStorage đề phòng người dùng cố tình chỉnh sửa bậy trước đó
@@ -70,13 +71,17 @@ export async function checkAuth(allowedRoles) {
 
     let message = "Phiên làm việc đã hết hạn hoặc không hợp lệ!";
 
-    // Nếu tài khoản bị khóa đột xuất, Backend trả về 403, cập nhật lại thông báo trực quan
-    if (error.response && error.response.status === 403) {
+    // Nếu tài khoản bị khóa đột xuất hoặc token hết hạn, Backend trả về 403 hoặc 401
+    if (
+      error.response &&
+      (error.response.status === 403 || error.response.status === 401)
+    ) {
       message =
-        error.response.data.message || "Tài khoản của bạn hiện đang bị khóa!";
+        error.response.data.message ||
+        "Tài khoản của bạn hiện đang bị khóa hoặc hết hạn phiên làm việc!";
     }
 
-    // Xóa dữ liệu lỗi/hết hạn trong localStorage
+    // Xóa dữ liệu lỗi/hết hạn trong localStorage (Lưu ý: Chỉ xóa phiên đăng nhập user, KHÔNG xóa giỏ hàng)
     localStorage.removeItem("hpstore_user");
     return redirectToLogin(message);
   }
