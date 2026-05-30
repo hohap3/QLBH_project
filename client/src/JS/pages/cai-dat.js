@@ -1,5 +1,6 @@
 import Swal from "sweetalert2";
 import axios from "axios";
+import { BASE_URL } from "/src/JS/common/header";
 
 // Hàm này sẽ được gọi mỗi khi trang Cài đặt được nạp vào vùng dynamic-content
 export async function initCaiDat() {
@@ -16,7 +17,7 @@ export async function initCaiDat() {
     try {
       // Truyền ID vào query string
       const response = await axios.get(
-        `http://localhost:3000/api/user/profile?id=${userStorage.id}`,
+        `${BASE_URL}/user/profile?id=${userStorage.id}`,
       );
       const user = response.data;
 
@@ -26,10 +27,10 @@ export async function initCaiDat() {
       const inputEmail = document.getElementById("txtEmail");
       const inputSDT = document.getElementById("txtSDT");
 
-      if (inputTenDN) inputTenDN.value = user.TenDangNhap;
-      if (inputHoTen) inputHoTen.value = user.HoTen || "";
-      if (inputEmail) inputEmail.value = user.Email || "";
-      if (inputSDT) inputSDT.value = user.SDT || "";
+      if (inputTenDN) inputTenDN.value = user.tendangnhap;
+      if (inputHoTen) inputHoTen.value = user.hoten || "";
+      if (inputEmail) inputEmail.value = user.email || "";
+      if (inputSDT) inputSDT.value = user.sdt || "";
     } catch (error) {
       console.error("Lỗi khi fetch dữ liệu:", error);
       Swal.fire("Lỗi", "Không thể lấy thông tin từ máy chủ", "error");
@@ -57,10 +58,7 @@ export async function initCaiDat() {
       };
 
       try {
-        const response = await axios.put(
-          "http://localhost:3000/api/user/update",
-          updateData,
-        );
+        const response = await axios.put(`${BASE_URL}/user/update`, updateData);
 
         await Swal.fire({
           icon: "success",
