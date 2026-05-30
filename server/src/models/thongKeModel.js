@@ -5,16 +5,18 @@ const ThongKeModel = {
   getSanPhamTheoDanhMuc: async () => {
     try {
       const pool = await poolPromise;
+      const request = pool.request ? pool.request() : new sql.Request(pool);
+      // PostgreSQL phân biệt chữ hoa thường, khuyến khích viết thường tên bảng/trường
       const query = `
                 SELECT 
-                    D.TenDanhMuc AS label, 
-                    COUNT(S.MaSP) AS value
-                FROM DANHMUC D
-                LEFT JOIN SANPHAM S ON D.MaDanhMuc = S.MaDanhMuc
-                GROUP BY D.MaDanhMuc, D.TenDanhMuc
+                    d.tendanhmuc AS label, 
+                    COUNT(s.masp) AS value
+                FROM danhmuc d
+                LEFT JOIN sanpham s ON d.madanhmuc = s.madanhmuc
+                GROUP BY d.madanhmuc, d.tendanhmuc
             `;
-      const result = await pool.request().query(query);
-      return result.recordset;
+      const result = await request.query(query);
+      return result.recordset || result.rows || result;
     } catch (error) {
       throw error;
     }
@@ -23,15 +25,28 @@ const ThongKeModel = {
   getQuickStats: async () => {
     try {
       const pool = await poolPromise;
-      // 🟢 FIX LOGIC: Doanh thu thực tế nên lấy tổng tiền từ HOADON thay vì tất cả DONHANG
+      const request = pool.request ? pool.request() : new sql.Request(pool);
+
+      // 🟢 FIX CHÍNH: Thay ISNULL bằng COALESCE của PostgreSQL
       const query = `
-               SELECT 
-                  COALESCE((SELECT SUM(D.TongTien) FROM HOADON H JOIN DONHANG D ON H.MaDonHang = D.MaDonHang), 0) as DoanhThu,
-                  (SELECT COUNT(MaDonHang) FROM DONHANG) as TongDonHang,
-                  (SELECT COUNT(MaKH) FROM KHACHHANG) as TongKhachHang
+                SELECT 
+                    COALESCE((SELECT SUM(tongtien) FROM donhang WHERE trangthai != 'Đã hủy'), 0) as doanhthu,
+                    (SELECT COUNT(madonhang) FROM donhang) as tongdonhang,
+                    (SELECT COUNT(makh) FROM khachhang) as tongkhachhang
             `;
-      const result = await pool.request().query(query);
-      return result.recordset[0];
+      const result = await request.query(query);
+      const rows = result.recordset
+        ? result.recordset[0]
+        : result.rows
+          ? result.rows[0]
+          : result[0];
+
+      // Map ngược lại thuộc tính chữ hoa để Controller không bị lỗi đọc undefined
+      return {
+        DoanhThu: rows.doanhthu,
+        TongDonHang: rows.tongdonhang,
+        TongKhachHang: rows.tongkhachhang,
+      };
     } catch (error) {
       throw error;
     }
@@ -40,18 +55,22 @@ const ThongKeModel = {
   getTopSellingProducts: async () => {
     try {
       const pool = await poolPromise;
+      const request = pool.request ? pool.request() : new sql.Request(pool);
+
+      // 🟢 FIX CHÍNH: Sử dụng LIMIT 5 cuối câu thay vì TOP 5 ở đầu câu lệnh
       const query = `
-               SELECT TOP 5 
-                    S.TenSP AS label, 
-                    SUM(CT.SoLuong) AS totalQty,
-                    SUM(CT.SoLuong * CT.GiaBan) AS totalRevenue
-                FROM CHITIET_DONHANG CT
-                JOIN SANPHAM S ON CT.MaSP = S.MaSP
-                GROUP BY S.MaSP, S.TenSP
-                ORDER BY totalRevenue DESC
+                SELECT 
+                    s.tensp AS label, 
+                    SUM(ct.soluong) AS totalqty,
+                    SUM(ct.soluong * ct.giaban) AS totalrevenue
+                FROM chitiet_donhang ct
+                JOIN sanpham s ON ct.masp = s.masp
+                GROUP BY s.masp, s.tensp
+                ORDER BY totalrevenue DESC
+                LIMIT 5
             `;
-      const result = await pool.request().query(query);
-      return result.recordset;
+      const result = await request.query(query);
+      return result.recordset || result.rows || result;
     } catch (error) {
       throw error;
     }
@@ -60,25 +79,30 @@ const ThongKeModel = {
   getOrdersByMonth: async () => {
     try {
       const pool = await poolPromise;
+      const request = pool.request ? pool.request() : new sql.Request(pool);
       const currentYear = new Date().getFullYear();
       const currentMonth = new Date().getMonth() + 1;
 
+      // 🟢 FIX CHÍNH: Dùng EXTRACT(MONTH FROM ...) thay cho MONTH() và YEAR()
       const query = `
                 SELECT 
-                    MONTH(NgayDat) AS month, 
-                    COUNT(MaDonHang) AS orderCount
-                FROM DONHANG
-                WHERE YEAR(NgayDat) = @Year AND MONTH(NgayDat) <= @Month AND TrangThai != N'Đã hủy'
-                GROUP BY MONTH(NgayDat)
-                ORDER BY MONTH(NgayDat) ASC
+                    EXTRACT(MONTH FROM ngaydat) AS month, 
+                    COUNT(madonhang) AS ordercount
+                FROM donhang
+                WHERE EXTRACT(YEAR FROM ngaydat) = $1 AND EXTRACT(MONTH FROM ngaydat) <= $2 AND trangthai != 'Đã hủy'
+                GROUP BY EXTRACT(MONTH FROM ngaydat)
+                ORDER BY month ASC
             `;
 
-      const result = await pool
-        .request()
-        .input("Year", sql.Int, currentYear)
-        .input("Month", sql.Int, currentMonth)
-        .query(query);
-      return result.recordset;
+      // Phụ thuộc vào Driver kết nối PG của bạn, truyền tham số dạng mảng hoặc đối tượng
+      const result = pool.query
+        ? await pool.query(query, [currentYear, currentMonth])
+        : await request
+            .input("Year", sql.Int, currentYear)
+            .input("Month", sql.Int, currentMonth)
+            .query(query);
+
+      return result.recordset || result.rows || result;
     } catch (error) {
       throw error;
     }
@@ -87,25 +111,29 @@ const ThongKeModel = {
   getRevenueByMonth: async () => {
     try {
       const pool = await poolPromise;
+      const request = pool.request ? pool.request() : new sql.Request(pool);
       const currentYear = new Date().getFullYear();
       const currentMonth = new Date().getMonth() + 1;
 
+      // 🟢 FIX CHÍNH: Dùng EXTRACT(MONTH FROM ...) chuẩn Postgres
       const query = `
                 SELECT 
-                    MONTH(NgayXuat) AS month, 
-                    SUM(TongTien) AS totalRevenue
-                FROM HOADON
-                WHERE YEAR(NgayXuat) = @Year AND MONTH(NgayXuat) <= @Month
-                GROUP BY MONTH(NgayXuat)
-                ORDER BY MONTH(NgayXuat) ASC
+                    EXTRACT(MONTH FROM ngayxuat) AS month, 
+                    SUM(tongtien) AS totalrevenue
+                FROM hoadon
+                WHERE EXTRACT(YEAR FROM ngayxuat) = $1 AND EXTRACT(MONTH FROM ngayxuat) <= $2
+                GROUP BY EXTRACT(MONTH FROM ngayxuat)
+                ORDER BY month ASC
             `;
 
-      const result = await pool
-        .request()
-        .input("Year", sql.Int, currentYear)
-        .input("Month", sql.Int, currentMonth)
-        .query(query);
-      return result.recordset;
+      const result = pool.query
+        ? await pool.query(query, [currentYear, currentMonth])
+        : await request
+            .input("Year", sql.Int, currentYear)
+            .input("Month", sql.Int, currentMonth)
+            .query(query);
+
+      return result.recordset || result.rows || result;
     } catch (error) {
       throw error;
     }

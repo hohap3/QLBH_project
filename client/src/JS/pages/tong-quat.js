@@ -99,9 +99,7 @@ async function renderTopSellingList() {
   const listContainer = document.getElementById("topSellingList");
   if (!listContainer) return;
   try {
-    const response = await axios.get(
-      "http://localhost:3000/api/thongke/top-products",
-    );
+    const response = await axios.get(`${BASE_URL}/thongke/top-products`);
     const products = response.data.data;
 
     let html = "";
@@ -138,9 +136,7 @@ async function renderTopSellingList() {
 // 3. GRAPH 1: Biểu đồ ĐƯỜNG - Doanh thu theo tháng (Mới thêm)
 async function renderMonthlyRevenueChart() {
   try {
-    const response = await axios.get(
-      "http://localhost:3000/api/thongke/monthly-revenue",
-    );
+    const response = await axios.get(`${BASE_URL}/thongke/monthly-revenue`);
     const stats = response.data.data;
 
     const labels = stats.map((item) => item.label);
@@ -213,9 +209,7 @@ async function renderMonthlyRevenueChart() {
 // 4. GRAPH 2: Biểu đồ CỘT - Số lượng đơn hàng theo tháng (Giữ lại ban đầu)
 async function renderMonthlyOrdersChart() {
   try {
-    const response = await axios.get(
-      "http://localhost:3000/api/thongke/monthly-orders",
-    );
+    const response = await axios.get(`${BASE_URL}/thongke/monthly-orders`);
     const stats = response.data.data;
 
     // Biểu đồ cũ trả về mảng có key là { month, orderCount }
