@@ -59,13 +59,14 @@ const ThongKeController = {
       const dbData = await ThongKeModel.getOrdersByMonth();
       const currentMonth = new Date().getMonth() + 1;
 
-      // Chuẩn hóa dữ liệu từ tháng 1 đến tháng hiện tại (PostgreSQL trả về 'month' và 'ordercount')
+      // Chuẩn hóa dữ liệu từ tháng 1 đến tháng hiện tại
       const formattedData = Array.from({ length: currentMonth }, (_, index) => {
         const monthNum = index + 1;
-        const matched = dbData.find((item) => item.month === monthNum);
+        // 🟢 Ép kiểu dữ liệu về Number để so sánh chính xác tuyệt đối
+        const matched = dbData.find((item) => Number(item.month) === monthNum);
         return {
           label: `T${monthNum}`,
-          value: matched ? item.ordercount : 0,
+          value: matched ? parseInt(matched.ordercount) : 0, // 🟢
         };
       });
 
@@ -84,13 +85,14 @@ const ThongKeController = {
       const dbData = await ThongKeModel.getRevenueByMonth();
       const currentMonth = new Date().getMonth() + 1;
 
-      // Chuẩn hóa dữ liệu từ tháng 1 đến tháng hiện tại (PostgreSQL trả về 'month' và 'totalrevenue')
+      // Chuẩn hóa dữ liệu từ tháng 1 đến tháng hiện tại
       const formattedData = Array.from({ length: currentMonth }, (_, index) => {
         const monthNum = index + 1;
-        const matched = dbData.find((item) => item.month === monthNum);
+        // 🟢 Ép kiểu dữ liệu về Number để so sánh chính xác tuyệt đối
+        const matched = dbData.find((item) => Number(item.month) === monthNum);
         return {
           label: `T${monthNum}`,
-          value: matched ? item.totalrevenue : 0,
+          value: matched ? parseFloat(matched.totalrevenue) : 0, // 🟢 FIX: Đổi từ item.totalrevenue thành matched.totalrevenue
         };
       });
 
