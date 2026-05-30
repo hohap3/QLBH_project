@@ -11,17 +11,17 @@ router.get("/", categoryController.getCategories);
 router.get("/:id", categoryController.getCategoryById);
 
 // 3. Thêm mới danh mục
-// 🟢 FIX: Thêm '/add' vào endpoint để khớp với Front-End
+
 // POST: https://qlbh-project.onrender.com/api/categories/add
 router.post("/add", categoryController.addCategory);
 
 // 4. Cập nhật danh mục theo ID
-// 🟢 FIX: Thêm '/update' vào endpoint để khớp với Front-End
+
 // PUT: https://qlbh-project.onrender.com/api/categories/update/SmartPhone
 router.put("/update/:id", categoryController.editCategory);
 
 // 5. Xóa danh mục theo ID
-// 🟢 FIX: Thêm '/delete' vào endpoint để khớp với Front-End
+
 // DELETE: https://qlbh-project.onrender.com/api/categories/delete/SmartPhone
 router.delete("/delete/:id", categoryController.removeCategory);
 

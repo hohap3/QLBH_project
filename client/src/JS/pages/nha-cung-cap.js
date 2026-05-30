@@ -1,6 +1,7 @@
 import axios from "axios";
 import Swal from "sweetalert2";
 import { Modal } from "bootstrap";
+import { BASE_URL } from "/src/JS/common/header";
 
 let supplierModal;
 
@@ -23,7 +24,7 @@ export async function initSupplierManager() {
   // 1. Tải danh sách nhà cung cấp
   const loadSuppliers = async () => {
     try {
-      const res = await axios.get("http://localhost:3000/api/suppliers");
+      const res = await axios.get(`${BASE_URL}/suppliers`);
       renderTable(res.data);
       if (totalCount) totalCount.innerText = res.data.length;
     } catch (err) {
@@ -38,16 +39,16 @@ export async function initSupplierManager() {
       .map(
         (ncc) => `
             <tr>
-                <td class="ps-4"><strong>${ncc.MaNCC}</strong></td>
-                <td><span class="fw-bold text-primary">${ncc.TenNCC}</span></td>
+                <td class="ps-4"><strong>${ncc.mancc}</strong></td>
+                <td><span class="fw-bold text-primary">${ncc.tenncc}</span></td>
                 <td>
-                    <div class="small"><i class="fa-solid fa-phone me-1"></i> ${ncc.SDT || "N/A"}</div>
-                    <div class="small text-muted"><i class="fa-solid fa-envelope me-1"></i> ${ncc.Email || "N/A"}</div>
+                    <div class="small"><i class="fa-solid fa-phone me-1"></i> ${ncc.sdt || "N/A"}</div>
+                    <div class="small text-muted"><i class="fa-solid fa-envelope me-1"></i> ${ncc.email || "N/A"}</div>
                 </td>
-                <td><small class="text-muted">${ncc.DiaChi || "<i>Chưa cập nhật</i>"}</small></td>
+                <td><small class="text-muted">${ncc.diachi || "<i>Chưa cập nhật</i>"}</small></td>
                 <td>
                 ${
-                  ncc.TrangThai
+                  ncc.trangthai
                     ? `<span class="badge rounded-pill bg-success-subtle text-success border border-success px-3 py-2">
                             <i class="fa-solid fa-circle-check me-1"></i> Đang hoạt động
                     </span>`
@@ -58,10 +59,10 @@ export async function initSupplierManager() {
             </td>
                 <td class="text-end pe-4">
                     <div class="d-flex justify-content-end align-items-center" style="white-space: nowrap;">
-                        <button class="btn btn-sm btn-outline-primary me-2 btn-edit" data-id="${ncc.MaNCC}">
+                        <button class="btn btn-sm btn-outline-primary me-2 btn-edit" data-id="${ncc.mancc}">
                             <i class="fa-regular fa-pen-to-square"></i> Sửa
                         </button>
-                        <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${ncc.MaNCC}">
+                        <button class="btn btn-sm btn-outline-danger btn-delete" data-id="${ncc.mancc}">
                             <i class="fa-regular fa-trash-can"></i> Xóa
                         </button>
                     </div>
@@ -167,13 +168,10 @@ export async function initSupplierManager() {
 
     try {
       if (isEdit) {
-        await axios.put(
-          `http://localhost:3000/api/suppliers/update/${data.MaNCC}`,
-          data,
-        );
+        await axios.put(`${BASE_URL}/suppliers/update/${data.MaNCC}`, data);
         Swal.fire("Thành công", "Đã cập nhật nhà cung cấp", "success");
       } else {
-        await axios.post("http://localhost:3000/api/suppliers/add", data);
+        await axios.post(`${BASE_URL}/suppliers/add`, data);
         Swal.fire("Thành công", "Đã thêm nhà cung cấp mới", "success");
       }
       supplierModal.hide();
@@ -202,9 +200,7 @@ export async function initSupplierManager() {
 
       if (result.isConfirmed) {
         try {
-          await axios.delete(
-            `http://localhost:3000/api/suppliers/delete/${id}`,
-          );
+          await axios.delete(`${BASE_URL}/suppliers/delete/${id}`);
           Swal.fire("Thành công", "Đã xóa nhà cung cấp", "success");
           loadSuppliers();
         } catch (err) {
@@ -220,21 +216,19 @@ export async function initSupplierManager() {
     if (btnEdit) {
       const id = btnEdit.getAttribute("data-id");
       try {
-        const res = await axios.get(
-          `http://localhost:3000/api/suppliers/${id}`,
-        );
+        const res = await axios.get(`${BASE_URL}/suppliers/${id}`);
         const data = res.data;
 
         const maInput = document.getElementById("maNCC");
-        maInput.value = data.MaNCC;
+        maInput.value = data.mancc;
         maInput.readOnly = true;
         maInput.classList.add("bg-light");
 
-        document.getElementById("tenNCC").value = data.TenNCC;
-        document.getElementById("sdt").value = data.SDT || "";
-        document.getElementById("email").value = data.Email || "";
-        document.getElementById("diaChi").value = data.DiaChi || "";
-        document.getElementById("trangThai").checked = data.TrangThai;
+        document.getElementById("tenNCC").value = data.tenncc;
+        document.getElementById("sdt").value = data.sdt || "";
+        document.getElementById("email").value = data.email || "";
+        document.getElementById("diaChi").value = data.diachi || "";
+        document.getElementById("trangThai").checked = data.trangthai;
 
         modalTitle.innerText = "Cập Nhật Nhà Cung Cấp";
         supplierModal.show();
