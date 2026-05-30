@@ -25,10 +25,12 @@ const ThongKeController = {
         data: stats,
       });
     } catch (error) {
-      console.error("Lỗi lấy tổng quan dashboard:", error);
+      // 🟢 IN RA LỖI CHI TIẾT TẠI ĐÂY ĐỂ BIẾT SAI CỘT HAY SAI BẢNG NÀO:
+      console.error("CHI TIẾT LỖI OVERVIEW:", error.message);
+
       res.status(500).json({
         success: false,
-        message: "Lỗi hệ thống khi lấy số liệu tổng quan",
+        message: error.message, // Trả trực tiếp message lỗi về Postman/Trình duyệt để check nhanh
       });
     }
   },

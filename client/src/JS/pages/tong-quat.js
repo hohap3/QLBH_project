@@ -1,6 +1,8 @@
 import axios from "axios";
 import Chart from "chart.js/auto";
 
+import { BASE_URL } from "/src/JS/common/header";
+
 function generateRandomColors(count) {
   const colors = [];
   for (let i = 0; i < count; i++) {
@@ -13,9 +15,7 @@ function generateRandomColors(count) {
 // 1. Biểu đồ hình tròn: Phân bổ sản phẩm theo danh mục
 async function renderCategoryChart() {
   try {
-    const response = await axios.get(
-      "http://localhost:3000/api/thongke/san-pham-danh-muc",
-    );
+    const response = await axios.get(`${BASE_URL}}/thongke/san-pham-danh-muc`);
     const stats = response.data.data;
 
     const labels = stats.map((item) => item.label);
@@ -274,9 +274,7 @@ async function renderMonthlyOrdersChart() {
 export async function initTongQuan() {
   try {
     // Gọi lấy số liệu 3 thẻ thống kê nhanh phía trên
-    const resStats = await axios.get(
-      "http://localhost:3000/api/thongke/overview",
-    );
+    const resStats = await axios.get(`${BASE_URL}/thongke/overview`);
     const stats = resStats.data.data;
 
     document.getElementById("totalRevenue").innerText = new Intl.NumberFormat(
