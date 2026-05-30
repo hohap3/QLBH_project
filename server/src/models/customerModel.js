@@ -1,99 +1,124 @@
-const { sql, poolPromise } = require("../config/database");
+// src/models/customerModel.js
+const { poolPromise } = require("../config/database");
 
 const Customer = {
-  // 1. Lấy tất cả khách hàng (Kèm trạng thái tài khoản người dùng)
+  // 1. Lấy tất cả khách hàng (Kèm trạng thái tài khoản người dùng và số lượng đơn hàng)
   getAll: async () => {
-    const pool = await poolPromise;
-    const result = await pool.request().query(`
-            SELECT 
-                kh.MaKH, kh.HoTen, kh.SDT, kh.Email, kh.DiaChi, kh.NgayTao, kh.DiemTichLuy,
-                nd.TrangThai, -- Lấy từ bảng NGUOIDUNG để biết tài khoản có bị khóa không
-                COUNT(dh.MaDonHang) AS TongDonHang, -- Tính dựa trên số hóa đơn của khách
-                MAX(dh.NgayDat) AS DonGanNhat
-            FROM KHACHHANG kh
-            LEFT JOIN NGUOIDUNG nd ON kh.MaND = nd.MaND
-            LEFT JOIN DONHANG dh ON kh.MaKH = dh.MaKH
-            GROUP BY 
-                kh.MaKH, kh.HoTen, kh.SDT, kh.Email, 
-                kh.DiaChi, kh.NgayTao, kh.DiemTichLuy, nd.TrangThai
-            ORDER BY kh.NgayTao DESC
-        `);
-    return result.recordset;
+    try {
+      const pool = await poolPromise;
+      const query = `
+        SELECT 
+          kh.makh, kh.hoten, kh.sdt, kh.email, kh.diachi, kh.ngaytao, kh.diemtichluy,
+          nd.trangthai, 
+          COUNT(dh.madonhang)::INT AS tongdonhang, 
+          MAX(dh.ngaydat) AS dongannhat
+        FROM khachhang kh
+        LEFT JOIN nguoidung nd ON kh.mand = nd.mand
+        LEFT JOIN donhang dh ON kh.makh = dh.makh
+        GROUP BY 
+          kh.makh, kh.hoten, kh.sdt, kh.email, 
+          kh.diachi, kh.ngaytao, kh.diemtichluy, nd.trangthai
+        ORDER BY kh.ngaytao DESC
+      `;
+      const result = await pool.query(query);
+      return result.rows;
+    } catch (error) {
+      throw error;
+    }
   },
 
   // 2. Lấy chi tiết 1 khách hàng
   getById: async (maKH) => {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("MaKH", sql.VarChar, maKH)
-      .query("SELECT * FROM KHACHHANG WHERE MaKH = @MaKH");
-    return result.recordset[0];
+    try {
+      const pool = await poolPromise;
+      const query = "SELECT * FROM khachhang WHERE makh = $1";
+      const result = await pool.query(query, [maKH]);
+      return result.rows[0];
+    } catch (error) {
+      throw error;
+    }
   },
 
   // 3. Lấy lịch sử hóa đơn mua hàng của khách hàng
   getOrderHistory: async (maKH) => {
-    const pool = await poolPromise;
-    const result = await pool.request().input("MaKH", sql.VarChar, maKH).query(`
-                SELECT MaDonHang, NgayDat, TongTien, TrangThai 
-                FROM DONHANG 
-                WHERE MaKH = @MaKH 
-                ORDER BY NgayDat DESC
-            `);
-    return result.recordset;
+    try {
+      const pool = await poolPromise;
+      const query = `
+        SELECT madonhang, ngaydat, tongtien, trangthai 
+        FROM donhang 
+        WHERE makh = $1 
+        ORDER BY ngaydat DESC
+      `;
+      const result = await pool.query(query, [maKH]);
+      return result.rows;
+    } catch (error) {
+      throw error;
+    }
   },
 
   // 4. Thêm mới khách hàng
   create: async (data) => {
-    const pool = await poolPromise;
-    return await pool
-      .request()
-      .input("MaKH", sql.VarChar, data.MaKH)
-      .input("HoTen", sql.NVarChar, data.HoTen)
-      .input("SDT", sql.VarChar, data.SDT)
-      .input("Email", sql.VarChar, data.Email || null)
-      .input("DiaChi", sql.NVarChar, data.DiaChi || null)
-      .input("DiemTichLuy", sql.Int, data.DiemTichLuy || 0)
-      .input("MaND", sql.VarChar, data.MaND || null).query(`
-                INSERT INTO KHACHHANG (MaKH, HoTen, SDT, Email, DiaChi, DiemTichLuy, MaND)
-                VALUES (@MaKH, @HoTen, @SDT, @Email, @DiaChi, @DiemTichLuy, @MaND)
-            `);
+    try {
+      const pool = await poolPromise;
+      const query = `
+        INSERT INTO khachhang (makh, hoten, sdt, email, diachi, diemtichluy, mand)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `;
+      const values = [
+        data.MaKH,
+        data.HoTen,
+        data.SDT,
+        data.Email || null,
+        data.DiaChi || null,
+        data.DiemTichLuy || 0,
+        data.MaND || null,
+      ];
+      return await pool.query(query, values);
+    } catch (error) {
+      throw error;
+    }
   },
 
   // 5. Cập nhật thông tin khách hàng & Điểm tích lũy
   update: async (maKH, data) => {
-    const pool = await poolPromise;
-    return await pool
-      .request()
-      .input("MaKH", sql.VarChar, maKH)
-      .input("HoTen", sql.NVarChar, data.HoTen)
-      .input("SDT", sql.VarChar, data.SDT)
-      .input("Email", sql.VarChar, data.Email || null)
-      .input("DiaChi", sql.NVarChar, data.DiaChi || null)
-      .input("DiemTichLuy", sql.Int, data.DiemTichLuy || 0).query(`
-                UPDATE KHACHHANG 
-                SET HoTen = @HoTen, 
-                    SDT = @SDT, 
-                    Email = @Email, 
-                    DiaChi = @DiaChi, 
-                    DiemTichLuy = @DiemTichLuy
-                WHERE MaKH = @MaKH
-            `);
+    try {
+      const pool = await poolPromise;
+      const query = `
+        UPDATE khachhang 
+        SET hoten = $1, 
+            sdt = $2, 
+            email = $3, 
+            diachi = $4, 
+            diemtichluy = $5
+        WHERE makh = $6
+      `;
+      const values = [
+        data.HoTen,
+        data.SDT,
+        data.Email || null,
+        data.DiaChi || null,
+        data.DiemTichLuy || 0,
+        maKH,
+      ];
+      return await pool.query(query, values);
+    } catch (error) {
+      throw error;
+    }
   },
 
-  // 6. ✅ THAY THẾ XÓA BẰNG: Khóa / Mở khóa trạng thái tài khoản (Soft Delete)
+  // 6. Khóa / Mở khóa trạng thái tài khoản (Soft Delete thông qua bảng nguoidung)
   toggleStatus: async (maKH, trangThai) => {
-    const pool = await poolPromise;
-    // Cập nhật trường TrangThai trong bảng NGUOIDUNG thông qua liên kết khóa ngoại MaND
-    return await pool
-      .request()
-      .input("MaKH", sql.VarChar, maKH)
-      .input("TrangThai", sql.Bit, trangThai) // true (1): Hoạt động, false (0): Khóa
-      .query(`
-                UPDATE NGUOIDUNG 
-                SET TrangThai = @TrangThai 
-                WHERE MaND = (SELECT MaND FROM KHACHHANG WHERE MaKH = @MaKH)
-            `);
+    try {
+      const pool = await poolPromise;
+      const query = `
+        UPDATE nguoidung 
+        SET trangthai = $1 
+        WHERE mand = (SELECT mand FROM khachhang WHERE makh = $2)
+      `;
+      return await pool.query(query, [trangThai ? true : false, maKH]);
+    } catch (error) {
+      throw error;
+    }
   },
 };
 

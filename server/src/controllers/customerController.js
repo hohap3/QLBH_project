@@ -1,3 +1,4 @@
+// src/controllers/customerController.js
 const Customer = require("../models/customerModel");
 
 const customerController = {
@@ -7,7 +8,8 @@ const customerController = {
       const data = await Customer.getAll();
       const formattedData = data.map((item) => ({
         ...item,
-        DonGanNhat: item.DonGanNhat ? item.DonGanNhat : null,
+        // Chuyển đổi linh hoạt tên thuộc tính viết thường từ Postgres sang giao diện Front-end mong muốn nếu cần
+        DonGanNhat: item.dongannhat ? item.dongannhat : null,
       }));
       res.status(200).json(formattedData);
     } catch (err) {
@@ -33,7 +35,7 @@ const customerController = {
     }
   },
 
-  // ✅ NGHIỆP VỤ MỚI: Lấy chi tiết thông tin kèm lịch sử hóa đơn mua sắm
+  // Lấy chi tiết thông tin kèm lịch sử hóa đơn mua sắm
   getCustomerHistory: async (req, res) => {
     try {
       const customer = await Customer.getById(req.params.id);
@@ -41,8 +43,6 @@ const customerController = {
         return res.status(404).json({ message: "Khách hàng không tồn tại" });
       }
       const orders = await Customer.getOrderHistory(req.params.id);
-
-      // Trả về đồng thời cả đối tượng khách hàng và mảng đơn hàng liên quan
       res.status(200).json({ customer, orders });
     } catch (err) {
       res.status(500).json({
@@ -64,10 +64,12 @@ const customerController = {
       await Customer.create(req.body);
       res.status(201).json({ message: "Thêm khách hàng thành công" });
     } catch (err) {
-      if (err.number === 2627) {
-        return res
-          .status(400)
-          .json({ message: "Mã khách hàng hoặc Email đã tồn tại" });
+      // 🟢 FIX CHÍNH POSTGRES: Kiểm tra mã lỗi vi phạm UNIQUE hoặc PRIMARY KEY là '23505'
+      if (err.code === "23505") {
+        return res.status(400).json({
+          message:
+            "Mã khách hàng, Số điện thoại hoặc Email đã tồn tại trên hệ thống",
+        });
       }
       res.status(500).json({ message: "Lỗi hệ thống", error: err.message });
     }
@@ -77,25 +79,35 @@ const customerController = {
   editCustomer: async (req, res) => {
     try {
       const result = await Customer.update(req.params.id, req.body);
-      if (result.rowsAffected[0] === 0) {
+
+      // 🟢 FIX CHÍNH POSTGRES: Dùng result.rowCount để kiểm tra số hàng ảnh hưởng thay vì rowsAffected[0]
+      if (result.rowCount === 0) {
         return res.status(404).json({ message: "Không tìm thấy khách hàng" });
       }
       res.status(200).json({ message: "Cập nhật khách hàng thành công" });
     } catch (err) {
+      if (err.code === "23505") {
+        return res.status(400).json({
+          message: "Số điện thoại hoặc Email bị trùng với khách hàng khác",
+        });
+      }
       res
         .status(500)
         .json({ message: "Lỗi khi cập nhật dữ liệu", error: err.message });
     }
   },
 
-  // ✅ THAY THẾ REMOVE: Điều chỉnh trạng thái Khóa / Mở khóa tài khoản khách hàng
+  // Điều chỉnh trạng thái Khóa / Mở khóa tài khoản khách hàng
   toggleCustomerStatus: async (req, res) => {
-    const { trangThai } = req.body; // Client truyền lên { trangThai: true/false }
+    const { trangThai } = req.body;
     try {
       const result = await Customer.toggleStatus(req.params.id, trangThai);
-      if (result.rowsAffected[0] === 0) {
+
+      // 🟢 FIX CHÍNH POSTGRES: Dùng result.rowCount
+      if (result.rowCount === 0) {
         return res.status(404).json({
-          message: "Không tìm thấy tài khoản liên kết với khách hàng này",
+          message:
+            "Không tìm thấy tài khoản liên kết hoặc khách hàng không tồn tại mã người dùng này",
         });
       }
       const msg = trangThai

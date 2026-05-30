@@ -1,6 +1,7 @@
 import axios from "axios";
 import Swal from "sweetalert2";
 import { Modal } from "bootstrap";
+import { BASE_URL } from "/src/JS/common/header";
 
 document.addEventListener("DOMContentLoaded", () => {
   initCustomerManager();
@@ -25,7 +26,7 @@ export async function initCustomerManager() {
    */
   const fetchCustomers = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/api/customers");
+      const response = await axios.get(`${BASE_URL}/customers`);
       const customers = response.data;
 
       renderTable(customers);
@@ -136,10 +137,9 @@ export async function initCustomerManager() {
 
     if (result.isConfirmed) {
       try {
-        await axios.put(
-          `http://localhost:3000/api/customers/toggle-status/${maKH}`,
-          { trangThai: !isActive },
-        );
+        await axios.put(`${BASE_URL}/customers/toggle-status/${maKH}`, {
+          trangThai: !isActive,
+        });
         Swal.fire(
           "Thành công!",
           `Đã ${actionText} tài khoản khách hàng.`,
@@ -161,9 +161,7 @@ export async function initCustomerManager() {
    */
   window.adjustPoints = async (maKH) => {
     try {
-      const response = await axios.get(
-        `http://localhost:3000/api/customers/detail/${maKH}`,
-      );
+      const response = await axios.get(`${BASE_URL}/customers/detail/${maKH}`);
       const kh = response.data;
 
       const { value: newPoints } = await Swal.fire({
@@ -185,7 +183,7 @@ export async function initCustomerManager() {
 
       if (newPoints !== undefined) {
         // Tận dụng lại API update nhưng chỉ truyền lên trường cần sửa
-        await axios.put(`http://localhost:3000/api/customers/update/${maKH}`, {
+        await axios.put(`${BASE_URL}/customers/update/${maKH}`, {
           HoTen: kh.HoTen, // Giữ nguyên thông tin cũ
           SDT: kh.SDT,
           Email: kh.Email,
@@ -210,9 +208,7 @@ export async function initCustomerManager() {
    */
   window.viewDetails = async (maKH) => {
     try {
-      const response = await axios.get(
-        `http://localhost:3000/api/customers/history/${maKH}`,
-      );
+      const response = await axios.get(`${BASE_URL}/customers/history/${maKH}`);
       const { customer, orders } = response.data;
 
       let orderRows = `<tr><td colspan="4" class="text-center text-muted py-3">Khách hàng chưa có lịch sử mua hàng</td></tr>`;
