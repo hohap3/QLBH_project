@@ -1,6 +1,5 @@
 import axios from "axios";
 import Chart from "chart.js/auto";
-
 import { BASE_URL } from "/src/JS/common/header";
 
 function generateRandomColors(count) {
@@ -15,35 +14,33 @@ function generateRandomColors(count) {
 // 1. Biểu đồ hình tròn: Phân bổ sản phẩm theo danh mục
 async function renderCategoryChart() {
   try {
-    const response = await axios.get(`${BASE_URL}}/thongke/san-pham-danh-muc`);
+    // 🟢 FIX CÚ PHÁP: Xóa dấu } thừa ở ${BASE_URL}
+    const response = await axios.get(`${BASE_URL}/thongke/san-pham-danh-muc`);
     const stats = response.data.data;
 
-    const labels = stats.map((item) => item.label);
-    const dataValues = stats.map((item) => item.value);
+    // PostgreSQL trả về trường viết thường hoặc object tùy biến, hỗ trợ cả hai kiểu label/value
+    const labels = stats.map((item) => item.label || item.tendanhmuc);
+    const dataValues = stats.map((item) => parseInt(item.value) || 0);
 
-    // Tự động tạo mảng màu dựa trên số lượng danh mục thực tế
     const dynamicColors = generateRandomColors(stats.length);
-
     const canvasElement = document.getElementById("categoryPieChart");
-    if (!canvasElement) return; // Bảo vệ code nếu không tìm thấy canvas
+    if (!canvasElement) return;
 
     const ctx = canvasElement.getContext("2d");
-
-    // Xóa biểu đồ cũ nếu đã tồn tại để tránh lỗi đè
     const existingChart = Chart.getChart(canvasElement);
     if (existingChart) {
       existingChart.destroy();
     }
 
     new Chart(ctx, {
-      type: "pie", // Biểu đồ hình tròn
+      type: "pie",
       data: {
         labels: labels,
         datasets: [
           {
             data: dataValues,
-            backgroundColor: dynamicColors, // Sử dụng màu động
-            hoverOffset: 15, // Hiệu ứng nổi bật khi di chuột vào (tăng một chút cho rõ)
+            backgroundColor: dynamicColors,
+            hoverOffset: 15,
             borderWidth: 2,
             borderColor: "#ffffff",
           },
@@ -52,18 +49,15 @@ async function renderCategoryChart() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
-
-        // 🌟 MỤC THÊM MỚI: Cấu hình Animation cho biểu đồ hình tròn
         animation: {
-          animateRotate: true, // 🌟 Bật hiệu ứng xoay từ tâm khi xuất hiện
-          animateScale: true, // 🌟 Bật hiệu ứng phóng to từ tâm khi xuất hiện
-          duration: 1500, // Thời gian chạy animation (ms) - 1.5 giây cho mượt
-          easing: "easeOutQuart", // 🌟 Kiểu lướt: Nhanh ban đầu và chậm dần về cuối trông rất chuyên nghiệp
+          animateRotate: true,
+          animateScale: true,
+          duration: 1500,
+          easing: "easeOutQuart",
         },
-
         plugins: {
           legend: {
-            position: "right", // Chú thích nằm bên phải
+            position: "right",
             labels: {
               usePointStyle: true,
               pointStyle: "circle",
@@ -72,13 +66,12 @@ async function renderCategoryChart() {
             },
           },
           tooltip: {
-            backgroundColor: "rgba(26, 28, 46, 0.9)", // Định dạng lại tooltip cho đẹp
+            backgroundColor: "rgba(26, 28, 46, 0.9)",
             padding: 12,
             cornerRadius: 8,
             titleFont: { size: 14, weight: "bold" },
             bodyFont: { size: 13 },
             callbacks: {
-              // Bổ sung thêm ký tự "sản phẩm" vào sau con số hiển thị
               label: function (context) {
                 const label = context.label || "";
                 const value = context.parsed || 0;
@@ -104,10 +97,14 @@ async function renderTopSellingList() {
 
     let html = "";
     products.forEach((item, index) => {
+      // 🟢 ĐỒNG BỘ ĐỌC TRƯỜNG: Hỗ trợ cả totalRevenue/totalrevenue viết thường của Postgres
+      const revenue = parseFloat(item.totalRevenue || item.totalrevenue) || 0;
+      const qty = parseInt(item.totalQty || item.totalqty) || 0;
+
       const formattedRevenue = new Intl.NumberFormat("vi-VN", {
         style: "currency",
         currency: "VND",
-      }).format(item.totalRevenue);
+      }).format(revenue);
 
       html += `
                 <div class="top-item d-flex align-items-center p-3 rounded-4 mb-3" 
@@ -117,7 +114,7 @@ async function renderTopSellingList() {
                         <div class="product-name mb-0" style="font-weight: 600; color: #1a1c2e;">
                             ${item.label}
                         </div>
-                        <small class="text-muted">${item.totalQty} sản phẩm đã bán</small>
+                        <small class="text-muted">${qty} sản phẩm đã bán</small>
                     </div>
                     <div class="product-revenue text-end" style="font-weight: 700; color: #2563eb;">
                         ${formattedRevenue}
@@ -133,14 +130,14 @@ async function renderTopSellingList() {
   }
 }
 
-// 3. GRAPH 1: Biểu đồ ĐƯỜNG - Doanh thu theo tháng (Mới thêm)
+// 3. GRAPH 1: Biểu đồ ĐƯỜNG - Doanh thu theo tháng
 async function renderMonthlyRevenueChart() {
   try {
     const response = await axios.get(`${BASE_URL}/thongke/monthly-revenue`);
     const stats = response.data.data;
 
     const labels = stats.map((item) => item.label);
-    const dataValues = stats.map((item) => item.value);
+    const dataValues = stats.map((item) => parseFloat(item.value) || 0);
 
     const canvasElement = document.getElementById("monthlyRevenueChart");
     if (!canvasElement) return;
@@ -160,7 +157,7 @@ async function renderMonthlyRevenueChart() {
             borderColor: "#3b82f6",
             backgroundColor: "rgba(59, 130, 246, 0.04)",
             borderWidth: 3,
-            tension: 0.4, // Đường cong lượn sóng mượt
+            tension: 0.4,
             pointBackgroundColor: "#ffffff",
             pointBorderColor: "#3b82f6",
             pointBorderWidth: 2,
@@ -206,15 +203,15 @@ async function renderMonthlyRevenueChart() {
   }
 }
 
-// 4. GRAPH 2: Biểu đồ CỘT - Số lượng đơn hàng theo tháng (Giữ lại ban đầu)
+// 4. GRAPH 2: Biểu đồ CỘT - Số lượng đơn hàng theo tháng
 async function renderMonthlyOrdersChart() {
   try {
     const response = await axios.get(`${BASE_URL}/thongke/monthly-orders`);
     const stats = response.data.data;
 
-    // Biểu đồ cũ trả về mảng có key là { month, orderCount }
-    const labels = stats.map((item) => `T${item.month}`);
-    const dataValues = stats.map((item) => item.orderCount);
+    // 🟢 FIX LỖI: Đồng bộ mapping với dữ liệu đã được Backend chuẩn hóa kiểu mới { label, value }
+    const labels = stats.map((item) => item.label);
+    const dataValues = stats.map((item) => parseInt(item.value) || 0);
 
     const canvasElement = document.getElementById("monthlyOrdersChart");
     if (!canvasElement) return;
@@ -224,16 +221,16 @@ async function renderMonthlyOrdersChart() {
     if (existingChart) existingChart.destroy();
 
     new Chart(ctx, {
-      type: "bar", // Dạng cột
+      type: "bar",
       data: {
         labels: labels,
         datasets: [
           {
             label: "Số đơn",
             data: dataValues,
-            backgroundColor: "#9333ea", // Màu tím theo đúng hình monthly.jpg của bạn
+            backgroundColor: "#9333ea",
             borderRadius: 5,
-            barThickness: 30, // Điều chỉnh độ rộng cột gọn lại để cân xứng giao diện
+            barThickness: 30,
           },
         ],
       },
@@ -244,7 +241,7 @@ async function renderMonthlyOrdersChart() {
           y: {
             beginAtZero: true,
             grid: { drawBorder: false, color: "#f0f0f0" },
-            ticks: { stepSize: 90, color: "#64748b" },
+            ticks: { color: "#64748b" },
           },
           x: {
             grid: { display: false },
@@ -267,24 +264,39 @@ async function renderMonthlyOrdersChart() {
 // Hàm khởi tạo tổng hợp toàn bộ Dashboard Admin
 export async function initTongQuan() {
   try {
-    // Gọi lấy số liệu 3 thẻ thống kê nhanh phía trên
     const resStats = await axios.get(`${BASE_URL}/thongke/overview`);
     const stats = resStats.data.data;
 
-    document.getElementById("totalRevenue").innerText = new Intl.NumberFormat(
-      "vi-VN",
-      { style: "currency", currency: "VND" },
-    ).format(stats.DoanhThu || 0);
-    document.getElementById("totalOrders").innerText = stats.TongDonHang || 0;
-    document.getElementById("totalCustomers").innerText =
-      stats.TongKhachHang || 0;
+    // 🟢 FIX LINH HOẠT: Hỗ trợ đọc cả thuộc tính chữ Hoa hoặc chữ thường trả từ database Postgres
+    const doanhThu =
+      stats.DoanhThu !== undefined ? stats.DoanhThu : stats.doanhthu || 0;
+    const tongDonHang =
+      stats.TongDonHang !== undefined
+        ? stats.TongDonHang
+        : stats.tongdonhang || 0;
+    const tongKhachHang =
+      stats.TongKhachHang !== undefined
+        ? stats.TongKhachHang
+        : stats.tongkhachhang || 0;
 
-    // 🌟 Kích hoạt đồng thời cả 2 đồ thị riêng biệt
+    const revenueEl = document.getElementById("totalRevenue");
+    const ordersEl = document.getElementById("totalOrders");
+    const customersEl = document.getElementById("totalCustomers");
+
+    if (revenueEl) {
+      revenueEl.innerText = new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+      }).format(parseFloat(doanhThu) || 0);
+    }
+    if (ordersEl) ordersEl.innerText = tongDonHang;
+    if (customersEl) customersEl.innerText = tongKhachHang;
+
+    // Kích hoạt đồng thời cả 4 đồ thị và danh sách riêng biệt
     renderCategoryChart();
     renderTopSellingList();
-
-    renderMonthlyRevenueChart(); // Chạy Graph Đường (Doanh thu)
-    renderMonthlyOrdersChart(); // Chạy Graph Cột (Số đơn)
+    renderMonthlyRevenueChart();
+    renderMonthlyOrdersChart();
   } catch (err) {
     console.error("Lỗi cập nhật Dashboard tổng quan:", err);
   }
