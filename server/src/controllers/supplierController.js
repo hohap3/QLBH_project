@@ -1,3 +1,4 @@
+// src/controllers/supplierController.js
 const Supplier = require("../models/supplierModel");
 
 const supplierController = {
@@ -7,12 +8,10 @@ const supplierController = {
       const suppliers = await Supplier.getAll();
       res.status(200).json(suppliers);
     } catch (err) {
-      res
-        .status(500)
-        .json({
-          message: "Lỗi Server khi tải danh sách NCC",
-          error: err.message,
-        });
+      res.status(500).json({
+        message: "Lỗi Server khi tải danh sách NCC",
+        error: err.message,
+      });
     }
   },
 
@@ -33,61 +32,76 @@ const supplierController = {
     }
   },
 
-  // Thêm mới
+  // Thêm mới nhà cung cấp
   createSupplier: async (req, res) => {
     try {
       await Supplier.create(req.body);
       res.status(201).json({ message: "Thêm nhà cung cấp thành công" });
     } catch (err) {
-      // Mã lỗi 2627: Vi phạm UNIQUE hoặc PRIMARY KEY
-      if (err.number === 2627 || err.number === 2601) {
-        if (err.message.includes("PRIMARY"))
+      // 🟢 FIX CHÍNH POSTGRES: Mã 23505 đại diện cho Duplicate / Vi phạm UNIQUE hoặc PRIMARY KEY
+      if (err.code === "23505") {
+        const errMsg = err.message.toLowerCase();
+        if (errMsg.includes("pkey") || errMsg.includes("primary"))
           return res
             .status(400)
             .json({ message: "Mã nhà cung cấp này đã tồn tại" });
-        if (err.message.includes("UQ_SDT"))
+        if (errMsg.includes("sdt") || errMsg.includes("phone"))
           return res
             .status(400)
             .json({ message: "Số điện thoại này đã được đăng ký" });
-        if (err.message.includes("UQ_Email"))
+        if (errMsg.includes("email"))
           return res.status(400).json({ message: "Email này đã được đăng ký" });
       }
       res.status(500).json({ message: "Lỗi hệ thống", error: err.message });
     }
   },
 
-  // Cập nhật
+  // Cập nhật thông tin
   updateSupplier: async (req, res) => {
     try {
       const result = await Supplier.update(req.params.id, req.body);
-      if (result.rowsAffected[0] === 0) {
+
+      // 🟢 FIX CHÍNH POSTGRES: Sử dụng result.rowCount thay vì rowsAffected[0]
+      if (result.rowCount === 0) {
         return res
           .status(404)
           .json({ message: "Không tìm thấy NCC để cập nhật" });
       }
       res.status(200).json({ message: "Cập nhật thông tin thành công" });
     } catch (err) {
+      if (err.code === "23505") {
+        return res.status(400).json({
+          message:
+            "Số điện thoại hoặc Email này đã tồn tại ở nhà cung cấp khác!",
+        });
+      }
       res
         .status(500)
         .json({ message: "Lỗi khi cập nhật dữ liệu", error: err.message });
     }
   },
 
-  // Xóa
+  // Xóa nhà cung cấp
   deleteSupplier: async (req, res) => {
     try {
       const result = await Supplier.delete(req.params.id);
-      if (result.rowsAffected[0] === 0) {
+
+      // 🟢 FIX CHÍNH POSTGRES: Sử dụng result.rowCount thay vì rowsAffected[0]
+      if (result.rowCount === 0) {
         return res.status(404).json({ message: "Không tìm thấy NCC để xóa" });
       }
       res.status(200).json({ message: "Đã xóa nhà cung cấp thành công" });
     } catch (err) {
-      // Lỗi này thường xảy ra nếu NCC đang có sản phẩm liên kết (khóa ngoại)
-      res.status(500).json({
-        message:
-          "Không thể xóa. Nhà cung cấp này có thể đang liên kết với các sản phẩm khác.",
-        error: err.message,
-      });
+      // 🟢 FIX CHÍNH POSTGRES: Lỗi mã 23503 là vi phạm ràng buộc khoá ngoại (Foreign Key Violation)
+      if (err.code === "23503") {
+        return res.status(400).json({
+          message:
+            "Không thể xóa. Nhà cung cấp này hiện đang liên kết với dữ liệu sản phẩm trong kho.",
+        });
+      }
+      res
+        .status(500)
+        .json({ message: "Lỗi khi xóa nhà cung cấp", error: err.message });
     }
   },
 };

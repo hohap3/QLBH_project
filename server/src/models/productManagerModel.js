@@ -1,34 +1,37 @@
-const { sql, poolPromise } = require("../config/database");
+// src/models/productManagerModel.js
+const { poolPromise } = require("../config/database");
 
 const productManagerModel = {
-  // Lấy tất cả sản phẩm (kèm tên danh mục và nhà cung cấp nếu cần)
+  // Lấy tất cả sản phẩm (Kèm tên danh mục và nhà cung cấp)
   getAllProducts: async () => {
     try {
       const pool = await poolPromise;
-      const result = await pool.request().query(`
-                SELECT sp.*, dm.TenDanhMuc, ncc.TenNCC 
-                FROM SANPHAM sp
-                JOIN DANHMUC dm ON sp.MaDanhMuc = dm.MaDanhMuc
-                JOIN NHACUNGCAP ncc ON sp.MaNCC = ncc.MaNCC
-            `);
-      return result.recordset;
+      const query = `
+                SELECT sp.*, dm.tendanhmuc AS "TenDanhMuc", ncc.tenncc AS "TenNCC"
+                FROM sanpham sp
+                JOIN danhmuc dm ON sp.madanhmuc = dm.madanhmuc
+                JOIN nhacungcap ncc ON sp.mancc = ncc.mancc
+            `;
+      const result = await pool.query(query);
+      return result.rows; // Trả về danh sách mảng đối tượng
     } catch (error) {
       throw error;
     }
   },
 
+  // Lấy chi tiết một sản phẩm theo ID
   getProductById: async (maSP) => {
     try {
       const pool = await poolPromise;
-      const result = await pool.request().input("MaSP", sql.VarChar, maSP)
-        .query(`
-                SELECT sp.*, dm.TenDanhMuc, ncc.TenNCC 
-                FROM SANPHAM sp
-                JOIN DANHMUC dm ON sp.MaDanhMuc = dm.MaDanhMuc
-                JOIN NHACUNGCAP ncc ON sp.MaNCC = ncc.MaNCC
-                WHERE sp.MaSP = @MaSP
-            `);
-      return result.recordset[0]; // Trả về đối tượng đầu tiên tìm thấy
+      const query = `
+                SELECT sp.*, dm.tendanhmuc AS "TenDanhMuc", ncc.tenncc AS "TenNCC"
+                FROM sanpham sp
+                JOIN danhmuc dm ON sp.madanhmuc = dm.madanhmuc
+                JOIN nhacungcap ncc ON sp.mancc = ncc.mancc
+                WHERE sp.masp = $1
+            `;
+      const result = await pool.query(query, [maSP]);
+      return result.rows[0];
     } catch (error) {
       throw error;
     }
@@ -38,50 +41,53 @@ const productManagerModel = {
   createProduct: async (data) => {
     try {
       const pool = await poolPromise;
-      await pool
-        .request()
-        .input("MaSP", sql.VarChar, data.MaSP)
-        .input("TenSP", sql.NVarChar, data.TenSP)
-        // Ép kiểu để tránh lỗi String vs Decimal/Int
-        .input("GiaNhap", sql.Decimal(18, 2), parseFloat(data.GiaNhap) || 0)
-        .input("GiaBan", sql.Decimal(18, 2), parseFloat(data.GiaBan) || 0)
-        .input("SoLuongTon", sql.Int, parseInt(data.SoLuongTon) || 0)
-        .input("MoTa", sql.NVarChar, data.MoTa || null)
-        .input("DonViTinh", sql.NVarChar, data.DonViTinh || null)
-        .input("MaDanhMuc", sql.VarChar, data.MaDanhMuc)
-        .input("MaNCC", sql.VarChar, data.MaNCC)
-        .input("HinhAnh", sql.VarChar, data.HinhAnh || null).query(`
-                    INSERT INTO SANPHAM (MaSP, TenSP, GiaNhap, GiaBan, SoLuongTon, MoTa, DonViTinh, MaDanhMuc, MaNCC, HinhAnh)
-                    VALUES (@MaSP, @TenSP, @GiaNhap, @GiaBan, @SoLuongTon, @MoTa, @DonViTinh, @MaDanhMuc, @MaNCC, @HinhAnh)
-                `);
+      const query = `
+                INSERT INTO sanpham (masp, tensp, gianhap, giaban, soluongton, mota, donvitinh, madanhmuc, mancc, hinhanh)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            `;
+      const values = [
+        data.MaSP,
+        data.TenSP,
+        parseFloat(data.GiaNhap) || 0,
+        parseFloat(data.GiaBan) || 0,
+        parseInt(data.SoLuongTon) || 0,
+        data.MoTa || null,
+        data.DonViTinh || null,
+        data.MaDanhMuc,
+        data.MaNCC,
+        data.HinhAnh || null,
+      ];
+      await pool.query(query, values);
       return true;
     } catch (error) {
       throw error;
     }
   },
 
-  // Cập nhật sản phẩm
+  // Cập nhật thông tin sản phẩm
   updateProduct: async (maSP, data) => {
     try {
       const pool = await poolPromise;
-      await pool
-        .request()
-        .input("MaSP", sql.VarChar, maSP)
-        .input("TenSP", sql.NVarChar, data.TenSP)
-        .input("GiaNhap", sql.Decimal(18, 2), parseFloat(data.GiaNhap) || 0)
-        .input("GiaBan", sql.Decimal(18, 2), parseFloat(data.GiaBan) || 0)
-        .input("SoLuongTon", sql.Int, parseInt(data.SoLuongTon) || 0)
-        .input("MoTa", sql.NVarChar, data.MoTa || null)
-        .input("DonViTinh", sql.NVarChar, data.DonViTinh || null)
-        .input("MaDanhMuc", sql.VarChar, data.MaDanhMuc)
-        .input("MaNCC", sql.VarChar, data.MaNCC)
-        .input("HinhAnh", sql.VarChar, data.HinhAnh || null).query(`
-                    UPDATE SANPHAM 
-                    SET TenSP = @TenSP, GiaNhap = @GiaNhap, GiaBan = @GiaBan, 
-                        SoLuongTon = @SoLuongTon, MoTa = @MoTa, DonViTinh = @DonViTinh, 
-                        MaDanhMuc = @MaDanhMuc, MaNCC = @MaNCC, HinhAnh = @HinhAnh
-                    WHERE MaSP = @MaSP
-                `);
+      const query = `
+                UPDATE sanpham 
+                SET tensp = $1, gianhap = $2, giaban = $3, 
+                    soluongton = $4, mota = $5, donvitinh = $6, 
+                    madanhmuc = $7, mancc = $8, hinhanh = $9
+                WHERE masp = $10
+            `;
+      const values = [
+        data.TenSP,
+        parseFloat(data.GiaNhap) || 0,
+        parseFloat(data.GiaBan) || 0,
+        parseInt(data.SoLuongTon) || 0,
+        data.MoTa || null,
+        data.DonViTinh || null,
+        data.MaDanhMuc,
+        data.MaNCC,
+        data.HinhAnh || null,
+        maSP,
+      ];
+      await pool.query(query, values);
       return true;
     } catch (error) {
       throw error;
@@ -92,63 +98,81 @@ const productManagerModel = {
   deleteProduct: async (maSP) => {
     try {
       const pool = await poolPromise;
-      await pool
-        .request()
-        .input("MaSP", sql.VarChar, maSP)
-        .query("DELETE FROM SANPHAM WHERE MaSP = @MaSP");
+      const query = "DELETE FROM sanpham WHERE masp = $1";
+      await pool.query(query, [maSP]);
       return true;
     } catch (error) {
       throw error;
     }
   },
 
+  // Đồng bộ hàng loạt sản phẩm từ file Excel (Thêm mới hoặc Cập nhật)
   bulkCreateOrUpdateProducts: async (productsList) => {
     try {
       const pool = await poolPromise;
       let successCount = 0;
 
       for (const item of productsList) {
-        if (!item.MaSP || !item.TenSP || !item.MaDanhMuc || !item.MaNCC)
-          continue;
+        // Đọc linh hoạt từ file Excel (hỗ trợ cả cột chữ hoa lẫn chữ thường)
+        const maSP = item.MaSP || item.masp;
+        const tenSP = item.TenSP || item.tensp;
+        const maDanhMuc = item.MaDanhMuc || item.madanhmuc;
+        const maNCC = item.MaNCC || item.mancc;
 
-        // Kiểm tra xem mã sản phẩm này đã tồn tại hay chưa
-        const checkExist = await pool
-          .request()
-          .input("CheckMaSP", sql.VarChar, item.MaSP)
-          .query(
-            "SELECT COUNT(*) as count FROM SANPHAM WHERE MaSP = @CheckMaSP",
-          );
+        if (!maSP || !tenSP || !maDanhMuc || !maNCC) continue;
 
-        const isExist = checkExist.recordset[0].count > 0;
+        // Kiểm tra trùng mã bằng câu lệnh đếm trực tiếp của Postgres
+        const checkQuery =
+          "SELECT COUNT(*)::int AS count FROM sanpham WHERE masp = $1";
+        const checkExist = await pool.query(checkQuery, [maSP]);
+        const isExist = checkExist.rows[0].count > 0;
 
-        const request = pool
-          .request()
-          .input("MaSP", sql.VarChar, item.MaSP)
-          .input("TenSP", sql.NVarChar, item.TenSP)
-          .input("GiaNhap", sql.Decimal(18, 2), parseFloat(item.GiaNhap) || 0)
-          .input("GiaBan", sql.Decimal(18, 2), parseFloat(item.GiaBan) || 0)
-          .input("SoLuongTon", sql.Int, parseInt(item.SoLuongTon) || 0)
-          .input("MoTa", sql.NVarChar, item.MoTa || null)
-          .input("DonViTinh", sql.NVarChar, item.DonViTinh || null)
-          .input("MaDanhMuc", sql.VarChar, item.MaDanhMuc)
-          .input("MaNCC", sql.VarChar, item.MaNCC)
-          .input("HinhAnh", sql.VarChar, item.HinhAnh || null);
+        const giaNhap = parseFloat(item.GiaNhap || item.gianhap) || 0;
+        const giaBan = parseFloat(item.GiaBan || item.giaban) || 0;
+        const soLuongTon = parseInt(item.SoLuongTon || item.soluongton) || 0;
+        const moTa = item.MoTa || item.mota || null;
+        const donViTinh = item.DonViTinh || item.donvitinh || null;
+        const hinhAnh = item.HinhAnh || item.hinhanh || null;
 
         if (isExist) {
-          // Nếu đã tồn tại -> Thực hiện cập nhật thông tin
-          await request.query(`
-            UPDATE SANPHAM 
-            SET TenSP = @TenSP, GiaNhap = @GiaNhap, GiaBan = @GiaBan, 
-                SoLuongTon = @SoLuongTon, MoTa = @MoTa, DonViTinh = @DonViTinh, 
-                MaDanhMuc = @MaDanhMuc, MaNCC = @MaNCC, HinhAnh = COALESCE(@HinhAnh, HinhAnh)
-            WHERE MaSP = @MaSP
-          `);
+          // Trùng mã -> Thực hiện UPDATE
+          const updateQuery = `
+                        UPDATE sanpham 
+                        SET tensp = $1, gianhap = $2, giaban = $3, 
+                            soluongton = $4, mota = $5, donvitinh = $6, 
+                            madanhmuc = $7, mancc = $8, hinhanh = COALESCE($9, hinhanh)
+                        WHERE masp = $10
+                    `;
+          await pool.query(updateQuery, [
+            tenSP,
+            giaNhap,
+            giaBan,
+            soLuongTon,
+            moTa,
+            donViTinh,
+            maDanhMuc,
+            maNCC,
+            hinhAnh,
+            maSP,
+          ]);
         } else {
-          // Nếu chưa tồn tại -> Thêm mới sản phẩm
-          await request.query(`
-            INSERT INTO SANPHAM (MaSP, TenSP, GiaNhap, GiaBan, SoLuongTon, MoTa, DonViTinh, MaDanhMuc, MaNCC, HinhAnh)
-            VALUES (@MaSP, @TenSP, @GiaNhap, @GiaBan, @SoLuongTon, @MoTa, @DonViTinh, @MaDanhMuc, @MaNCC, @HinhAnh)
-          `);
+          // Chưa tồn tại -> Thực hiện INSERT
+          const insertQuery = `
+                        INSERT INTO sanpham (masp, tensp, gianhap, giaban, soluongton, mota, donvitinh, madanhmuc, mancc, hinhanh)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    `;
+          await pool.query(insertQuery, [
+            maSP,
+            tenSP,
+            giaNhap,
+            giaBan,
+            soLuongTon,
+            moTa,
+            donViTinh,
+            maDanhMuc,
+            maNCC,
+            hinhAnh,
+          ]);
         }
         successCount++;
       }

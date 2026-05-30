@@ -1,70 +1,86 @@
-const { sql, poolPromise } = require("../config/database");
+// src/models/supplierModel.js
+const { poolPromise } = require("../config/database");
 
 const Supplier = {
-  // Lấy tất cả nhà cung cấp
+  // Lấy tất cả nhà cung cấp (Sắp xếp theo ngày tạo giảm dần)
   getAll: async () => {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .query("SELECT * FROM NHACUNGCAP ORDER BY NgayTao DESC");
-    return result.recordset;
+    try {
+      const pool = await poolPromise;
+      // PostgreSQL khuyến khích viết thường tên bảng/trường: nhacungcap, ngaytao
+      const query = "SELECT * FROM nhacungcap ORDER BY ngaytao DESC";
+      const result = await pool.query(query);
+      return result.rows;
+    } catch (error) {
+      throw error;
+    }
   },
 
   // Lấy chi tiết 1 nhà cung cấp
   getById: async (maNCC) => {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("MaNCC", sql.VarChar, maNCC)
-      .query("SELECT * FROM NHACUNGCAP WHERE MaNCC = @MaNCC");
-    return result.recordset[0];
+    try {
+      const pool = await poolPromise;
+      const query = "SELECT * FROM nhacungcap WHERE mancc = $1";
+      const result = await pool.query(query, [maNCC]);
+      return result.rows[0];
+    } catch (error) {
+      throw error;
+    }
   },
 
   // Thêm mới nhà cung cấp
   create: async (data) => {
-    const pool = await poolPromise;
-    return await pool
-      .request()
-      .input("MaNCC", sql.VarChar, data.MaNCC)
-      .input("TenNCC", sql.NVarChar, data.TenNCC)
-      .input("SDT", sql.VarChar, data.SDT)
-      .input("Email", sql.VarChar, data.Email)
-      .input("DiaChi", sql.NVarChar, data.DiaChi)
-      .input(
-        "TrangThai",
-        sql.Bit,
-        data.TrangThai !== undefined ? data.TrangThai : 1,
-      ).query(`
-                INSERT INTO NHACUNGCAP (MaNCC, TenNCC, SDT, Email, DiaChi, TrangThai)
-                VALUES (@MaNCC, @TenNCC, @SDT, @Email, @DiaChi, @TrangThai)
-            `);
+    try {
+      const pool = await poolPromise;
+      const query = `
+                INSERT INTO nhacungcap (mancc, tenncc, sdt, email, diachi, trangthai)
+                VALUES ($1, $2, $3, $4, $5, $6)
+            `;
+      const values = [
+        data.MaNCC,
+        data.TenNCC,
+        data.SDT,
+        data.Email,
+        data.DiaChi,
+        data.TrangThai !== undefined ? data.TrangThai : true, // Kiểu BOOLEAN trong Postgres
+      ];
+      return await pool.query(query, values);
+    } catch (error) {
+      throw error;
+    }
   },
 
   // Cập nhật nhà cung cấp
   update: async (maNCC, data) => {
-    const pool = await poolPromise;
-    return await pool
-      .request()
-      .input("MaNCC", sql.VarChar, maNCC)
-      .input("TenNCC", sql.NVarChar, data.TenNCC)
-      .input("SDT", sql.VarChar, data.SDT || null) // Cho phép null nếu trống
-      .input("Email", sql.VarChar, data.Email || null)
-      .input("DiaChi", sql.NVarChar, data.DiaChi || null)
-      // Chuyển đổi về 1 hoặc 0 cho kiểu BIT
-      .input("TrangThai", sql.Bit, data.TrangThai ? 1 : 0).query(`
-            UPDATE NHACUNGCAP 
-            SET TenNCC = @TenNCC, SDT = @SDT, Email = @Email, DiaChi = @DiaChi, TrangThai = @TrangThai
-            WHERE MaNCC = @MaNCC
-        `);
+    try {
+      const pool = await poolPromise;
+      const query = `
+                UPDATE nhacungcap 
+                SET tenncc = $1, sdt = $2, email = $3, diachi = $4, trangthai = $5
+                WHERE mancc = $6
+            `;
+      const values = [
+        data.TenNCC,
+        data.SDT || null,
+        data.Email || null,
+        data.DiaChi || null,
+        data.TrangThai ? true : false,
+        maNCC,
+      ];
+      return await pool.query(query, values);
+    } catch (error) {
+      throw error;
+    }
   },
 
   // Xóa nhà cung cấp
   delete: async (maNCC) => {
-    const pool = await poolPromise;
-    return await pool
-      .request()
-      .input("MaNCC", sql.VarChar, maNCC)
-      .query("DELETE FROM NHACUNGCAP WHERE MaNCC = @MaNCC");
+    try {
+      const pool = await poolPromise;
+      const query = "DELETE FROM nhacungcap WHERE mancc = $1";
+      return await pool.query(query, [maNCC]);
+    } catch (error) {
+      throw error;
+    }
   },
 };
 

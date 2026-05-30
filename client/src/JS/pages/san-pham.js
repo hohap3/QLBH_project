@@ -1,6 +1,7 @@
 import axios from "axios";
 import Swal from "sweetalert2";
 import { Modal } from "bootstrap";
+import { BASE_URL } from "/src/JS/common/header";
 
 let editModal;
 let addModal;
@@ -33,8 +34,8 @@ export async function initProductManager() {
   const loadDropdowns = async () => {
     try {
       const [resDM, resNCC] = await Promise.all([
-        axios.get("http://localhost:3000/api/categories"),
-        axios.get("http://localhost:3000/api/suppliers"),
+        axios.get(`${BASE_URL}/categories`),
+        axios.get(`${BASE_URL}/suppliers`),
       ]);
 
       const dmOptions =
@@ -123,7 +124,7 @@ export async function initProductManager() {
 
   const loadData = async () => {
     try {
-      const res = await axios.get("http://localhost:3000/api/products");
+      const res = await axios.get(`${BASE_URL}/products`);
       renderProducts(res.data);
     } catch (err) {
       console.error("Lỗi tải danh sách sản phẩm:", err);
@@ -167,7 +168,7 @@ export async function initProductManager() {
         });
 
         const response = await axios.post(
-          "http://localhost:3000/api/products/import-excel",
+          `${BASE_URL}/products/import-excel`,
           formData,
           {
             headers: {
@@ -216,7 +217,7 @@ export async function initProductManager() {
       const formData = new FormData(addForm);
 
       try {
-        await axios.post("http://localhost:3000/api/products/add", formData);
+        await axios.post(`${BASE_URL}/products/add`, formData);
         addModal.hide();
         Swal.fire("Thành công", "Đã thêm sản phẩm mới", "success");
         loadData();
@@ -248,7 +249,7 @@ export async function initProductManager() {
 
       if (result.isConfirmed) {
         try {
-          await axios.delete(`http://localhost:3000/api/products/delete/${id}`);
+          await axios.delete(`${BASE_URL}/products/delete/${id}`);
           Swal.fire("Đã xóa!", "", "success");
           loadData();
         } catch (err) {
@@ -260,7 +261,7 @@ export async function initProductManager() {
     // ĐỔ DỮ LIỆU VÀO MODAL SỬA
     if (target.classList.contains("btn-edit")) {
       try {
-        const res = await axios.get(`http://localhost:3000/api/products/${id}`);
+        const res = await axios.get(`${BASE_URL}/products/${id}`);
         const sp = res.data;
         if (sp) {
           document.getElementById("editMaSP").value = sp.MaSP;
@@ -312,10 +313,7 @@ export async function initProductManager() {
       }
 
       try {
-        await axios.put(
-          `http://localhost:3000/api/products/update/${maSP}`,
-          formData,
-        );
+        await axios.put(`${BASE_URL}/products/update/${maSP}`, formData);
         editModal.hide();
         Swal.fire("Thành công", "Đã cập nhật sản phẩm", "success");
         loadData();
