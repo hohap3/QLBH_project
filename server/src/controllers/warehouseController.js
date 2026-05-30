@@ -1,4 +1,3 @@
-// controllers/warehouseController.js
 const WarehouseModel = require("../models/warehouseModel");
 
 class WarehouseController {
@@ -9,7 +8,7 @@ class WarehouseController {
       res.status(200).json({
         success: true,
         message: "Lấy lịch sử giao dịch kho thành công!",
-        data: data,
+        data: data, // Mảng các Object dạng chữ thường (masp, tensp, ngaygd...)
       });
     } catch (error) {
       res.status(500).json({
@@ -44,8 +43,8 @@ class WarehouseController {
     try {
       const { maGD, maSP, loaiGD, soLuong } = req.body;
 
-      // Kiểm tra tính đầy đủ của dữ liệu gửi lên
-      if (!maGD || !maSP || !loaiGD || !soLuong) {
+      // Đảm bảo dữ liệu truyền lên đầy đủ
+      if (!maGD || !maSP || loaiGD === undefined || !soLuong) {
         return res.status(400).json({
           success: false,
           message:
@@ -53,24 +52,34 @@ class WarehouseController {
         });
       }
 
-      if (parseInt(soLuong) <= 0) {
+      const parsedSoLuong = parseInt(soLuong);
+      const parsedLoaiGD = parseInt(loaiGD);
+
+      if (isNaN(parsedSoLuong) || parsedSoLuong <= 0) {
         return res.status(400).json({
           success: false,
           message: "Số lượng giao dịch kho phải lớn hơn 0!",
         });
       }
 
+      if (parsedLoaiGD !== 1 && parsedLoaiGD !== 2) {
+        return res.status(400).json({
+          success: false,
+          message: "Loại giao dịch không hợp lệ (1: Nhập kho, 2: Xuất kho)!",
+        });
+      }
+
       const result = await WarehouseModel.createTransaction({
         maGD,
         maSP,
-        loaiGD: parseInt(loaiGD),
-        soLuong: parseInt(soLuong),
+        loaiGD: parsedLoaiGD,
+        soLuong: parsedSoLuong,
       });
 
       res.status(201).json({
         success: true,
         message:
-          loaiGD === 1
+          parsedLoaiGD === 1
             ? "Nhập kho sản phẩm thành công!"
             : "Xuất kho sản phẩm thành công!",
         data: result,
@@ -78,8 +87,7 @@ class WarehouseController {
     } catch (error) {
       res.status(400).json({
         success: false,
-        message: "Thao tác kho hàng thất bại!",
-        error: error.message,
+        message: error.message || "Thao tác kho hàng thất bại!",
       });
     }
   }

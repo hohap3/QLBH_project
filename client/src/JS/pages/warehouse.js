@@ -1,6 +1,7 @@
 // src/JS/pages/kho-hang.js
 import axios from "axios";
 import Swal from "sweetalert2";
+import { BASE_URL } from "/src/JS/common/header";
 
 // Mảng chứa dữ liệu gốc từ API để phục vụ việc lọc và xuất file Excel
 let warehouseList = [];
@@ -38,9 +39,7 @@ export async function initWarehouseManager() {
 // 1. Tải toàn bộ danh sách lịch sử kho từ API
 async function fetchWarehouseLogs() {
   try {
-    const response = await axios.get(
-      "http://localhost:3000/api/warehouse/transactions",
-    );
+    const response = await axios.get(`${BASE_URL}/warehouse/transactions`);
     if (response.data.success) {
       warehouseList = response.data.data;
       renderTable(warehouseList);
@@ -122,7 +121,7 @@ async function loadProductsToSelect() {
   const select = document.getElementById("selectProduct");
   if (!select) return;
   try {
-    const response = await axios.get("http://localhost:3000/api/products"); // Giả định endpoint lấy toàn bộ SP của bạn
+    const response = await axios.get(`${BASE_URL}/products`); // Giả định endpoint lấy toàn bộ SP của bạn
     const products = response.data.data || response.data;
     select.innerHTML = products
       .map(
@@ -146,10 +145,12 @@ async function handleCreateTransaction(e) {
   const soLuong = document.getElementById("numSoLuong").value;
 
   try {
-    const response = await axios.post(
-      "http://localhost:3000/api/warehouse/transaction",
-      { maGD, maSP, loaiGD, soLuong },
-    );
+    const response = await axios.post(`${BASE_URL}/warehouse/transaction`, {
+      maGD,
+      maSP,
+      loaiGD,
+      soLuong,
+    });
     if (response.data.success) {
       Swal.fire("Thành công", response.data.message, "success");
       document.getElementById("formWarehouseTransaction").reset();
