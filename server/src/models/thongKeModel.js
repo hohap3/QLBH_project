@@ -25,10 +25,10 @@ const ThongKeModel = {
       const pool = await poolPromise;
       // 🟢 FIX LOGIC: Doanh thu thực tế nên lấy tổng tiền từ HOADON thay vì tất cả DONHANG
       const query = `
-                SELECT 
-                    ISNULL((SELECT SUM(TongTien) FROM HOADON), 0) as DoanhThu,
-                    (SELECT COUNT(MaDonHang) FROM DONHANG) as TongDonHang,
-                    (SELECT COUNT(MaKH) FROM KHACHHANG) as TongKhachHang
+               SELECT 
+                  COALESCE((SELECT SUM(D.TongTien) FROM HOADON H JOIN DONHANG D ON H.MaDonHang = D.MaDonHang), 0) as DoanhThu,
+                  (SELECT COUNT(MaDonHang) FROM DONHANG) as TongDonHang,
+                  (SELECT COUNT(MaKH) FROM KHACHHANG) as TongKhachHang
             `;
       const result = await pool.request().query(query);
       return result.recordset[0];
