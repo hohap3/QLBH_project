@@ -1,11 +1,20 @@
-// src/JS/cart.js
+import axios from "axios";
 import Swal from "sweetalert2";
+import { BASE_URL } from "/src/JS/common/header";
 
-// FIX PATH: File trong thư mục public được map thẳng ra root '/'
 const DEFAULT_IMAGE = "/img/default.jpg";
 
-document.addEventListener("DOMContentLoaded", () => {
-  // Kích hoạt vẽ giỏ hàng ngay khi người dùng truy cập trang cart.html
+// Biến toàn cục lưu trữ trạng thái giảm giá và điểm tích lũy của khách hàng
+let userPoints = 0;
+let currentDiscountPercent = 0;
+let currentDiscountAmount = 0;
+let baseSubTotal = 0; // Lưu tổng tiền gốc trước giảm giá
+
+document.addEventListener("DOMContentLoaded", async () => {
+  // 1. Tải thông tin điểm tích lũy của khách hàng trước
+  await fetchUserPoints();
+
+  // 2. Kích hoạt vẽ giỏ hàng
   renderCartPage();
 
   const checkoutBtn = document.getElementById("btn-trigger-checkout");
@@ -14,11 +23,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// 🟢 GIỮ NGUYÊN: Hàm lấy Key động theo user để đảm bảo giỏ hàng lưu tách biệt theo từng tài khoản
 function getCartKey() {
   const userData = JSON.parse(localStorage.getItem("hpstore_user"));
-  if (userData && (userData.MaND || userData.id)) {
-    return `hpstore_cart_${userData.MaND || userData.id}`;
+  if (
+    userData &&
+    (userData.maND || userData.mand || userData.id || userData.MaND)
+  ) {
+    return `hpstore_cart_${userData.maND || userData.mand || userData.id || userData.MaND}`;
   }
   return "hpstore_cart_guest";
 }
@@ -26,15 +37,39 @@ function getCartKey() {
 function updateCartBadgeCount() {
   const cartKey = getCartKey();
   const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
-  // 🟢 ĐỒNG BỘ: Chuyển sang chữ thường 'item.soLuong' phục vụ logic data mới
   const totalItems = cart.reduce(
-    (sum, item) => sum + (parseInt(item.SoLuong) || 0),
+    (sum, item) => sum + (parseInt(item.SoLuong || item.soluong) || 0),
     0,
   );
 
   const badge = document.getElementById("cart-count");
   if (badge) {
     badge.innerText = totalItems;
+  }
+}
+
+// 🟢 BỔ SUNG: Lấy điểm tích lũy của khách hàng từ Backend Postgres
+async function fetchUserPoints() {
+  const userData = JSON.parse(localStorage.getItem("hpstore_user"));
+  const maND =
+    userData?.maND || userData?.mand || userData?.id || userData?.MaND;
+
+  if (!maND) return;
+
+  try {
+    // Gọi API lấy thông tin profile/khách hàng liên kết với MaND
+    const response = await axios.get(`${BASE_URL}/user/profile?id=${maND}`);
+    // Đọc trường diemtichluy (Postgres trả về chữ thường)
+    userPoints =
+      parseInt(response.data.diemtichluy || response.data.DiemTichLuy) || 0;
+
+    // Hiển thị điểm lên giao diện nếu có thẻ hiển thị
+    const pointsEl = document.getElementById("user-current-points");
+    if (pointsEl) {
+      pointsEl.innerText = `${userPoints} điểm`;
+    }
+  } catch (error) {
+    console.error("Không lấy được điểm tích lũy của khách hàng:", error);
   }
 }
 
@@ -59,29 +94,31 @@ function renderCartPage() {
     return;
   }
 
-  let subTotal = 0;
+  baseSubTotal = 0;
 
   const htmlRows = cart
     .map((item) => {
-      // 🟢 ĐỒNG BỘ: Chuyển đổi gọi thuộc tính bằng chữ thường
-      const giaBan = parseFloat(item.GiaBan) || 0;
-      const soLuong = parseInt(item.SoLuong) || 0;
+      const giaBan = parseFloat(item.GiaBan || item.giaban) || 0;
+      const soLuong = parseInt(item.SoLuong || item.soluong) || 0;
       const itemTotal = giaBan * soLuong;
 
-      subTotal += itemTotal;
+      baseSubTotal += itemTotal;
 
       const imgPath =
-        item.hinhAnh && item.hinhAnh !== "NULL"
-          ? `https://qlbh-project.onrender.com/uploads/products/${item.HinhAnh}`
+        (item.hinhAnh || item.hinhanh) &&
+        (item.hinhAnh || item.hinhanh) !== "NULL"
+          ? `https://qlbh-project.onrender.com/uploads/products/${item.hinhAnh || item.hinhanh}`
           : DEFAULT_IMAGE;
 
+      const maSP = item.MaSP || item.masp;
+
       return `
-            <tr data-masp="${item.MaSP || ""}">
+            <tr data-masp="${maSP}">
                 <td>
                     <div class="d-flex align-items-center gap-3">
-                        <img src="${imgPath}" class="product-cart-img" alt="${item.TenSP || "Sản phẩm"}" style="width:70px; height:70px; object-fit:contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}'">
+                        <img src="${imgPath}" class="product-cart-img" alt="${item.TenSP || item.tensp || "Sản phẩm"}" style="width:70px; height:70px; object-fit:contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}'">
                         <div>
-                            <h6 class="fw-bold text-dark mb-1 text-truncate" style="max-width: 250px;">${item.TenSP || "Không rõ tên"}</h6>
+                            <h6 class="fw-bold text-dark mb-1 text-truncate" style="max-width: 250px;">${item.TenSP || item.tensp || "Không rõ tên"}</h6>
                             <small class="text-muted d-block">Đơn giá: ${giaBan.toLocaleString("vi-VN")} đ</small>
                         </div>
                     </div>
@@ -89,15 +126,15 @@ function renderCartPage() {
                 <td>
                     <div class="d-flex justify-content-center">
                         <div class="quantity-input-group d-flex align-items-center" style="border: 1px solid #ddd; border-radius:5px;">
-                            <button type="button" class="btn btn-sm btn-light px-2" onclick="changeQty('${item.MaSP}', -1)">-</button>
+                            <button type="button" class="btn btn-sm btn-light px-2" onclick="changeQty('${maSP}', -1)">-</button>
                             <input type="text" value="${soLuong}" class="text-center border-0 fw-bold" style="width: 40px;" readonly>
-                            <button type="button" class="btn btn-sm btn-light px-2" onclick="changeQty('${item.MaSP}', 1)">+</button>
+                            <button type="button" class="btn btn-sm btn-light px-2" onclick="changeQty('${maSP}', 1)">+</button>
                         </div>
                     </div>
                 </td>
                 <td class="text-end fw-bold text-dark">${itemTotal.toLocaleString("vi-VN")} đ</td>
                 <td class="text-center">
-                    <button class="btn btn-sm text-danger" onclick="removeCartItem('${item.MaSP}')">
+                    <button class="btn btn-sm text-danger" onclick="removeCartItem('${maSP}')">
                         <i class="fa-regular fa-trash-can fs-5"></i>
                     </button>
                 </td>
@@ -107,30 +144,157 @@ function renderCartPage() {
     .join("");
 
   tableBody.innerHTML = htmlRows;
-  updateSummary(subTotal);
-  updateCartBadgeCount();
+
+  // Vẽ giao diện khu vực chọn đổi điểm tích lũy lấy Voucher
+  renderDiscountSection();
+
+  // Tính toán tiền dựa trên Voucher đang chọn (nếu có)
+  calculateDiscount();
+}
+
+// 🟢 BỔ SUNG: Render khu vực chọn Voucher giảm giá đổi bằng điểm
+function renderDiscountSection() {
+  const discountContainer = document.getElementById("discount-reward-section");
+  if (!discountContainer) return;
+
+  // Cấu hình các mốc đổi điểm thưởng
+  const rewards = [
+    { percent: 5, points: 75, label: "Giảm giá 5%" },
+    { percent: 10, points: 150, label: "Giảm giá 10%" },
+    { percent: 15, points: 225, label: "Giảm giá 15%" },
+  ];
+
+  let htmlOptions = `
+    <div class="p-3 bg-light rounded border mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="fw-bold text-secondary small"><i class="fa-solid fa-star text-warning me-1"></i> Đổi điểm tích lũy (Hiện có: <strong class="text-dark">${userPoints}</strong> điểm)</span>
+      </div>
+      <div class="d-flex flex-column gap-2">
+  `;
+
+  rewards.forEach((r) => {
+    const isEligible = userPoints >= r.points; // Kiểm tra đủ điểm không
+    const isChecked = currentDiscountPercent === r.percent ? "checked" : "";
+    const isDisabled =
+      (!isEligible && currentDiscountPercent === 0) ||
+      (currentDiscountPercent !== 0 && currentDiscountPercent !== r.percent)
+        ? "disabled"
+        : "";
+
+    htmlOptions += `
+      <div class="form-check p-2 rounded border bg-white d-flex align-items-center justify-content-between" style="padding-left: 2.5rem !important;">
+        <div>
+          <input class="form-check-input discount-radio-option" type="radio" name="discountReward" id="reward-${r.percent}" value="${r.percent}" data-points="${r.points}" ${isChecked} ${isDisabled} onchange="handleSelectDiscount(this)">
+          <label class="form-check-label fw-bold text-dark" for="reward-${r.percent}">
+            ${r.label}
+          </label>
+        </div>
+        <span class="badge ${isEligible ? "bg-primary" : "bg-secondary"} rounded-pill">${r.points} điểm</span>
+      </div>
+    `;
+  });
+
+  htmlOptions += `
+      </div>
+      ${currentDiscountPercent > 0 ? `<button class="btn btn-sm btn-link text-danger p-0 mt-2 text-decoration-none small" onclick="cancelSelectedDiscount()"><i class="fa-solid fa-arrow-rotate-left me-1"></i> Hủy chọn (Hoàn lại điểm)</button>` : ""}
+    </div>
+  `;
+
+  discountContainer.innerHTML = htmlOptions;
+}
+
+// 🟢 BỔ SUNG: Xử lý khi click chọn một Option giảm giá
+window.handleSelectDiscount = function (radioElement) {
+  const percent = parseInt(radioElement.value);
+  const requiredPoints = parseInt(radioElement.getAttribute("data-points"));
+
+  if (userPoints < requiredPoints) {
+    Swal.fire(
+      "Thông báo",
+      "Bạn không đủ điểm tích lũy để đổi mốc giảm giá này!",
+      "warning",
+    );
+    radioElement.checked = false;
+    return;
+  }
+
+  Swal.fire({
+    title: "Xác nhận đổi điểm?",
+    text: `Bạn sẽ dùng ${requiredPoints} điểm để đổi lấy voucher giảm giá ${percent}% cho đơn hàng này. Chỉ được chọn 1 lần duy nhất!`,
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonColor: "#6366f1",
+    cancelButtonColor: "#6c757d",
+    confirmButtonText: "Đồng ý đổi",
+    cancelButtonText: "Hủy",
+  }).then((result) => {
+    if (result.isConfirmed) {
+      currentDiscountPercent = percent;
+      // Khóa tạm thời lựa chọn (Chỉ được chọn 1 mục và áp dụng 1 lần)
+      calculateDiscount();
+      renderDiscountSection();
+    } else {
+      radioElement.checked = false;
+    }
+  });
+};
+
+// 🟢 BỔ SUNG: Hủy chọn Voucher để chọn lại mốc khác
+window.cancelSelectedDiscount = function () {
+  currentDiscountPercent = 0;
+  currentDiscountAmount = 0;
+  calculateDiscount();
+  renderDiscountSection();
+};
+
+// 🟢 BỔ SUNG: Tính toán số tiền được giảm tương ứng %
+function calculateDiscount() {
+  if (currentDiscountPercent > 0) {
+    currentDiscountAmount = Math.round(
+      baseSubTotal * (currentDiscountPercent / 100),
+    );
+  } else {
+    currentDiscountAmount = 0;
+  }
+  updateSummary(baseSubTotal);
 }
 
 function updateSummary(subTotal) {
   const subtotalEl = document.getElementById("cart-subtotal");
+  const discountRowEl = document.getElementById("cart-discount-row");
+  const discountEl = document.getElementById("cart-discount-amount");
   const totalEl = document.getElementById("cart-total");
 
   if (subtotalEl)
     subtotalEl.innerText = `${subTotal.toLocaleString("vi-VN")} đ`;
-  if (totalEl) totalEl.innerText = `${subTotal.toLocaleString("vi-VN")} đ`;
+
+  // Cập nhật dòng giảm giá hiển thị trực quan
+  if (discountRowEl && discountEl) {
+    if (currentDiscountPercent > 0) {
+      discountRowEl.classList.remove("d-none");
+      discountEl.innerText = `-${currentDiscountAmount.toLocaleString("vi-VN")} đ (${currentDiscountPercent}%)`;
+    } else {
+      discountRowEl.classList.add("d-none");
+    }
+  }
+
+  const finalTotal = Math.max(0, subTotal - currentDiscountAmount);
+  if (totalEl) totalEl.innerText = `${finalTotal.toLocaleString("vi-VN")} đ`;
+
+  updateCartBadgeCount();
 }
 
 window.changeQty = function (maSP, delta) {
   const cartKey = getCartKey();
   let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
-  const itemIndex = cart.findIndex((item) => item.MaSP === maSP);
+  const itemIndex = cart.findIndex((item) => (item.MaSP || item.masp) === maSP);
 
   if (itemIndex > -1) {
-    let currentQty = parseInt(cart[itemIndex].SoLuong) || 1;
+    let currentQty =
+      parseInt(cart[itemIndex].SoLuong || cart[itemIndex].soluong) || 1;
     currentQty += delta;
 
     if (currentQty <= 0) {
-      // 🟢 TÍCH HỢP: Hỏi xác nhận bằng SweetAlert2 khi giảm số lượng về 0
       Swal.fire({
         title: "Xóa sản phẩm?",
         text: "Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?",
@@ -146,7 +310,6 @@ window.changeQty = function (maSP, delta) {
           localStorage.setItem(cartKey, JSON.stringify(cart));
           renderCartPage();
 
-          // Thông báo Toast nhỏ góc màn hình cho mượt
           Swal.fire({
             icon: "success",
             title: "Đã xóa sản phẩm",
@@ -169,7 +332,6 @@ window.removeCartItem = function (maSP) {
   const cartKey = getCartKey();
   let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
 
-  // 🟢 TÍCH HỢP: Xác nhận khi chủ động bấm vào icon Thùng rác
   Swal.fire({
     title: "Bỏ sản phẩm này?",
     text: "Sản phẩm sẽ được xóa khỏi danh sách giỏ hàng của bạn.",
@@ -181,7 +343,7 @@ window.removeCartItem = function (maSP) {
     cancelButtonText: "Giữ lại",
   }).then((result) => {
     if (result.isConfirmed) {
-      cart = cart.filter((item) => item.MaSP !== maSP);
+      cart = cart.filter((item) => (item.MaSP || item.masp) !== maSP);
       localStorage.setItem(cartKey, JSON.stringify(cart));
       renderCartPage();
 
@@ -198,10 +360,8 @@ window.removeCartItem = function (maSP) {
 };
 
 function handleCheckoutRedirect() {
-  // 1. Kiểm tra trạng thái đăng nhập hệ thống trước tiên
   const userData = JSON.parse(localStorage.getItem("hpstore_user"));
   if (!userData || !userData.token) {
-    // 🟢 THAY ĐỔI MỚI: Hiện SweetAlert thông báo thay vì chuyển hướng thẳng
     Swal.fire({
       icon: "info",
       title: "Yêu cầu đăng nhập",
@@ -219,7 +379,6 @@ function handleCheckoutRedirect() {
     return;
   }
 
-  // 2. Kiểm tra số lượng phần tử có trong giỏ hàng
   const cartKey = getCartKey();
   const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
 
@@ -233,6 +392,23 @@ function handleCheckoutRedirect() {
     return;
   }
 
-  // Điều hướng sang trang thanh toán nếu hợp lệ dữ liệu
+  // 🟢 TIẾN TRÌNH: Lưu thông tin giảm giá vào localStorage để trang checkout.html đọc và trừ vào hóa đơn thực tế
+  const checkoutDiscountInfo = {
+    percent: currentDiscountPercent,
+    amount: currentDiscountAmount,
+    pointsToDeduct:
+      currentDiscountPercent === 5
+        ? 75
+        : currentDiscountPercent === 10
+          ? 150
+          : currentDiscountPercent === 15
+            ? 225
+            : 0,
+  };
+  localStorage.setItem(
+    "hpstore_checkout_discount",
+    JSON.stringify(checkoutDiscountInfo),
+  );
+
   window.location.href = "/src/pages/checkout.html";
 }

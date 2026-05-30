@@ -5,6 +5,7 @@ import Swal from "sweetalert2";
 const MY_ACCOUNT = "0934135205";
 const DEFAULT_IMAGE = "/img/default.jpg";
 let baseTotalMoney = 0;
+import { BASE_URL } from "/src/JS/common/header";
 
 // THÔNG TIN TÀI KHOẢN NGÂN HÀNG CỦA SHOP (Cấu hình để sinh VietQR)
 const BANK_CONFIG = {
@@ -46,9 +47,7 @@ async function autofillUserInfo() {
   }
   const maND = userData.MaND || userData.id;
   try {
-    const res = await fetch(
-      `http://localhost:3000/api/account/checkout-info/${maND}`,
-    );
+    const res = await fetch(`${BASE_URL}/account/checkout-info/${maND}`);
     const result = await res.json();
     if (result.success && result.data) {
       const user = result.data;
@@ -104,7 +103,7 @@ function renderCheckoutSummary() {
       const qty = parseInt(item.SoLuong) || 0;
       const imgPath =
         item.HinhAnh && item.HinhAnh !== "NULL"
-          ? `http://localhost:3000/uploads/products/${item.HinhAnh}`
+          ? `${BASE_URL}/uploads/products/${item.HinhAnh}`
           : DEFAULT_IMAGE;
 
       return `
@@ -199,7 +198,7 @@ async function handleCheckoutSubmit(e) {
     });
 
     // 1. Gọi API gửi thông tin tạo đơn hàng lưu xuống Database SQL Server
-    const response = await fetch("http://localhost:3000/api/checkout/process", {
+    const response = await fetch(`${BASE_URL}/checkout/process`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(checkoutPayload),

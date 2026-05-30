@@ -1,7 +1,7 @@
-// src/controllers/accountController.js
 const accountModel = require("../models/accountModel");
 
 const getCheckoutProfile = async (req, res) => {
+  // Lấy maND từ params (Ví dụ: /api/account/checkout-profile/:maND)
   const { maND } = req.params;
 
   // Kiểm tra tham số đầu vào đề phòng client gửi rỗng
@@ -22,10 +22,11 @@ const getCheckoutProfile = async (req, res) => {
       });
     }
 
+    // Trả về dữ liệu thành công cho client
     return res.status(200).json({
       success: true,
       message: "Lấy thông tin tài khoản thành công.",
-      data: userInfo,
+      data: userInfo, // Chứa { hoten, sdt, diachi, diemtichluy } dạng chữ thường
     });
   } catch (error) {
     console.error("Lỗi nghiêm trọng tại accountController:", error);

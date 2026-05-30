@@ -42,31 +42,44 @@
         </div>
 
         <div class="col-lg-4">
-          <div
-            class="card cart-card p-4 bg-white position-sticky"
-            style="top: 90px"
-          >
-            <h5 class="fw-bold border-bottom pb-3 mb-3">Tóm tắt đơn hàng</h5>
-            <div class="d-flex justify-content-between mb-2 text-secondary">
-              <span>Tạm tính:</span>
-              <span id="cart-subtotal">0 đ</span>
-            </div>
-            <div class="d-flex justify-content-between mb-3 text-secondary">
-              <span>Giảm giá tích lũy:</span>
-              <span class="text-success" id="cart-discount">-0 đ</span>
-            </div>
-            <hr />
-            <div class="d-flex justify-content-between align-items-center mb-4">
-              <span class="fw-bold text-dark">Tổng tiền toán:</span>
-              <h4 class="fw-bold text-danger mb-0" id="cart-total">0 đ</h4>
-            </div>
+          <div class="position-sticky" style="top: 90px">
+            <div id="discount-reward-section" class="mb-3"></div>
 
-            <button
-              class="btn btn-primary w-100 btn-checkout text-white"
-              id="btn-trigger-checkout"
-            >
-              <i class="fa-solid fa-credit-card me-2"></i>Tiến hành thanh toán
-            </button>
+            <div class="card cart-card p-4 bg-white">
+              <h5 class="fw-bold border-bottom pb-3 mb-3">Tóm tắt đơn hàng</h5>
+
+              <div class="d-flex justify-content-between mb-2 text-secondary">
+                <span>Tạm tính:</span>
+                <span id="cart-subtotal" class="fw-semibold">0 đ</span>
+              </div>
+
+              <div
+                class="d-flex justify-content-between mb-3 text-danger d-none"
+                id="cart-discount-row"
+              >
+                <span>Giảm giá đổi điểm:</span>
+                <span id="cart-discount-amount" class="fw-bold">0 đ</span>
+              </div>
+
+              <span id="cart-discount" class="d-none">-0 đ</span>
+
+              <hr />
+
+              <div
+                class="d-flex justify-content-between align-items-center mb-4"
+              >
+                <span class="fw-bold text-dark">Tổng thanh toán:</span>
+                <h4 class="fw-bold text-danger mb-0" id="cart-total">0 đ</h4>
+              </div>
+
+              <button
+                class="btn btn-primary w-100 btn-checkout text-white py-2"
+                id="btn-trigger-checkout"
+                style="border-radius: 8px"
+              >
+                <i class="fa-solid fa-credit-card me-2"></i>Tiến hành thanh toán
+              </button>
+            </div>
           </div>
         </div>
       </div>

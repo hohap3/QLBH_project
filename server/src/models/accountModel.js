@@ -1,23 +1,25 @@
-// src/models/accountModel.js
-const { sql, poolPromise } = require("../config/database");
+const { pool } = require("../config/database");
 
 class AccountModel {
   static async getCheckoutInfoByUserId(maND) {
     try {
-      const pool = await poolPromise;
-      const result = await pool.request().input("MaND", sql.VarChar(20), maND)
-        .query(`
-                    SELECT 
-                        COALESCE(kh.HoTen, nd.HoTen) AS HoTen,
-                        COALESCE(kh.SDT, nd.SDT) AS SDT,
-                        kh.DiaChi
-                    FROM NGUOIDUNG nd
-                    LEFT JOIN KHACHHANG kh ON nd.MaND = kh.MaND
-                    WHERE nd.MaND = @MaND
-                `);
+      // 🟢 Chuyển sang cú pháp Postgres ($1) và viết thường toàn bộ tên bảng/cột
+      const query = `
+        SELECT 
+          COALESCE(kh.hoten, nd.hoten) AS hoten,
+          COALESCE(kh.sdt, nd.sdt) AS sdt,
+          kh.diachi,
+          kh.diemtichluy -- Lấy thêm điểm tích lũy phục vụ giao diện nếu cần
+        FROM nguoidung nd
+        LEFT JOIN khachhang kh ON nd.mand = kh.mand
+        WHERE nd.mand = $1
+      `;
 
-      // Nếu tìm thấy tài khoản, trả về bản ghi đầu tiên, ngược lại trả về null
-      return result.recordset.length > 0 ? result.recordset[0] : null;
+      // Thực thi truy vấn bằng thư viện pg
+      const result = await pool.query(query, [maND]);
+
+      // 🟢 ĐỒNG BỘ: Kết quả Postgres nằm trong mảng `rows`
+      return result.rows.length > 0 ? result.rows[0] : null;
     } catch (error) {
       throw new Error(
         "Lỗi truy vấn database tại AccountModel: " + error.message,
