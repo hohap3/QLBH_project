@@ -1,7 +1,7 @@
-// src/JS/pages/kho-hang.js
 import axios from "axios";
 import Swal from "sweetalert2";
 import { BASE_URL } from "/src/JS/common/header";
+import * as bootstrap from "bootstrap";
 
 // Mảng chứa dữ liệu gốc từ API để phục vụ việc lọc và xuất file Excel
 let warehouseList = [];
@@ -15,10 +15,17 @@ export async function initWarehouseManager() {
     document.head.appendChild(script);
   }
 
-  await loadProductsToSelect();
-  await fetchWarehouseLogs();
+  document
+    .getElementById("btnOpenTransactionModal")
+    ?.addEventListener("click", () => {
+      const modalEl = document.getElementById("modalTransaction");
+      if (modalEl) {
+        const modal =
+          bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.show();
+      }
+    });
 
-  // Đăng ký các sự kiện tương tác giao diện
   document
     .getElementById("searchWarehouse")
     ?.addEventListener("input", applyFilters);
@@ -34,6 +41,9 @@ export async function initWarehouseManager() {
   document
     .getElementById("btnExportExcel")
     ?.addEventListener("click", exportToExcel);
+
+  await loadProductsToSelect();
+  await fetchWarehouseLogs();
 }
 
 // 1. Tải toàn bộ danh sách lịch sử kho từ API
@@ -52,37 +62,38 @@ async function fetchWarehouseLogs() {
   }
 }
 
-// 2. Render danh sách ra bảng HTML
+// 2. Render danh sách ra bảng HTML (Đã tối ưu badge và style cho đồng bộ)
 function renderTable(data) {
   const tbody = document.getElementById("warehouseDataBody");
   if (!tbody) return;
 
   if (data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4">Không tìm thấy giao dịch nào phù hợp.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">Không tìm thấy giao dịch nào phù hợp.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = data
     .map((item) => {
-      const isNhap = item.LoaiGD === 1;
+      // 🟢 Đồng bộ chữ thường theo Postgres: item.loaigd
+      const isNhap = item.loaigd === 1;
       const badgeClass = isNhap
-        ? "bg-success-subtle text-success"
-        : "bg-danger-subtle text-danger";
+        ? "bg-success text-white rounded-pill px-3 py-1 fw-semibold"
+        : "bg-danger text-white rounded-pill px-3 py-1 fw-semibold";
       const badgeText = isNhap ? "Nhập kho" : "Xuất kho";
       const prefix = isNhap ? "+" : "-";
 
       return `
             <tr>
-                <td class="fw-bold text-secondary">${item.MaGD}</td>
-                <td>
-                    <div class="fw-semibold">${item.TenSP}</div>
-                    <small class="text-muted">Mã: ${item.MaSP}</small>
+                <td class="fw-bold text-secondary align-middle">${item.magd}</td>
+                <td class="align-middle">
+                    <div class="fw-semibold text-dark">${item.tensp}</div>
+                    <small class="text-muted">Mã: ${item.masp}</small>
                 </td>
-                <td><span class="badge ${badgeClass}">${badgeText}</span></td>
-                <td class="text-end fw-bold ${isNhap ? "text-success" : "text-danger"}">${prefix}${item.SoLuong} ${item.DonViTinh || "Cái"}</td>
-                <td class="text-end text-muted">${item.TonTruoc}</td>
-                <td class="text-end fw-semibold text-dark">${item.TonSau}</td>
-                <td>${new Date(item.NgayGD).toLocaleString("vi-VN")}</td>
+                <td class="align-middle"><span class="badge ${badgeClass}" style="white-space: nowrap;">${badgeText}</span></td>
+                <td class="text-end fw-bold align-middle ${isNhap ? "text-success" : "text-danger"}">${prefix}${item.soluong} ${item.donvitinh || "Cái"}</td>
+                <td class="text-end text-muted align-middle">${item.tontruoc}</td>
+                <td class="text-end fw-bold text-dark align-middle">${item.tonsau}</td>
+                <td class="align-middle text-muted">${item.ngaygd ? new Date(item.ngaygd).toLocaleString("vi-VN") : "---"}</td>
             </tr>
         `;
     })
@@ -98,12 +109,15 @@ function applyFilters() {
   const filterLoai = document.getElementById("filterLoaiGD").value;
 
   const filtered = warehouseList.filter((item) => {
+    // 🟢 FIX LỖI 1: Chuyển toàn bộ thuộc tính sang chữ thường để đọc đúng dữ liệu Postgres
     const matchesSearch =
-      item.MaGD.toLowerCase().includes(searchVal) ||
-      item.TenSP.toLowerCase().includes(searchVal) ||
-      item.MaSP.toLowerCase().includes(searchVal);
+      (item.magd && item.magd.toLowerCase().includes(searchVal)) ||
+      (item.tensp && item.tensp.toLowerCase().includes(searchVal)) ||
+      (item.masp && item.masp.toLowerCase().includes(searchVal));
+
     const matchesLoai =
-      filterLoai === "" || item.LoaiGD === parseInt(filterLoai);
+      filterLoai === "" || item.loaigd === parseInt(filterLoai);
+
     return matchesSearch && matchesLoai;
   });
 
@@ -121,13 +135,18 @@ async function loadProductsToSelect() {
   const select = document.getElementById("selectProduct");
   if (!select) return;
   try {
-    const response = await axios.get(`${BASE_URL}/products`); // Giả định endpoint lấy toàn bộ SP của bạn
+    const response = await axios.get(`${BASE_URL}/products`);
     const products = response.data.data || response.data;
+
+    // 🟢 FIX LỖI 2: Đảm bảo kiểm tra và map đúng chữ thường/hoa tùy thuộc vào endpoint /products phản hồi
     select.innerHTML = products
-      .map(
-        (p) =>
-          `<option value="${p.MaSP}">${p.TenSP} (Hiện tồn: ${p.SoLuongTon})</option>`,
-      )
+      .map((p) => {
+        const maSP = p.masp || p.MaSP;
+        const tenSP = p.tensp || p.TenSP;
+        const soLuongTon =
+          p.soluongton !== undefined ? p.soluongton : p.SoLuongTon || 0;
+        return `<option value="${maSP}">${tenSP} (Hiện tồn: ${soLuongTon})</option>`;
+      })
       .join("");
   } catch (err) {
     console.error("Không tải được sản phẩm vào ô chọn", err);
@@ -139,25 +158,40 @@ async function handleCreateTransaction(e) {
   e.preventDefault();
   const maGD = document.getElementById("txtMaGD").value.trim();
   const maSP = document.getElementById("selectProduct").value;
-  const loaiGD = document.querySelector(
+  const loaiGDElement = document.querySelector(
     'input[name="radioLoaiGD"]:checked',
-  ).value;
+  );
   const soLuong = document.getElementById("numSoLuong").value;
+
+  if (!loaiGDElement) {
+    Swal.fire(
+      "Thông báo",
+      "Vui lòng chọn loại giao dịch (Nhập kho / Xuất kho)!",
+      "warning",
+    );
+    return;
+  }
 
   try {
     const response = await axios.post(`${BASE_URL}/warehouse/transaction`, {
       maGD,
       maSP,
-      loaiGD,
-      soLuong,
+      loaiGD: parseInt(loaiGDElement.value),
+      soLuong: parseInt(soLuong),
     });
+
     if (response.data.success) {
       Swal.fire("Thành công", response.data.message, "success");
       document.getElementById("formWarehouseTransaction").reset();
-      // Đóng modal thủ công
+
+      // Đóng modal an toàn thông qua Bootstrap Instance
       const modalEl = document.getElementById("modalTransaction");
-      const modal = bootstrap.Modal.getInstance(modalEl);
-      modal.hide();
+      if (modalEl) {
+        const modal =
+          bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+        modal.hide();
+      }
+
       // Tải lại bảng dữ liệu mới
       await fetchWarehouseLogs();
     }
@@ -188,18 +222,20 @@ function exportToExcel() {
     return;
   }
 
-  // Định dạng cấu trúc dữ liệu xuất file trực quan cho doanh nghiệp
+  // 🟢 FIX LỖI 3: Chuyển đổi toàn bộ map sang chữ thường để tránh lỗi 'undefined' cột dữ liệu trong Excel
   const excelData = warehouseList.map((item, index) => ({
     STT: index + 1,
-    "Mã Giao Dịch": item.MaGD,
-    "Mã Sản Phẩm": item.MaSP,
-    "Tên Sản Phẩm": item.TenSP,
-    "Loại Giao Dịch": item.LoaiGD === 1 ? "Nhập kho" : "Xuất kho",
-    "Số Lượng": item.SoLuong,
-    "Đơn Vị Tính": item.DonViTinh || "Cái",
-    "Tồn Trước Biến Động": item.TonTruoc,
-    "Tồn Sau Biến Động": item.TonSau,
-    "Thời Gian Thực Hiện": new Date(item.NgayGD).toLocaleString("vi-VN"),
+    "Mã Giao Dịch": item.magd,
+    "Mã Sản Phẩm": item.masp,
+    "Tên Sản Phẩm": item.tensp || "Chưa rõ",
+    "Loại Giao Dịch": item.loaigd === 1 ? "Nhập kho" : "Xuất kho",
+    "Số Lượng": item.soluong,
+    "Đơn Vị Tính": item.donvitinh || "Cái",
+    "Tồn Trước Biến Động": item.tontruoc,
+    "Tồn Sau Biến Động": item.tonsau,
+    "Thời Gian Thực Hiện": item.ngaygd
+      ? new Date(item.ngaygd).toLocaleString("vi-VN")
+      : "---",
   }));
 
   // Tạo một Workbook mới
@@ -208,15 +244,16 @@ function exportToExcel() {
   XLSX.utils.book_append_sheet(workbook, worksheet, "Báo cáo Kho HP STORE");
 
   // Tự động căn chỉnh chiều rộng của các cột dữ liệu tránh bị khuất chữ
-  const max_author = excelData.reduce(
-    (w, r) => Math.max(w, r["Tên Sản Phẩm"].length),
+  const max_len = excelData.reduce(
+    (w, r) => Math.max(w, r["Tên Sản Phẩm"] ? r["Tên Sản Phẩm"].length : 15),
     15,
   );
+
   worksheet["!cols"] = [
     { wch: 6 }, // STT
     { wch: 15 }, // Mã GD
     { wch: 20 }, // Mã SP
-    { wch: max_author }, // Tên SP (Co giãn theo độ dài tên dài nhất)
+    { wch: max_len + 5 }, // Tên SP (Tự động nới rộng thêm 5 khoảng trắng cho đẹp)
     { wch: 15 }, // Loại GD
     { wch: 10 }, // Số lượng
     { wch: 12 }, // Đơn vị tính
