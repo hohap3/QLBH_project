@@ -1,4 +1,5 @@
-const Order = require("../models/oderModel");
+// src/controllers/orderController.js
+const Order = require("../models/orderModel"); // Khớp lại chính tả tên file mẫu (orderModel)
 
 const orderController = {
   // Lấy toàn bộ đơn hàng
@@ -22,29 +23,30 @@ const orderController = {
         return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
       }
 
-      // Format dữ liệu lồng phần thông tin Khách hàng - Tài khoản và Danh sách sản phẩm mua
+      // 🟢 FIX QUAN TRỌNG: Đọc dữ liệu từ 'details' bằng các key chữ thường (Postgres)
+      // giữ nguyên định dạng cấu trúc JSON chữ hoa-thường ở ngoài để không làm gãy Front-end
       const orderInfo = {
-        MaDonHang: details[0].MaDonHang,
-        NgayDat: details[0].NgayDat,
-        TrangThai: details[0].TrangThai,
-        TongTien: details[0].TongTien,
-        GhiChu: details[0].GhiChu,
+        MaDonHang: details[0].madonhang,
+        NgayDat: details[0].ngaydat,
+        TrangThai: details[0].trangthai,
+        TongTien: details[0].tongtien,
+        GhiChu: details[0].ghichu,
 
         // Nhóm thông tin khách hàng & tài khoản liên kết
         KhachHang: {
-          HoTen: details[0].HoTenKhachHang,
-          SDT: details[0].SDTKhachHang,
-          Email: details[0].EmailKhachHang,
-          DiaChi: details[0].DiaChiKhachHang,
-          TenDangNhap: details[0].TenDangNhap, // Tên đăng nhập từ NGUOIDUNG
+          HoTen: details[0].hotenkhachhang,
+          SDT: details[0].sdtkhachhang,
+          Email: details[0].emailkhachhang,
+          DiaChi: details[0].diachikhachhang,
+          TenDangNhap: details[0].tendangnhap,
         },
 
         // Danh sách các mặt hàng nằm trong đơn này
         Items: details.map((item) => ({
-          MaSP: item.MaSP,
-          SoLuong: item.SoLuong,
-          GiaBan: item.GiaBan,
-          GiamGia: item.GiamGia,
+          MaSP: item.masp,
+          SoLuong: item.soluong,
+          GiaBan: item.giaban,
+          GiamGia: item.giamgia,
         })),
       };
 
@@ -56,13 +58,15 @@ const orderController = {
     }
   },
 
-  // Cập nhật trạng thái (ví dụ: Chuyển từ Đang xử lý -> Đã giao)
+  // Cập nhật trạng thái đơn hàng
   updateOrderStatus: async (req, res) => {
     const { id } = req.params;
     const { TrangThai } = req.body;
     try {
       const result = await Order.updateStatus(id, TrangThai);
-      if (result.rowsAffected[0] === 0) {
+
+      // 🟢 FIX POSTGRES: Thay thế rowsAffected[0] bằng rowCount
+      if (result.rowCount === 0) {
         return res.status(404).json({ message: "Đơn hàng không tồn tại" });
       }
       res.status(200).json({ message: "Cập nhật trạng thái thành công" });

@@ -1,69 +1,77 @@
-const { sql, poolPromise } = require("../config/database");
+// src/models/orderModel.js
+const { poolPromise } = require("../config/database");
 
 const Order = {
-  // Lấy danh sách đơn hàng hiển thị ra bảng (giống design)
+  // 1. Lấy danh sách đơn hàng hiển thị ra bảng
   getAll: async () => {
-    const pool = await poolPromise;
-    const result = await pool.request().query(`
-                SELECT 
-                    dh.MaDonHang,
-                    kh.HoTen AS TenKhachHang,
-                    kh.Email AS EmailKhachHang,
-                    dh.NgayDat,
-                    dh.TongTien,
-                    dh.TrangThai,
-                    (SELECT COUNT(*) FROM CHITIET_DONHANG ct WHERE ct.MaDonHang = dh.MaDonHang) AS SoLuongSanPham
-                FROM DONHANG dh
-                LEFT JOIN KHACHHANG kh ON dh.MaKH = kh.MaKH
-                ORDER BY dh.NgayDat DESC
-            `);
-    return result.recordset;
+    try {
+      const pool = await poolPromise;
+      const query = `
+        SELECT 
+          dh.madonhang,
+          kh.hoten AS tenkhachhang,
+          kh.email AS emailkhachhang,
+          dh.ngaydat,
+          dh.tongtien,
+          dh.trangthai,
+          (SELECT COUNT(*)::INT FROM chitiet_donhang ct WHERE ct.madonhang = dh.madonhang) AS soluongsanpham
+        FROM donhang dh
+        LEFT JOIN khachhang kh ON dh.makh = kh.makh
+        ORDER BY dh.ngaydat DESC
+      `;
+      const result = await pool.query(query);
+      return result.rows; // 🟢 Sử dụng .rows của Postgres
+    } catch (error) {
+      throw error;
+    }
   },
 
-  // Lấy chi tiết một đơn hàng bao gồm các mặt hàng đã mua
+  // 2. Lấy chi tiết một đơn hàng bao gồm các mặt hàng đã mua
   getDetails: async (maDonHang) => {
-    const pool = await poolPromise;
-    const result = await pool
-      .request()
-      .input("MaDonHang", sql.VarChar, maDonHang).query(`
-                SELECT 
-                    dh.MaDonHang,
-                    dh.NgayDat,
-                    dh.TrangThai,
-                    dh.TongTien,
-                    dh.GhiChu,
-                    -- Thông tin khách hàng mua hàng
-                    kh.HoTen AS HoTenKhachHang, 
-                    kh.SDT AS SDTKhachHang, 
-                    kh.Email AS EmailKhachHang, 
-                    kh.DiaChi AS DiaChiKhachHang,
-                    -- Thông tin tài khoản người dùng liên kết với khách hàng này
-                    nd.TenDangNhap AS TenDangNhap,
-                    -- Thông tin chi tiết sản phẩm trong đơn hàng
-                    ct.MaSP, 
-                    ct.SoLuong, 
-                    ct.GiaBan, 
-                    ct.GiamGia
-                FROM DONHANG dh
-                LEFT JOIN KHACHHANG kh ON dh.MaKH = kh.MaKH
-                LEFT JOIN NGUOIDUNG nd ON kh.MaND = nd.MaND -- Lấy thông tin tài khoản qua MaND
-                LEFT JOIN CHITIET_DONHANG ct ON dh.MaDonHang = ct.MaDonHang
-                WHERE dh.MaDonHang = @MaDonHang
-            `);
-    return result.recordset;
+    try {
+      const pool = await poolPromise;
+      const query = `
+        SELECT 
+          dh.madonhang,
+          dh.ngaydat,
+          dh.trangthai,
+          dh.tongtien,
+          dh.ghichu,
+          kh.hoten AS hotenkhachhang, 
+          kh.sdt AS sdtkhachhang, 
+          kh.email AS emailkhachhang, 
+          kh.diachi AS diachikhachhang,
+          nd.tendangnhap AS tendangnhap,
+          ct.masp, 
+          ct.soluong, 
+          ct.giaban, 
+          ct.giamgia
+        FROM donhang dh
+        LEFT JOIN khachhang kh ON dh.makh = kh.makh
+        LEFT JOIN nguoidung nd ON kh.mand = nd.mand 
+        LEFT JOIN chitiet_donhang ct ON dh.madonhang = ct.madonhang
+        WHERE dh.madonhang = $1
+      `;
+      const result = await pool.query(query, [maDonHang]);
+      return result.rows;
+    } catch (error) {
+      throw error;
+    }
   },
 
-  // Cập nhật trạng thái đơn hàng (Đã giao, Đang xử lý, v.v.)
+  // 3. Cập nhật trạng thái đơn hàng
   updateStatus: async (maDonHang, trangThai) => {
-    const pool = await poolPromise;
-    return await pool
-      .request()
-      .input("MaDonHang", sql.VarChar, maDonHang)
-      .input("TrangThai", sql.NVarChar, trangThai).query(`
-                UPDATE DONHANG 
-                SET TrangThai = @TrangThai 
-                WHERE MaDonHang = @MaDonHang
-            `);
+    try {
+      const pool = await poolPromise;
+      const query = `
+        UPDATE donhang 
+        SET trangthai = $1 
+        WHERE madonhang = $2
+      `;
+      return await pool.query(query, [trangThai, maDonHang]);
+    } catch (error) {
+      throw error;
+    }
   },
 };
 

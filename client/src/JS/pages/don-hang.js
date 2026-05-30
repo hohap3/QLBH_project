@@ -3,6 +3,7 @@ import Swal from "sweetalert2";
 import { Modal } from "bootstrap";
 import ExcelJS from "exceljs/dist/exceljs.min.js";
 import { saveAs } from "file-saver";
+import { BASE_URL } from "/src/JS/common/header";
 
 document.addEventListener("DOMContentLoaded", () => {
   initOrderManager();
@@ -22,7 +23,7 @@ export async function initOrderManager() {
    */
   const fetchOrders = async () => {
     try {
-      const response = await axios.get("http://localhost:3000/api/orders");
+      const response = await axios.get(`${BASE_URL}/orders`);
       allOrders = response.data;
 
       renderTable(allOrders);
@@ -172,7 +173,7 @@ export async function initOrderManager() {
     });
 
     try {
-      await axios.put(`http://localhost:3000/api/orders/status/${maDonHang}`, {
+      await axios.put(`${BASE_URL}/orders/status/${maDonHang}`, {
         TrangThai: trangThaiMoi,
       });
 
@@ -218,9 +219,7 @@ export async function initOrderManager() {
     });
 
     try {
-      const response = await axios.get(
-        `http://localhost:3000/api/orders/${maDonHang}`,
-      );
+      const response = await axios.get(`${BASE_URL}/orders/${maDonHang}`);
       const order = response.data;
       Swal.close();
 
