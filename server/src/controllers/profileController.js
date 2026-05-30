@@ -14,12 +14,15 @@ class ProfileController {
           .json({ success: false, message: "Không tìm thấy người dùng!" });
       }
 
+      // Trả về dữ liệu (Lúc này các thuộc tính đều là chữ thường theo chuẩn Postgres)
       res.status(200).json(profile);
     } catch (err) {
-      console.error(err);
-      res
-        .status(500)
-        .json({ success: false, message: "Lỗi server khi lấy hồ sơ!" });
+      console.error("GET PROFILE ERROR:", err);
+      res.status(500).json({
+        success: false,
+        message: "Lỗi hệ thống khi lấy thông tin hồ sơ!",
+        error: err.message,
+      });
     }
   }
 
@@ -27,26 +30,34 @@ class ProfileController {
   static async updateProfile(req, res) {
     try {
       const { maND } = req.params;
+      // Nhận dữ liệu từ req.body (giữ nguyên quy tắc camelCase/PascalCase từ Frontend gửi lên nếu có)
       const { HoTen, SDT, Email, DiaChi } = req.body;
 
       if (!HoTen || !SDT) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Họ tên và Số điện thoại là bắt buộc!",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Họ tên và Số điện thoại là bắt buộc!",
+        });
       }
 
-      await ProfileModel.updateProfile(maND, { HoTen, SDT, Email, DiaChi });
+      // Đổi sang key tương ứng với cấu trúc biến dùng trong Model
+      await ProfileModel.updateProfile(maND, {
+        hoten: HoTen,
+        sdt: SDT,
+        email: Email,
+        diachi: DiaChi,
+      });
+
       res
         .status(200)
         .json({ success: true, message: "Cập nhật thông tin thành công!" });
     } catch (err) {
-      console.error(err);
-      res
-        .status(500)
-        .json({ success: false, message: "Lỗi server khi cập nhật hồ sơ!" });
+      console.error("UPDATE PROFILE ERROR:", err);
+      res.status(500).json({
+        success: false,
+        message: "Lỗi hệ thống khi cập nhật hồ sơ!",
+        error: err.message,
+      });
     }
   }
 
@@ -57,22 +68,17 @@ class ProfileController {
       const { currentPassword, newPassword } = req.body;
 
       if (!currentPassword || !newPassword) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Vui lòng nhập đủ mật khẩu cũ và mới!",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Vui lòng nhập đủ mật khẩu cũ và mới!",
+        });
       }
 
-      // TỐI ƯU: Chặn mật khẩu quá ngắn ngay tại Backend để nâng cao bảo mật
       if (newPassword.length < 6) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Mật khẩu mới phải từ 6 ký tự trở lên!",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Mật khẩu mới phải từ 6 ký tự trở lên!",
+        });
       }
 
       const user = await ProfileModel.getPasswordHash(maND);
@@ -82,14 +88,13 @@ class ProfileController {
           .json({ success: false, message: "Người dùng không tồn tại!" });
       }
 
-      const isMatch = await bcrypt.compare(currentPassword, user.MatKhauHash);
+      // ĐÃ SỬA: Đọc đúng trường chữ thường 'matkhauhash' trả về từ Postgres
+      const isMatch = await bcrypt.compare(currentPassword, user.matkhauhash);
       if (!isMatch) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Mật khẩu hiện tại không chính xác!",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Mật khẩu hiện tại không chính xác!",
+        });
       }
 
       const salt = await bcrypt.genSalt(10);
@@ -101,10 +106,12 @@ class ProfileController {
         .status(200)
         .json({ success: true, message: "Thay đổi mật khẩu thành công!" });
     } catch (err) {
-      console.error(err);
-      res
-        .status(500)
-        .json({ success: false, message: "Lỗi server khi đổi mật khẩu!" });
+      console.error("CHANGE PASSWORD ERROR:", err);
+      res.status(500).json({
+        success: false,
+        message: "Lỗi hệ thống khi đổi mật khẩu!",
+        error: err.message,
+      });
     }
   }
 }

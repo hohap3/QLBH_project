@@ -1,102 +1,90 @@
-const { poolPromise, sql } = require("../config/database");
+const { pool } = require("../config/database");
 
 class ProfileModel {
-  // 1. Lấy thông tin chi tiết bằng cách JOIN bảng NGUOIDUNG và KHACHHANG
+  // 1. Lấy thông tin chi tiết bằng cách JOIN bảng nguoidung và khachhang
   static async getProfileByMaND(maND) {
     try {
+      // ĐÃ SỬA: Chuyển sang cú pháp Postgres ($1) và đồng bộ chữ thường
       const query = `
-                SELECT 
-                    nd.MaND, nd.TenDangNhap, nd.NgayTao, nd.TrangThai,
-                    kh.MaKH, kh.HoTen, kh.SDT, kh.Email, kh.DiaChi, kh.DiemTichLuy
-                FROM NGUOIDUNG nd
-                LEFT JOIN KHACHHANG kh ON nd.MaND = kh.MaND
-                WHERE nd.MaND = @MaND
-            `;
-      // SỬA: Sử dụng poolPromise hoặc kết nối chuẩn để đảm bảo tái sử dụng connection ổn định
-      const pool = await poolPromise;
-      const result = await pool
-        .request()
-        .input("MaND", sql.VarChar(20), maND)
-        .query(query);
+        SELECT 
+          nd.mand, nd.tendangnhap, nd.ngaytao, nd.trangthai,
+          kh.makh, kh.hoten, kh.sdt, kh.email, kh.diachi, kh.diemtichluy
+        FROM nguoidung nd
+        LEFT JOIN khachhang kh ON nd.mand = kh.mand
+        WHERE nd.mand = $1
+      `;
 
-      return result.recordset[0];
+      const result = await pool.query(query, [maND]);
+      return result.rows[0]; // Postgres trả về mảng rows thay vì recordset
     } catch (err) {
       throw err;
     }
   }
 
-  // 2. Cập nhật thông tin cá nhân (Cập nhật đồng thời cả 2 bảng để đồng bộ dữ liệu)
+  // 2. Cập nhật thông tin cá nhân (Sử dụng Postgres Transaction)
   static async updateProfile(maND, data) {
-    // SỬA: Lấy pool kết nối trước khi khởi tạo Transaction
-    const pool = await poolPromise;
-    const transaction = new sql.Transaction(pool); // Truyền pool vào đây để sửa lỗi crash kết nối
+    const client = await pool.connect(); // Lấy client riêng biệt để chạy Transaction
 
     try {
-      await transaction.begin();
+      await client.query("BEGIN");
 
-      // Cập nhật bảng NGUOIDUNG
+      // Cập nhật bảng nguoidung
       const queryND = `
-                UPDATE NGUOIDUNG 
-                SET HoTen = @HoTen, Email = @Email, SDT = @SDT 
-                WHERE MaND = @MaND
-            `;
-      await new sql.Request(transaction)
-        .input("MaND", sql.VarChar(20), maND)
-        .input("HoTen", sql.NVarChar(100), data.HoTen)
-        .input("Email", sql.VarChar(100), data.Email || null)
-        .input("SDT", sql.VarChar(15), data.SDT)
-        .query(queryND);
+        UPDATE nguoidung 
+        SET hoten = $1, email = $2, sdt = $3 
+        WHERE mand = $4
+      `;
+      await client.query(queryND, [
+        data.hoten,
+        data.email || null,
+        data.sdt,
+        maND,
+      ]);
 
-      // Cập nhật bảng KHACHHANG (Cho phép DiaChi có thể là NULL)
+      // Cập nhật bảng khachhang
       const queryKH = `
-                UPDATE KHACHHANG 
-                SET HoTen = @HoTen, Email = @Email, SDT = @SDT, DiaChi = @DiaChi 
-                WHERE MaND = @MaND
-            `;
-      await new sql.Request(transaction)
-        .input("MaND", sql.VarChar(20), maND)
-        .input("HoTen", sql.NVarChar(100), data.HoTen)
-        .input("Email", sql.VarChar(100), data.Email || null)
-        .input("SDT", sql.VarChar(15), data.SDT)
-        .input("DiaChi", sql.NVarChar(255), data.DiaChi || null) // Nhận giá trị NULL chính xác
-        .query(queryKH);
+        UPDATE khachhang 
+        SET hoten = $1, email = $2, sdt = $3, diachi = $4 
+        WHERE mand = $5
+      `;
+      await client.query(queryKH, [
+        data.hoten,
+        data.email || null,
+        data.sdt,
+        data.diachi || null,
+        maND,
+      ]);
 
-      await transaction.commit();
+      await client.query("COMMIT");
       return true;
     } catch (err) {
-      // SỬA: Kiểm tra kĩ trạng thái transaction trước khi rollback nhằm tránh lỗi lặp
-      if (transaction._backedUp || transaction.isOpen) {
-        await transaction.rollback();
-      }
+      await client.query("ROLLBACK");
       throw err;
+    } finally {
+      client.release(); // Giải phóng kết nối trả về pool
     }
   }
 
-  // 3. Lấy mật khẩu mã hóa hiện tại để đối chiếu trước khi đổi
+  // 3. Lấy mật khẩu băm hiện tại để đối chiếu
   static async getPasswordHash(maND) {
     try {
-      const pool = await poolPromise;
-      const result = await pool
-        .request()
-        .input("MaND", sql.VarChar(20), maND)
-        .query("SELECT MatKhauHash FROM NGUOIDUNG WHERE MaND = @MaND");
-      return result.recordset[0];
+      const result = await pool.query(
+        "SELECT matkhauhash FROM nguoidung WHERE mand = $1",
+        [maND],
+      );
+      return result.rows[0];
     } catch (err) {
       throw err;
     }
   }
 
-  // 4. Cập nhật mật khẩu mới (Lưu trường MatKhauHash)
+  // 4. Cập nhật mật khẩu mới
   static async updatePassword(maND, newPasswordHash) {
     try {
-      const pool = await poolPromise;
-      await pool
-        .request()
-        .input("MaND", sql.VarChar(20), maND)
-        .input("MatKhauHash", sql.VarChar(255), newPasswordHash)
-        .query(
-          "UPDATE NGUOIDUNG SET MatKhauHash = @MatKhauHash WHERE MaND = @MaND",
-        );
+      await pool.query(
+        "UPDATE nguoidung SET matkhauhash = $1 WHERE mand = $2",
+        [newPasswordHash, maND],
+      );
       return true;
     } catch (err) {
       throw err;

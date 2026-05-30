@@ -1,7 +1,8 @@
 import axios from "axios";
 import Swal from "sweetalert2";
 
-const BASE_URL = "http://localhost:3000/api";
+// 🟢 ĐÃ CẬP NHẬT: Đổi từ localhost sang domain Render để chạy thực tế
+const BASE_URL = "https://qlbh-project.onrender.com/api";
 
 document.addEventListener("DOMContentLoaded", async () => {
   // 1. Kiểm tra trạng thái đăng nhập từ key chung 'hpstore_user'
@@ -53,29 +54,29 @@ async function loadUserProfile(maND, token) {
     });
 
     const data = response.data;
+    console.log("Dữ liệu Profile nhận được:", data);
 
     // Đổ dữ liệu vào vùng Sidebar bên trái của trang hoso.html
     const sidebarFullname = document.getElementById("sidebar-fullname");
     const sidebarUsername = document.getElementById("sidebar-username");
     const sidebarPoints = document.getElementById("sidebar-points");
 
-    console.log(data);
-
+    // 🟢 ĐÃ CẬP NHẬT: Sửa các trường dữ liệu thành CHỮ THƯỜNG đồng bộ với PostgreSQL
     if (sidebarFullname)
-      sidebarFullname.innerText = data.HoTen || "Chưa cập nhật";
-    if (sidebarUsername) sidebarUsername.innerText = `@${data.TenDangNhap}`;
-    if (sidebarPoints) sidebarPoints.innerText = data.DiemTichLuy || 0;
+      sidebarFullname.innerText = data.hoten || "Chưa cập nhật";
+    if (sidebarUsername) sidebarUsername.innerText = `@${data.tendangnhap}`;
+    if (sidebarPoints) sidebarPoints.innerText = data.diemtichluy || 0;
 
-    // Điền dữ liệu vào Form thông tin chi tiết
-    document.getElementById("info-username").value = data.TenDangNhap;
-    document.getElementById("info-fullname").value = data.HoTen || "";
-    document.getElementById("info-phone").value = data.SDT || "";
-    document.getElementById("info-email").value = data.Email || "";
-    document.getElementById("info-address").value = data.DiaChi || "";
+    // Điền dữ liệu vào Form thông tin chi tiết (Sửa sang chữ thường)
+    document.getElementById("info-username").value = data.tendangnhap;
+    document.getElementById("info-fullname").value = data.hoten || "";
+    document.getElementById("info-phone").value = data.sdt || "";
+    document.getElementById("info-email").value = data.email || "";
+    document.getElementById("info-address").value = data.diachi || "";
 
-    // Định dạng ngày tạo tài khoản thân thiện
-    if (data.NgayTao) {
-      const orderDate = new Date(data.NgayTao);
+    // Định dạng ngày tạo tài khoản thân thiện (Sửa sang chữ thường)
+    if (data.ngaytao) {
+      const orderDate = new Date(data.ngaytao);
       document.getElementById("info-created-date").value =
         orderDate.toLocaleDateString("vi-VN");
     }
@@ -114,6 +115,7 @@ function initUIEvents(maND, token) {
     formInfo.onsubmit = async (e) => {
       e.preventDefault();
 
+      // 🟢 ĐÃ CẬP NHẬT: Giữ nguyên key PascalCase gửi lên body, Controller ở Backend sẽ tự ánh xạ lại sang chữ thường
       const payload = {
         HoTen: document.getElementById("info-fullname").value.trim(),
         SDT: document.getElementById("info-phone").value.trim(),
@@ -174,7 +176,7 @@ function initUIEvents(maND, token) {
         return;
       }
 
-      // ✅ 2. ĐÃ CẬP NHẬT: Kiểm tra mật khẩu mới không được trùng mật khẩu cũ
+      // 2. Kiểm tra mật khẩu mới không được trùng mật khẩu cũ
       if (currentPassword === newPassword) {
         Swal.fire({
           icon: "warning",
@@ -204,13 +206,13 @@ function initUIEvents(maND, token) {
           { headers: { Authorization: `Bearer ${token}` } },
         );
 
-        // ✅ 4. ĐÃ CẬP NHẬT: Đổi mật khẩu thành công -> Xóa bộ nhớ Session & Yêu cầu đăng nhập lại
+        // 4. Đổi mật khẩu thành công -> Xóa bộ nhớ Session & Yêu cầu đăng nhập lại
         Swal.fire({
           icon: "success",
           title: "Thành công!",
           text: "Mật khẩu đã được thay đổi. Vui lòng đăng nhập lại với mật khẩu mới!",
           confirmButtonColor: "#6138ff",
-          allowOutsideClick: false, // Ngăn người dùng click ra ngoài để bỏ qua đăng xuất
+          allowOutsideClick: false,
         }).then(() => {
           formPassword.reset();
 
