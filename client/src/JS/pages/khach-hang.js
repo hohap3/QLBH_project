@@ -48,13 +48,13 @@ export async function initCustomerManager() {
 
     tableBody.innerHTML = customers
       .map((kh, index) => {
-        const isVip = kh.DiemTichLuy >= 100;
-        const donGanNhat = kh.DonGanNhat
-          ? new Date(kh.DonGanNhat).toLocaleDateString("vi-VN")
+        const isVip = kh.diemtichluy >= 100;
+        const donGanNhat = kh.dongannhat
+          ? new Date(kh.dongannhat).toLocaleDateString("vi-VN")
           : "---";
         const bgColor = avatarColors[index % avatarColors.length];
-        const firstLetter = kh.HoTen ? kh.HoTen.charAt(0).toUpperCase() : "?";
-        const isActive = kh.TrangThai !== false;
+        const firstLetter = kh.hoten ? kh.hoten.charAt(0).toUpperCase() : "?";
+        const isActive = kh.trangthai !== false;
 
         return `
                 <tr style="${!isActive ? "opacity: 0.6; background-color: #f8fafc;" : ""}">
@@ -64,18 +64,18 @@ export async function initCustomerManager() {
                                 ${firstLetter}
                             </div>
                             <div>
-                                <div class="fw-bold mb-0">${kh.HoTen} ${!isActive ? '<span class="badge bg-danger ms-1" style="font-size: 10px;">Bị khóa</span>' : ""}</div>
-                                <small class="text-muted">ID: #${kh.MaKH}</small>
+                                <div class="fw-bold mb-0">${kh.hoten} ${!isActive ? '<span class="badge bg-danger ms-1" style="font-size: 10px;">Bị khóa</span>' : ""}</div>
+                                <small class="text-muted">ID: #${kh.makh}</small>
                             </div>
                         </div>
                     </td>
                     <td>
-                        <div class="text-muted small">${kh.Email || "<i>Chưa cập nhật</i>"}</div>
-                        <div class="fw-medium small">${kh.SDT}</div>
+                        <div class="text-muted small">${kh.email || "<i>Chưa cập nhật</i>"}</div>
+                        <div class="fw-medium small">${kh.sdt}</div>
                     </td>
                     <td>
-                        <div class="fw-bold text-dark">${kh.TongDonHang || 0} <small class="text-muted">đơn</small></div>
-                        <small class="text-success fw-semibold">🪙 ${kh.DiemTichLuy || 0}đ</small>
+                        <div class="fw-bold text-dark">${kh.tongdonhang || 0} <small class="text-muted">đơn</small></div>
+                        <small class="text-success fw-semibold">🪙 ${kh.diemtichluy || 0}đ</small>
                     </td>
                     <td>
                         <span class="text-muted small">${donGanNhat}</span>
@@ -86,12 +86,12 @@ export async function initCustomerManager() {
                         </span>
                     </td>
                     <td class="text-center">
-                        <button class="btn-action btn-view" onclick="viewDetails('${kh.MaKH}')" title="Xem chi tiết & Lịch sử">
+                        <button class="btn-action btn-view" onclick="viewDetails('${kh.makh}')" title="Xem chi tiết & Lịch sử">
                             <i class="fa-regular fa-eye"></i>
                         </button>
                        
                         <button class="btn-action ${isActive ? "btn-lock text-danger" : "btn-unlock text-success"}" 
-                                onclick="toggleCustomerStatus('${kh.MaKH}', ${isActive})" 
+                                onclick="toggleCustomerStatus('${kh.makh}', ${isActive})" 
                                 title="${isActive ? "Khóa tài khoản" : "Mở khóa tài khoản"}">
                             <i class="fa-solid ${isActive ? "fa-user-slash" : "fa-user-check"}"></i>
                         </button>
@@ -166,10 +166,10 @@ export async function initCustomerManager() {
 
       const { value: newPoints } = await Swal.fire({
         title: "Chỉnh sửa Điểm Tích Lũy",
-        text: `Khách hàng: ${kh.HoTen} (Điểm hiện tại: ${kh.DiemTichLuy})`,
+        text: `Khách hàng: ${kh.hoten} (Điểm hiện tại: ${kh.diemtichluy})`,
         input: "number",
         inputLabel: "Nhập số điểm tích lũy mới",
-        inputValue: kh.DiemTichLuy,
+        inputValue: kh.diemtichluy,
         showCancelButton: true,
         confirmButtonText: "Cập nhật điểm",
         cancelButtonText: "Hủy",
@@ -218,12 +218,12 @@ export async function initCustomerManager() {
           .map(
             (order) => `
           <tr>
-            <td class="fw-bold text-primary">#${order.MaDonHang}</td>
-            <td>${new Date(order.NgayDat).toLocaleDateString("vi-VN")}</td>
-            <td class="text-end fw-bold">${parseFloat(order.TongTien).toLocaleString("vi-VN")} đ</td>
+            <td class="fw-bold text-primary">#${order.madonhang}</td>
+            <td>${new Date(order.ngaydat).toLocaleDateString("vi-VN")}</td>
+            <td class="text-end fw-bold">${parseFloat(order.tongtien).toLocaleString("vi-VN")} đ</td>
             <td>
-              <span class="badge ${order.TrangThai === "Thành công" ? "bg-success" : order.TrangThai === "Đang giao" ? "bg-warning" : "bg-secondary"}">
-                ${order.TrangThai}
+              <span class="badge ${order.trangthai === "Thành công" ? "bg-success" : order.trangthai === "Đang giao" ? "bg-warning" : "bg-secondary"}">
+                ${order.trangthai}
               </span>
             </td>
           </tr>
@@ -236,18 +236,18 @@ export async function initCustomerManager() {
         <div class="row g-3 mb-4 border-bottom pb-3">
           <div class="col-6">
             <p class="mb-1 text-muted small">Khách hàng</p>
-            <h5 class="fw-bold text-dark mb-0">${customer.HoTen}</h5>
-            <small class="text-muted">Mã: KH_${customer.MaKH}</small>
+            <h5 class="fw-bold text-dark mb-0">${customer.hoten}</h5>
+            <small class="text-muted">Mã: KH_${customer.makh}</small>
           </div>
           <div class="col-6 text-end">
             <p class="mb-1 text-muted small">Hạng tài khoản</p>
-            <span class="badge rounded-pill ${customer.DiemTichLuy >= 100 ? "bg-warning text-dark" : "bg-light text-dark border"} fw-bold px-3 py-2">
-              ${customer.DiemTichLuy >= 100 ? "👑 THÀNH VIÊN VIP" : "THÀNH VIÊN THƯỜNG"}
+            <span class="badge rounded-pill ${customer.diemtichluy >= 100 ? "bg-warning text-dark" : "bg-light text-dark border"} fw-bold px-3 py-2">
+              ${customer.diemtichluy >= 100 ? "👑 THÀNH VIÊN VIP" : "THÀNH VIÊN THƯỜNG"}
             </span>
           </div>
-          <div class="col-4"><strong>📞 SĐT:</strong> <br>${customer.SDT}</div>
-          <div class="col-4"><strong>📧 Email:</strong> <br>${customer.Email || "---"}</div>
-          <div class="col-4"><strong>📍 Địa chỉ:</strong> <br>${customer.DiaChi || "Chưa cập nhật"}</div>
+          <div class="col-4"><strong>📞 SĐT:</strong> <br>${customer.sdt}</div>
+          <div class="col-4"><strong>📧 Email:</strong> <br>${customer.email || "---"}</div>
+          <div class="col-4"><strong>📍 Địa chỉ:</strong> <br>${customer.diachi || "Chưa cập nhật"}</div>
         </div>
         
         <h6 class="fw-bold text-secondary mb-3"><i class="fa-solid fa-clock-history me-1"></i> LỊCH SỬ ĐƠN HÀNG GẦN ĐÂY</h6>
