@@ -53,17 +53,17 @@ export async function initEmployeeManager() {
           : "N/A";
         return `
                 <tr>
-                    <td class="ps-4"><strong>${nv.MaND}</strong></td>
-                    <td><span class="badge bg-light text-dark border">${nv.TenDangNhap}</span></td>
-                    <td><div class="fw-bold text-dark">${nv.HoTen || "<i>Chưa cập nhật</i>"}</div></td>
+                    <td class="ps-4"><strong>${nv.mand}</strong></td>
+                    <td><span class="badge bg-light text-dark border">${nv.tendangnhap}</span></td>
+                    <td><div class="fw-bold text-dark">${nv.hoten || "<i>Chưa cập nhật</i>"}</div></td>
                     <td>
-                        <div class="small"><i class="fa-solid fa-phone me-1 text-muted"></i> ${nv.SDT || "N/A"}</div>
-                        <div class="small text-muted"><i class="fa-solid fa-envelope me-1"></i> ${nv.Email || "N/A"}</div>
+                        <div class="small"><i class="fa-solid fa-phone me-1 text-muted"></i> ${nv.sdt || "N/A"}</div>
+                        <div class="small text-muted"><i class="fa-solid fa-envelope me-1"></i> ${nv.email || "N/A"}</div>
                     </td>
                     <td><small class="text-muted">${dateFormatted}</small></td>
                     <td>
                         ${
-                          nv.TrangThai
+                          nv.trangthai
                             ? `<span class="badge rounded-pill bg-success-subtle text-success border border-success px-3 py-2">
                                     <i class="fa-solid fa-circle-check me-1"></i> Đang làm việc
                                </span>`
@@ -74,11 +74,11 @@ export async function initEmployeeManager() {
                     </td>
                     <td class="text-end pe-4">
                         <div class="d-flex justify-content-end gap-2">
-                            <button class="btn btn-sm btn-outline-primary btn-edit" data-id="${nv.MaND}">
+                            <button class="btn btn-sm btn-outline-primary btn-edit" data-id="${nv.mand}">
                                 <i class="fa-regular fa-pen-to-square"></i> Sửa
                             </button>
-                            <button class="btn btn-sm ${nv.TrangThai ? "btn-outline-warning" : "btn-outline-success"} btn-toggle-status" data-id="${nv.MaND}" data-status="${nv.TrangThai}">
-                                <i class="fa-solid ${nv.TrangThai ? "fa-user-lock" : "fa-user-check"}"></i> ${nv.TrangThai ? "Khóa" : "Mở"}
+                            <button class="btn btn-sm ${nv.trangthai ? "btn-outline-warning" : "btn-outline-success"} btn-toggle-status" data-id="${nv.mand}" data-status="${nv.trangthai}">
+                                <i class="fa-solid ${nv.trangthai ? "fa-user-lock" : "fa-user-check"}"></i> ${nv.trangthai ? "Khóa" : "Mở"}
                             </button>
                         </div>
                     </td>
@@ -206,17 +206,17 @@ export async function initEmployeeManager() {
         const res = await axios.get(`${BASE_URL}/employees/${id}`);
         if (res.data.success) {
           const nv = res.data.data;
-          currentEditId = nv.MaND;
+          currentEditId = nv.mand;
 
-          modalTitle.innerText = `Chỉnh Sửa Nhân Viên: ${nv.MaND}`;
+          modalTitle.innerText = `Chỉnh Sửa Nhân Viên: ${nv.mand}`;
           usernameWrapper.style.display = "none";
 
           document.getElementById("tenDangNhap").required = false;
           // ĐÃ XÓA: dòng set required cho matKhau để tránh lỗi null value
 
-          document.getElementById("hoTen").value = nv.HoTen || "";
-          document.getElementById("sdt").value = nv.SDT || "";
-          document.getElementById("email").value = nv.Email || "";
+          document.getElementById("hoTen").value = nv.hoten || "";
+          document.getElementById("sdt").value = nv.sdt || "";
+          document.getElementById("email").value = nv.email || "";
 
           employeeModal.show();
         }
