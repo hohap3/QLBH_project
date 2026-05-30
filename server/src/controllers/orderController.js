@@ -1,5 +1,5 @@
 // src/controllers/orderController.js
-const Order = require("../models/orderModel"); // Khớp lại chính tả tên file mẫu (orderModel)
+const Order = require("../models/oderModel"); // Khớp lại chính tả tên file mẫu (orderModel)
 
 const orderController = {
   // Lấy toàn bộ đơn hàng
