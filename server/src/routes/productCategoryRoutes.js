@@ -6,20 +6,23 @@ const categoryController = require("../controllers/productCategoryController");
 // GET: https://qlbh-project.onrender.com/api/categories
 router.get("/", categoryController.getCategories);
 
-// 2. Lấy chi tiết một danh mục theo ID
+// 2. Lấy chi tiết một danh mục theo ID (Dùng khi bấm nút "Sửa" để đổ dữ liệu lên form)
 // GET: https://qlbh-project.onrender.com/api/categories/SmartPhone
 router.get("/:id", categoryController.getCategoryById);
 
 // 3. Thêm mới danh mục
-// POST: https://qlbh-project.onrender.com/api/categories
-router.post("/", categoryController.addCategory);
+// 🟢 FIX: Thêm '/add' vào endpoint để khớp với Front-End
+// POST: https://qlbh-project.onrender.com/api/categories/add
+router.post("/add", categoryController.addCategory);
 
 // 4. Cập nhật danh mục theo ID
-// PUT: https://qlbh-project.onrender.com/api/categories/SmartPhone
-router.put("/:id", categoryController.editCategory);
+// 🟢 FIX: Thêm '/update' vào endpoint để khớp với Front-End
+// PUT: https://qlbh-project.onrender.com/api/categories/update/SmartPhone
+router.put("/update/:id", categoryController.editCategory);
 
 // 5. Xóa danh mục theo ID
-// DELETE: https://qlbh-project.onrender.com/api/categories/SmartPhone
-router.delete("/:id", categoryController.removeCategory);
+// 🟢 FIX: Thêm '/delete' vào endpoint để khớp với Front-End
+// DELETE: https://qlbh-project.onrender.com/api/categories/delete/SmartPhone
+router.delete("/delete/:id", categoryController.removeCategory);
 
 module.exports = router;

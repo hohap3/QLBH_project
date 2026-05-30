@@ -42,14 +42,14 @@ export async function initProductManager() {
         '<option value="" disabled>-- Chọn danh mục --</option>' +
         resDM.data
           .map(
-            (dm) => `<option value="${dm.MaDanhMuc}">${dm.TenDanhMuc}</option>`,
+            (dm) => `<option value="${dm.madanhmuc}">${dm.tendanhmuc}</option>`,
           )
           .join("");
 
       const nccOptions =
         '<option value="" disabled selected>Chọn nhà cung cấp</option>' +
         resNCC.data
-          .map((ncc) => `<option value="${ncc.MaNCC}">${ncc.TenNCC}</option>`)
+          .map((ncc) => `<option value="${ncc.mancc}">${ncc.tenncc}</option>`)
           .join("");
 
       if (document.getElementById("editMaDanhMuc"))
@@ -85,7 +85,7 @@ export async function initProductManager() {
   const renderProducts = (products) => {
     tableBody.innerHTML = products
       .map((sp) => {
-        const isOutOfStock = sp.SoLuongTon <= 0;
+        const isOutOfStock = sp.soluongton <= 0;
         const themeClass = !isOutOfStock ? "success" : "danger";
         const statusText = !isOutOfStock ? "Còn hàng" : "Hết hàng";
 
@@ -95,26 +95,26 @@ export async function initProductManager() {
                     <div class="d-flex align-items-center">
                         <div class="rounded-3 me-3 d-flex align-items-center justify-content-center bg-light" 
                              style="width: 45px; height: 45px; overflow: hidden; border: 1px solid #eee;">
-                             <img src="${sp.HinhAnh ? `http://localhost:3000/uploads/products/${sp.HinhAnh}` : "/assets/images/default-product.png"}" 
+                             <img src="${sp.hinhanh ? `http://localhost:3000/uploads/products/${sp.hinhanh}` : "/assets/images/default-product.png"}" 
                                 style="width: 100%; height: 100%; object-fit: cover;">
                         </div>
                         <div>
-                            <div class="fw-bold mb-0">${sp.TenSP}</div>
-                            <div class="text-muted small">ID: #${sp.MaSP}</div>
+                            <div class="fw-bold mb-0">${sp.tensp}</div>
+                            <div class="text-muted small">ID: #${sp.masp}</div>
                         </div>
                     </div>
                 </td>
                 <td class="text-muted">${sp.TenDanhMuc || "Chưa phân loại"}</td>
-                <td class="fw-bold">${new Intl.NumberFormat("vi-VN").format(sp.GiaBan)}đ</td>
-                <td><span class="fw-bold text-${themeClass}">${sp.SoLuongTon} sp</span></td>
+                <td class="fw-bold">${new Intl.NumberFormat("vi-VN").format(sp.giaban)}đ</td>
+                <td><span class="fw-bold text-${themeClass}">${sp.soluongton} sp</span></td>
                 <td>
                     <span class="badge bg-${themeClass}-subtle text-${themeClass} px-3 py-2" style="border-radius: 8px;">
                         ${statusText}
                     </span>
                 </td>
                 <td class="text-end">
-                    <button class="btn btn-link text-success p-1 mx-1 btn-edit" data-id="${sp.MaSP}"><i class="fa-regular fa-pen-to-square"></i></button>
-                    <button class="btn btn-link text-danger p-1 mx-1 btn-delete" data-id="${sp.MaSP}"><i class="fa-regular fa-trash-can"></i></button>
+                    <button class="btn btn-link text-success p-1 mx-1 btn-edit" data-id="${sp.masp}"><i class="fa-regular fa-pen-to-square"></i></button>
+                    <button class="btn btn-link text-danger p-1 mx-1 btn-delete" data-id="${sp.masp}"><i class="fa-regular fa-trash-can"></i></button>
                 </td>
             </tr>`;
       })
@@ -264,19 +264,19 @@ export async function initProductManager() {
         const res = await axios.get(`${BASE_URL}/products/${id}`);
         const sp = res.data;
         if (sp) {
-          document.getElementById("editMaSP").value = sp.MaSP;
-          document.getElementById("editMaNCC").value = sp.MaNCC;
-          document.getElementById("editTenSP").value = sp.TenSP;
-          document.getElementById("editGiaNhap").value = sp.GiaNhap;
-          document.getElementById("editGiaBan").value = sp.GiaBan;
-          document.getElementById("editSoLuongTon").value = sp.SoLuongTon;
-          document.getElementById("editMoTa").value = sp.MoTa || "";
-          document.getElementById("editDonViTinh").value = sp.DonViTinh || "";
-          document.getElementById("editMaDanhMuc").value = sp.MaDanhMuc;
+          document.getElementById("editMaSP").value = sp.masp;
+          document.getElementById("editMaNCC").value = sp.mancc;
+          document.getElementById("editTenSP").value = sp.tensp;
+          document.getElementById("editGiaNhap").value = sp.gianhap;
+          document.getElementById("editGiaBan").value = sp.giaban;
+          document.getElementById("editSoLuongTon").value = sp.soluongton;
+          document.getElementById("editMoTa").value = sp.mota || "";
+          document.getElementById("editDonViTinh").value = sp.donvitinh || "";
+          document.getElementById("editMaDanhMuc").value = sp.madanhmuc;
 
-          document.getElementById("editHinhAnhCu").value = sp.HinhAnh || "";
-          document.getElementById("editImagePreview").src = sp.HinhAnh
-            ? `http://localhost:3000/uploads/products/${sp.HinhAnh}`
+          document.getElementById("editHinhAnhCu").value = sp.hinhanh || "";
+          document.getElementById("editImagePreview").src = sp.hinhanh
+            ? `http://localhost:3000/uploads/products/${sp.hinhanh}`
             : "/assets/images/default-product.png";
 
           editModal.show();
