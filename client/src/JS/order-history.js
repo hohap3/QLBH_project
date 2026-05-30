@@ -3,7 +3,7 @@ import { BASE_URL } from "./common/header";
 import Swal from "sweetalert2";
 
 const DEFAULT_IMAGE = "/img/default.jpg";
-let globalOrdersArray = []; // Biến lưu trữ dữ liệu đơn hàng cục bộ
+let globalOrdersArray = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   const userData = JSON.parse(localStorage.getItem("hpstore_user"));
@@ -20,7 +20,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  // Hiển thị tên tài khoản lên sidebar thành phần
   if (userData.name) {
     document.getElementById("sidebar-user-name").innerText = userData.name;
   }
@@ -30,15 +29,40 @@ document.addEventListener("DOMContentLoaded", () => {
   setupFilterEvents();
 });
 
-// Hàm chính lấy danh sách hóa đơn từ Server sử dụng Axios
-async function loadOrderHistoryFromServer(token) {
+// 🟢 CẢI TIẾN: Thêm hiệu ứng Skeleton Loading giúp giao diện mượt mà hơn
+function showSkeletonLoading() {
   const listContainer = document.getElementById("order-history-list");
+  listContainer.innerHTML = Array(2)
+    .fill(0)
+    .map(
+      () => `
+    <div class="card mb-3 border-0 shadow-sm placeholder-glow" style="border-radius: 16px;">
+      <div class="card-header bg-light p-3 d-flex justify-content-between align-items-center">
+        <div class="col-3 placeholder bg-secondary opacity-20 py-2 rounded"></div>
+        <div class="col-2 placeholder bg-secondary opacity-20 py-2 rounded"></div>
+      </div>
+      <div class="card-body p-3">
+        <div class="d-flex align-items-center gap-3">
+          <div class="placeholder bg-secondary opacity-20 rounded" style="width: 65px; height: 65px;"></div>
+          <div class="w-70">
+            <div class="col-6 placeholder bg-secondary opacity-20 py-2 mb-2 rounded"></div>
+            <div class="col-4 placeholder bg-secondary opacity-20 py-1 rounded"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `,
+    )
+    .join("");
+}
+
+// Hàm chính lấy danh sách hóa đơn từ Server
+async function loadOrderHistoryFromServer(token) {
+  showSkeletonLoading(); // Kích hoạt loading ngay khi gọi hàm
 
   try {
     const response = await axios.get(`${BASE_URL}/orderHistory/history`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     const result = response.data;
@@ -49,23 +73,19 @@ async function loadOrderHistoryFromServer(token) {
 
     globalOrdersArray = result.data || [];
 
-    // 1. Cập nhật các con số đếm trạng thái trên Sidebar dựa trên data chuẩn của DB
     updateSidebarCounters(globalOrdersArray);
-
-    // 2. Render toàn bộ đơn hàng ra màn hình lần đầu
     renderOrdersToUI(globalOrdersArray);
   } catch (error) {
     console.error("Lỗi:", error);
-    listContainer.innerHTML = `
+    document.getElementById("order-history-list").innerHTML = `
       <div class="alert alert-danger border-0 shadow-sm p-4 rounded-4" role="alert">
           <i class="fa-solid fa-triangle-exclamation me-2 fs-5"></i>
-          Có lỗi xảy ra trong quá trình kết nối thông tin dữ liệu hóa đơn. Vui lòng tải lại trang!
+          Có lỗi xảy ra trong quá trình kết nối dữ liệu hóa đơn. Vui lòng tải lại trang!
       </div>
     `;
   }
 }
 
-// 🟢 ĐÃ CẬP NHẬT: So khớp bộ đếm bằng chữ thường 'trangthai' theo PostgreSQL
 function updateSidebarCounters(orders) {
   document.getElementById("count-all").innerText = orders.length;
   document.getElementById("count-pending").innerText = orders.filter(
@@ -85,7 +105,6 @@ function updateSidebarCounters(orders) {
   ).length;
 }
 
-// Thiết lập sự kiện bấm bộ lọc ở cột trái
 function setupFilterEvents() {
   const filterItems = document.querySelectorAll(
     "#status-filter-group .filter-link-item",
@@ -94,7 +113,6 @@ function setupFilterEvents() {
   filterItems.forEach((item) => {
     item.addEventListener("click", (e) => {
       e.preventDefault();
-
       filterItems.forEach((i) => i.classList.remove("active"));
       item.classList.add("active");
 
@@ -103,7 +121,6 @@ function setupFilterEvents() {
       if (selectedStatus === "Tất cả") {
         renderOrdersToUI(globalOrdersArray);
       } else {
-        // 🟢 ĐÃ CẬP NHẬT: Lọc theo thuộc tính chữ thường 'trangthai'
         const statusToFilter =
           selectedStatus === "Đã giao" ? "Thành công" : selectedStatus;
         const filtered = globalOrdersArray.filter(
@@ -136,7 +153,6 @@ function renderOrdersToUI(ordersList) {
 
   listContainer.innerHTML = ordersList
     .map((order) => {
-      // 🟢 ĐÃ CẬP NHẬT: Gọi chữ thường 'order.ngaydat'
       const formatNgay = new Date(order.ngaydat).toLocaleDateString("vi-VN", {
         year: "numeric",
         month: "long",
@@ -146,13 +162,14 @@ function renderOrdersToUI(ordersList) {
       });
 
       let statusBadgeHTML = "";
+
+      // 🟢 CẢI TIẾN: Thay vì điều hướng thô sơ, ta bọc hàm reBuyOrder() truyền mã đơn hàng vào xử lý
       let actionButtonsHTML = `
-        <button class="btn btn-outline-primary btn-action-order px-3" onclick="window.location.href='/src/pages/cart.html'">
+        <button class="btn btn-outline-primary btn-action-order px-3" onclick="reBuyOrder('${order.madonhang}')">
             <i class="fa-solid fa-rotate-left me-1"></i> Mua lại
         </button>
       `;
 
-      // Phân loại Trạng thái & Bổ sung nút xuất hóa đơn (Cập nhật chữ thường order.madonhang)
       switch (order.trangthai) {
         case "Chờ xác nhận":
           statusBadgeHTML = `<span class="badge-status status-pending" style="background-color: #fff3cd; color: #856404; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-clock-rotate-left"></i> Chờ xác nhận</span>`;
@@ -169,7 +186,7 @@ function renderOrdersToUI(ordersList) {
             <button class="btn btn-success px-3 me-2 text-white" style="border-radius: 8px;" onclick="viewInvoice('${order.madonhang}')">
                 <i class="fa-solid fa-file-invoice me-1"></i> Xuất hóa đơn
             </button>
-            <button class="btn btn-outline-primary btn-action-order px-3" onclick="window.location.href='/src/pages/cart.html'">
+            <button class="btn btn-outline-primary btn-action-order px-3" onclick="reBuyOrder('${order.madonhang}')">
                 <i class="fa-solid fa-rotate-left me-1"></i> Mua lại
             </button>
           `;
@@ -181,18 +198,20 @@ function renderOrdersToUI(ordersList) {
           statusBadgeHTML = `<span class="badge-status bg-secondary text-white">${order.trangthai}</span>`;
       }
 
-      // 🟢 ĐÃ CẬP NHẬT: Đọc mảng sản phẩm chi tiết bằng key chữ thường 'order.sanpham'
       const productsHTML = (order.sanpham || [])
         .map((item) => {
           const hasValidImg =
             item.hinhanh &&
             item.hinhanh.trim() !== "" &&
             item.hinhanh !== "NULL";
-
-          // Đổi từ localhost sang domain static trên Render để hiển thị ảnh từ Host mới
           const pathImg = hasValidImg
             ? `https://qlbh-project.onrender.com/uploads/products/${item.hinhanh}`
             : DEFAULT_IMAGE;
+
+          // 🟢 CẢI TIẾN: Bọc kĩ toán tử ép kiểu phòng lỗi dữ liệu trống từ database
+          const priceFormatted = (Number(item.giaban) || 0).toLocaleString(
+            "vi-VN",
+          );
 
           return `
           <div class="row align-items-center py-3 mx-0 border-bottom last-border-none">
@@ -207,19 +226,21 @@ function renderOrdersToUI(ordersList) {
                   </div>
               </div>
               <div class="col-auto text-end">
-                  <span class="fw-bold text-dark">${Number(item.giaban).toLocaleString("vi-VN")} đ</span>
+                  <span class="fw-bold text-dark">${priceFormatted} đ</span>
               </div>
           </div>
         `;
         })
         .join("");
 
-      // 🟢 ĐÃ CẬP NHẬT: Kiểm tra ghi chú chữ thường 'order.ghichu'
       const hopLeGhiChu =
         order.ghichu && order.ghichu !== "NULL" && order.ghichu.trim() !== "";
+      const totalAmountFormatted = (Number(order.tongtien) || 0).toLocaleString(
+        "vi-VN",
+      );
 
       return `
-        <div class="card order-container-card mb-3 shadow-sm border-0">
+        <div class="card order-container-card mb-3 shadow-sm border-0" style="border-radius: 14px; overflow: hidden;">
             <div class="order-card-header d-flex flex-wrap justify-content-between align-items-center gap-2 p-3 bg-light">
                 <div>
                     <span class="text-muted small d-block">MÃ ĐƠN HÀNG</span>
@@ -245,7 +266,7 @@ function renderOrdersToUI(ordersList) {
                 <div class="d-flex align-items-center gap-4">
                     <div class="text-end">
                         <span class="text-muted small d-block">TỔNG SỐ TIỀN</span>
-                        <span class="fs-4 fw-bold text-danger">${Number(order.tongtien).toLocaleString("vi-VN")} đ</span>
+                        <span class="fs-4 fw-bold text-danger">${totalAmountFormatted} đ</span>
                     </div>
                     <div class="d-flex align-items-center">
                         ${actionButtonsHTML}
@@ -258,17 +279,58 @@ function renderOrdersToUI(ordersList) {
     .join("");
 }
 
+// 🟢 CẢI TIẾN MỚI: Hàm "Mua lại" tự động nhồi sản phẩm vào LocalStorage giỏ hàng hiện tại
+window.reBuyOrder = function (maDonHang) {
+  const order = globalOrdersArray.find((o) => o.madonhang === maDonHang);
+  if (!order || !order.sanpham || order.sanpham.length === 0) return;
+
+  // Giả sử key giỏ hàng của bạn là 'hpstore_cart'
+  let currentCart = JSON.parse(localStorage.getItem("hpstore_cart")) || [];
+
+  order.sanpham.forEach((oldItem) => {
+    const existingProductIndex = currentCart.findIndex(
+      (cartItem) => cartItem.maSP === oldItem.masp,
+    );
+
+    if (existingProductIndex > -1) {
+      // Nếu sản phẩm đã tồn tại trong giỏ thì cộng dồn số lượng cũ vào
+      currentCart[existingProductIndex].soLuong += Number(oldItem.soluong);
+    } else {
+      // Chưa có thì đẩy object mới (khớp với cấu trúc Model Cart trên máy bạn) vào mảng
+      currentCart.push({
+        maSP: oldItem.masp,
+        tenSP: oldItem.tensp,
+        hinhAnh: oldItem.hinhanh,
+        giaBan: Number(oldItem.giaban),
+        soLuong: Number(oldItem.soluong),
+      });
+    }
+  });
+
+  localStorage.setItem("hpstore_cart", JSON.stringify(currentCart));
+
+  // Bật thông báo ngọt ngào trước khi nhảy trang
+  Swal.fire({
+    icon: "success",
+    title: "Đã thêm vào giỏ hàng!",
+    text: "Toàn bộ sản phẩm thuộc đơn hàng này đã được nạp lại vào giỏ.",
+    confirmButtonColor: "#6f42c1",
+    timer: 1500,
+    showConfirmButton: false,
+  }).then(() => {
+    window.location.href = "/src/pages/cart.html";
+  });
+};
+
 // HÀM XỬ LÝ BẬT POPUP XEM HÓA ĐƠN ĐIỆN TỬ
 window.viewInvoice = function (maDonHang) {
-  // 🟢 ĐÃ CẬP NHẬT: So khớp mã bằng chữ thường 'madonhang'
   const order = globalOrdersArray.find((o) => o.madonhang === maDonHang);
   if (!order) return;
 
   const modalBody = document.getElementById("invoice-modal-body");
 
-  // Render giao diện hóa đơn (Sửa sang các trường chữ thường hoàn toàn)
   modalBody.innerHTML = `
-    <div id="invoice-print-area" class="p-3" style="font-family: 'Segoe UI', Roboto, sans-serif; background: #fff;">
+    <div id="invoice-print-area" class="p-4" style="font-family: 'Segoe UI', Roboto, sans-serif; background: #fff;">
       <div class="text-center mb-4">
         <h4 class="fw-bold text-uppercase tracking-wide m-0" style="color: #6f42c1;">HP STORE</h4>
         <small class="text-muted">Đẳng cấp công nghệ - Trải nghiệm đỉnh cao</small>
@@ -279,7 +341,7 @@ window.viewInvoice = function (maDonHang) {
         <div class="col-6"><strong>Mã hóa đơn:</strong> HD-${order.madonhang}</div>
         <div class="col-6 text-end"><strong>Ngày xuất:</strong> ${new Date().toLocaleDateString("vi-VN")}</div>
         <div class="col-12"><strong>Mã đơn hàng liên kết:</strong> ${order.madonhang}</div>
-        <div class="col-12"><strong>Trạng thái giao dịch:</strong> <span class="text-success fw-bold">Đã thanh toán</span></div>
+        <div class="col-12"><strong>Trạng thái giao dịch:</strong> <span class="text-success fw-bold"><i class="fa-solid fa-shield-check"></i> Đã thanh toán</span></div>
       </div>
 
       <table class="table table-sm table-borderless small mb-4">
@@ -297,7 +359,7 @@ window.viewInvoice = function (maDonHang) {
             <tr class="border-bottom-subtle">
               <td style="padding: 8px 0;">${item.tensp}</td>
               <td class="text-center" style="padding: 8px 0;">${item.soluong}</td>
-              <td class="text-end fw-medium" style="padding: 8px 0;">${Number(item.giaban).toLocaleString("vi-VN")} đ</td>
+              <td class="text-end fw-medium" style="padding: 8px 0;">${(Number(item.giaban) || 0).toLocaleString("vi-VN")} đ</td>
             </tr>
           `,
             )
@@ -307,7 +369,7 @@ window.viewInvoice = function (maDonHang) {
 
       <div class="border-top pt-3 text-end">
         <span class="text-muted small d-block">TỔNG TIỀN THANH TOÁN</span>
-        <h3 class="fw-bold text-danger m-0">${Number(order.tongtien).toLocaleString("vi-VN")} đ</h3>
+        <h3 class="fw-bold text-danger m-0">${(Number(order.tongtien) || 0).toLocaleString("vi-VN")} đ</h3>
       </div>
       
       <div class="text-center mt-5 text-muted small">
@@ -317,7 +379,6 @@ window.viewInvoice = function (maDonHang) {
     </div>
   `;
 
-  // Cấu hình sự kiện bấm nút Tải PDF về máy
   const btnDownload = document.getElementById("btn-download-pdf");
   btnDownload.onclick = function () {
     const element = document.getElementById("invoice-print-area");
@@ -333,7 +394,6 @@ window.viewInvoice = function (maDonHang) {
     html2pdf().set(options).from(element).save();
   };
 
-  // Hiển thị modal lên màn hình
   const invoiceModal = new bootstrap.Modal(
     document.getElementById("invoiceModal"),
   );
