@@ -65,23 +65,23 @@ async function loadOrderHistoryFromServer(token) {
   }
 }
 
-// Đồng bộ các hàm đếm khớp hoàn toàn với chuỗi text trong Cơ sở dữ liệu
+// 🟢 ĐÃ CẬP NHẬT: So khớp bộ đếm bằng chữ thường 'trangthai' theo PostgreSQL
 function updateSidebarCounters(orders) {
   document.getElementById("count-all").innerText = orders.length;
   document.getElementById("count-pending").innerText = orders.filter(
-    (o) => o.TrangThai === "Chờ xác nhận",
+    (o) => o.trangthai === "Chờ xác nhận",
   ).length;
   document.getElementById("count-processing").innerText = orders.filter(
-    (o) => o.TrangThai === "Đang xử lý",
+    (o) => o.trangthai === "Đang xử lý",
   ).length;
   document.getElementById("count-shipping").innerText = orders.filter(
-    (o) => o.TrangThai === "Đang giao",
+    (o) => o.trangthai === "Đang giao",
   ).length;
   document.getElementById("count-success").innerText = orders.filter(
-    (o) => o.TrangThai === "Thành công",
-  ).length; // Đồng bộ trạng thái 'Thành công'
+    (o) => o.trangthai === "Thành công",
+  ).length;
   document.getElementById("count-canceled").innerText = orders.filter(
-    (o) => o.TrangThai === "Đã hủy",
+    (o) => o.trangthai === "Đã hủy",
   ).length;
 }
 
@@ -103,11 +103,11 @@ function setupFilterEvents() {
       if (selectedStatus === "Tất cả") {
         renderOrdersToUI(globalOrdersArray);
       } else {
-        // Đồng bộ logic lọc cho trạng thái Đã giao thành công -> "Thành công" theo Database mới của bạn
+        // 🟢 ĐÃ CẬP NHẬT: Lọc theo thuộc tính chữ thường 'trangthai'
         const statusToFilter =
           selectedStatus === "Đã giao" ? "Thành công" : selectedStatus;
         const filtered = globalOrdersArray.filter(
-          (order) => order.TrangThai === statusToFilter,
+          (order) => order.trangthai === statusToFilter,
         );
         renderOrdersToUI(filtered);
       }
@@ -136,7 +136,8 @@ function renderOrdersToUI(ordersList) {
 
   listContainer.innerHTML = ordersList
     .map((order) => {
-      const formatNgay = new Date(order.NgayDat).toLocaleDateString("vi-VN", {
+      // 🟢 ĐÃ CẬP NHẬT: Gọi chữ thường 'order.ngaydat'
+      const formatNgay = new Date(order.ngaydat).toLocaleDateString("vi-VN", {
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -151,8 +152,8 @@ function renderOrdersToUI(ordersList) {
         </button>
       `;
 
-      // Phân loại Trạng thái & Bổ sung nút xuất hóa đơn cho trạng thái "Thành công"
-      switch (order.TrangThai) {
+      // Phân loại Trạng thái & Bổ sung nút xuất hóa đơn (Cập nhật chữ thường order.madonhang)
+      switch (order.trangthai) {
         case "Chờ xác nhận":
           statusBadgeHTML = `<span class="badge-status status-pending" style="background-color: #fff3cd; color: #856404; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-clock-rotate-left"></i> Chờ xác nhận</span>`;
           break;
@@ -162,11 +163,10 @@ function renderOrdersToUI(ordersList) {
         case "Đang giao":
           statusBadgeHTML = `<span class="badge-status status-shipping" style="background-color: #e3f2fd; color: #0d6efd; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-truck-fast"></i> Đang giao hàng</span>`;
           break;
-        case "Thành công": // Trạng thái đồng bộ từ DB mới
+        case "Thành công":
           statusBadgeHTML = `<span class="badge-status status-success" style="background-color: #e8f5e9; color: #1b5e20; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-circle-check"></i> Thành công</span>`;
-          // THÊM NÚT XUẤT HÓA ĐƠN Ở ĐÂY
           actionButtonsHTML = `
-            <button class="btn btn-success px-3 me-2 text-white" style="border-radius: 8px;" onclick="viewInvoice('${order.MaDonHang}')">
+            <button class="btn btn-success px-3 me-2 text-white" style="border-radius: 8px;" onclick="viewInvoice('${order.madonhang}')">
                 <i class="fa-solid fa-file-invoice me-1"></i> Xuất hóa đơn
             </button>
             <button class="btn btn-outline-primary btn-action-order px-3" onclick="window.location.href='/src/pages/cart.html'">
@@ -178,44 +178,52 @@ function renderOrdersToUI(ordersList) {
           statusBadgeHTML = `<span class="badge-status status-canceled" style="background-color: #ffebee; color: #c62828; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-circle-xmark"></i> Đã hủy bỏ</span>`;
           break;
         default:
-          statusBadgeHTML = `<span class="badge-status bg-secondary text-white">${order.TrangThai}</span>`;
+          statusBadgeHTML = `<span class="badge-status bg-secondary text-white">${order.trangthai}</span>`;
       }
 
-      const productsHTML = order.SảnPhẩm.map((item) => {
-        const hasValidImg =
-          item.HinhAnh && item.HinhAnh.trim() !== "" && item.HinhAnh !== "NULL";
-        const pathImg = hasValidImg
-          ? `http://localhost:3000/uploads/products/${item.HinhAnh}`
-          : DEFAULT_IMAGE;
+      // 🟢 ĐÃ CẬP NHẬT: Đọc mảng sản phẩm chi tiết bằng key chữ thường 'order.sanpham'
+      const productsHTML = (order.sanpham || [])
+        .map((item) => {
+          const hasValidImg =
+            item.hinhanh &&
+            item.hinhanh.trim() !== "" &&
+            item.hinhanh !== "NULL";
 
-        return `
+          // Đổi từ localhost sang domain static trên Render để hiển thị ảnh từ Host mới
+          const pathImg = hasValidImg
+            ? `https://qlbh-project.onrender.com/uploads/products/${item.hinhanh}`
+            : DEFAULT_IMAGE;
+
+          return `
           <div class="row align-items-center py-3 mx-0 border-bottom last-border-none">
               <div class="col-auto">
                   <img src="${pathImg}" class="product-thumbnail" alt="product" style="width:65px; height:65px; object-fit:contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
               </div>
               <div class="col">
-                  <h6 class="fw-bold text-dark mb-1">${item.TenSP || "Sản phẩm không rõ tên"}</h6>
+                  <h6 class="fw-bold text-dark mb-1">${item.tensp || "Sản phẩm không rõ tên"}</h6>
                   <div class="d-flex align-items-center gap-3 text-muted small">
-                      <span>Mã SP: <strong class="text-secondary">${item.MaSP}</strong></span>
-                      <span>Số lượng: <strong class="text-dark">${item.SoLuong}</strong></span>
+                      <span>Mã SP: <strong class="text-secondary">${item.masp}</strong></span>
+                      <span>Số lượng: <strong class="text-dark">${item.soluong}</strong></span>
                   </div>
               </div>
               <div class="col-auto text-end">
-                  <span class="fw-bold text-dark">${Number(item.GiaBan).toLocaleString("vi-VN")} đ</span>
+                  <span class="fw-bold text-dark">${Number(item.giaban).toLocaleString("vi-VN")} đ</span>
               </div>
           </div>
         `;
-      }).join("");
+        })
+        .join("");
 
+      // 🟢 ĐÃ CẬP NHẬT: Kiểm tra ghi chú chữ thường 'order.ghichu'
       const hopLeGhiChu =
-        order.GhiChu && order.GhiChu !== "NULL" && order.GhiChu.trim() !== "";
+        order.ghichu && order.ghichu !== "NULL" && order.ghichu.trim() !== "";
 
       return `
         <div class="card order-container-card mb-3 shadow-sm border-0">
             <div class="order-card-header d-flex flex-wrap justify-content-between align-items-center gap-2 p-3 bg-light">
                 <div>
                     <span class="text-muted small d-block">MÃ ĐƠN HÀNG</span>
-                    <h6 class="fw-bold text-primary mb-0">${order.MaDonHang}</h6>
+                    <h6 class="fw-bold text-primary mb-0">${order.madonhang}</h6>
                 </div>
                 <div class="d-flex align-items-center gap-3">
                     <div class="text-md-end">
@@ -232,12 +240,12 @@ function renderOrdersToUI(ordersList) {
 
             <div class="order-card-footer d-flex flex-wrap justify-content-between align-items-center gap-3 p-3 bg-light border-top">
                 <div class="text-muted small">
-                    ${hopLeGhiChu ? `<i class="fa-regular fa-comment-dots me-1"></i> Ghi chú: ${order.GhiChu}` : ""}
+                    ${hopLeGhiChu ? `<i class="fa-regular fa-comment-dots me-1"></i> Ghi chú: ${order.ghichu}` : ""}
                 </div>
                 <div class="d-flex align-items-center gap-4">
                     <div class="text-end">
                         <span class="text-muted small d-block">TỔNG SỐ TIỀN</span>
-                        <span class="fs-4 fw-bold text-danger">${Number(order.TongTien).toLocaleString("vi-VN")} đ</span>
+                        <span class="fs-4 fw-bold text-danger">${Number(order.tongtien).toLocaleString("vi-VN")} đ</span>
                     </div>
                     <div class="d-flex align-items-center">
                         ${actionButtonsHTML}
@@ -252,12 +260,13 @@ function renderOrdersToUI(ordersList) {
 
 // HÀM XỬ LÝ BẬT POPUP XEM HÓA ĐƠN ĐIỆN TỬ
 window.viewInvoice = function (maDonHang) {
-  const order = globalOrdersArray.find((o) => o.MaDonHang === maDonHang);
+  // 🟢 ĐÃ CẬP NHẬT: So khớp mã bằng chữ thường 'madonhang'
+  const order = globalOrdersArray.find((o) => o.madonhang === maDonHang);
   if (!order) return;
 
   const modalBody = document.getElementById("invoice-modal-body");
 
-  // Render giao diện hóa đơn (Thêm id="invoice-print-area" để làm vùng chụp xuất PDF)
+  // Render giao diện hóa đơn (Sửa sang các trường chữ thường hoàn toàn)
   modalBody.innerHTML = `
     <div id="invoice-print-area" class="p-3" style="font-family: 'Segoe UI', Roboto, sans-serif; background: #fff;">
       <div class="text-center mb-4">
@@ -267,9 +276,9 @@ window.viewInvoice = function (maDonHang) {
       </div>
       
       <div class="row g-2 small mb-4 text-dark">
-        <div class="col-6"><strong>Mã hóa đơn:</strong> HD-${order.MaDonHang}</div>
+        <div class="col-6"><strong>Mã hóa đơn:</strong> HD-${order.madonhang}</div>
         <div class="col-6 text-end"><strong>Ngày xuất:</strong> ${new Date().toLocaleDateString("vi-VN")}</div>
-        <div class="col-12"><strong>Mã đơn hàng liên kết:</strong> ${order.MaDonHang}</div>
+        <div class="col-12"><strong>Mã đơn hàng liên kết:</strong> ${order.madonhang}</div>
         <div class="col-12"><strong>Trạng thái giao dịch:</strong> <span class="text-success fw-bold">Đã thanh toán</span></div>
       </div>
 
@@ -282,21 +291,23 @@ window.viewInvoice = function (maDonHang) {
           </tr>
         </thead>
         <tbody>
-          ${order.SảnPhẩm.map(
-            (item) => `
+          ${(order.sanpham || [])
+            .map(
+              (item) => `
             <tr class="border-bottom-subtle">
-              <td style="padding: 8px 0;">${item.TenSP}</td>
-              <td class="text-center" style="padding: 8px 0;">${item.SoLuong}</td>
-              <td class="text-end fw-medium" style="padding: 8px 0;">${Number(item.GiaBan).toLocaleString("vi-VN")} đ</td>
+              <td style="padding: 8px 0;">${item.tensp}</td>
+              <td class="text-center" style="padding: 8px 0;">${item.soluong}</td>
+              <td class="text-end fw-medium" style="padding: 8px 0;">${Number(item.giaban).toLocaleString("vi-VN")} đ</td>
             </tr>
           `,
-          ).join("")}
+            )
+            .join("")}
         </tbody>
       </table>
 
       <div class="border-top pt-3 text-end">
         <span class="text-muted small d-block">TỔNG TIỀN THANH TOÁN</span>
-        <h3 class="fw-bold text-danger m-0">${Number(order.TongTien).toLocaleString("vi-VN")} đ</h3>
+        <h3 class="fw-bold text-danger m-0">${Number(order.tongtien).toLocaleString("vi-VN")} đ</h3>
       </div>
       
       <div class="text-center mt-5 text-muted small">
@@ -311,16 +322,14 @@ window.viewInvoice = function (maDonHang) {
   btnDownload.onclick = function () {
     const element = document.getElementById("invoice-print-area");
 
-    // Cấu hình định dạng xuất file PDF công ty
     const options = {
       margin: 10,
-      filename: `HoaDon_HPSTORE_${order.MaDonHang}.pdf`,
+      filename: `HoaDon_HPSTORE_${order.madonhang}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true }, // Tăng độ nét nét chữ lên gấp đôi
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }, // Xuất khổ giấy dọc A4 chuẩn
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     };
 
-    // Tiến hành tải file âm thầm xuống PC khách hàng
     html2pdf().set(options).from(element).save();
   };
 

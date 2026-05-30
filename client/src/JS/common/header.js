@@ -1,5 +1,5 @@
 // src/JS/header.js
-export const BASE_URL = "http://localhost:3000/api";
+export const BASE_URL = "https://qlbh-project.onrender.com/api";
 import Swal from "sweetalert2";
 
 function injectHeaderCSS() {

@@ -1,56 +1,50 @@
-const { poolPromise, sql } = require("../config/database");
+const { pool } = require("../config/database");
 
 const OrderHistoryModel = {
+  // 1. Lấy danh sách đơn hàng của người dùng
   getHistoryByUserId: async (maND) => {
     try {
-      const pool = await poolPromise;
+      // ĐÃ SỬA: Chuyển sang cú pháp Postgres ($1), tên bảng/cột viết thường hoàn toàn
       const query = `
-                SELECT 
-                    dh.MaDonHang,
-                    dh.NgayDat,
-                    dh.TrangThai,
-                    dh.TongTien,
-                    dh.GhiChu
-                FROM DONHANG dh
-                WHERE dh.MaNguoiDung = @maND
-                ORDER BY dh.NgayDat DESC
-            `;
+        SELECT 
+          dh.madonhang,
+          dh.ngaydat,
+          dh.trangthai,
+          dh.tongtien,
+          dh.ghichu
+        FROM donhang dh
+        WHERE dh.manguoidung = $1
+        ORDER BY dh.ngaydat DESC
+      `;
 
-      const result = await pool
-        .request()
-        .input("maND", sql.VarChar(20), maND)
-        .query(query);
-
-      return result.recordset;
+      const result = await pool.query(query, [maND]);
+      return result.rows; // Trả về mảng rows của Postgres
     } catch (error) {
       console.error("Lỗi Model getHistoryByUserId:", error);
       throw error;
     }
   },
 
+  // 2. Lấy chi tiết các sản phẩm trong đơn hàng
   getItemsByOrderId: async (maDonHang) => {
     try {
-      const pool = await poolPromise;
+      // ĐÃ SỬA: JOIN bảng dùng chữ thường, tính toán ThanhTien bằng thuộc tính chữ thường
       const query = `
-                SELECT 
-                    ct.MaSP,
-                    sp.TenSP,
-                    sp.HinhAnh,
-                    ct.SoLuong,
-                    ct.GiaBan,
-                    ct.GiamGia,
-                    (ct.SoLuong * ct.GiaBan - ct.GiamGia) AS ThanhTien
-                FROM CHITIET_DONHANG ct
-                JOIN SANPHAM sp ON ct.MaSP = sp.MaSP
-                WHERE ct.MaDonHang = @maDonHang
-            `;
+        SELECT 
+          ct.masp,
+          sp.tensp,
+          sp.hinhanh,
+          ct.soluong,
+          ct.giaban,
+          ct.giamgia,
+          (ct.soluong * ct.giaban - ct.giamgia) AS thanhtien
+        FROM chitiet_donhang ct
+        JOIN sanpham sp ON ct.masp = sp.masp
+        WHERE ct.madonhang = $1
+      `;
 
-      const result = await pool
-        .request()
-        .input("maDonHang", sql.VarChar(20), maDonHang)
-        .query(query);
-
-      return result.recordset;
+      const result = await pool.query(query, [maDonHang]);
+      return result.rows;
     } catch (error) {
       console.error("Lỗi Model getItemsByOrderId:", error);
       throw error;
