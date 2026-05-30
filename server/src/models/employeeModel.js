@@ -1,76 +1,101 @@
-const { sql, poolPromise } = require("../config/database");
+// src/models/employeeModel.js
+const { poolPromise } = require("../config/database");
 
 class EmployeeModel {
   // 1. Lấy toàn bộ danh sách nhân viên
   static async getAllEmployees() {
-    const pool = await poolPromise; // Sử dụng pool đã cấu hình sẵn
-    const result = await pool.request().query(`
-                SELECT MaND, TenDangNhap, HoTen, Email, SDT, NgayTao, TrangThai, MaVaiTro 
-                FROM NGUOIDUNG 
-                WHERE MaVaiTro = 'Employee'
-                ORDER BY NgayTao DESC
-            `);
-    return result.recordset;
+    try {
+      const pool = await poolPromise;
+      const query = `
+        SELECT mand, tendangnhap, hoten, email, sdt, ngaytao, trangthai, mavaitro 
+        FROM nguoidung 
+        WHERE mavaitro = 'Employee'
+        ORDER BY ngaytao DESC
+      `;
+      const result = await pool.query(query);
+      return result.rows; // 🟢 Postgres sử dụng .rows thay vì .recordset
+    } catch (error) {
+      throw error;
+    }
   }
 
   // 2. Lấy thông tin chi tiết một nhân viên theo Mã
   static async getEmployeeById(id) {
-    const pool = await poolPromise;
-    const result = await pool.request().input("MaND", sql.VarChar(20), id)
-      .query(`
-                SELECT MaND, TenDangNhap, HoTen, Email, SDT, NgayTao, TrangThai, MaVaiTro 
-                FROM NGUOIDUNG 
-                WHERE MaND = @MaND AND MaVaiTro = 'Employee'
-            `);
-    return result.recordset[0];
+    try {
+      const pool = await poolPromise;
+      const query = `
+        SELECT mand, tendangnhap, hoten, email, sdt, ngaytao, trangthai, mavaitro 
+        FROM nguoidung 
+        WHERE mand = $1 AND mavaitro = 'Employee'
+      `;
+      const result = await pool.query(query, [id]);
+      return result.rows[0];
+    } catch (error) {
+      throw error;
+    }
   }
 
   // 3. Thêm mới một nhân viên
   static async createEmployee(employeeData) {
-    const pool = await poolPromise;
-    await pool
-      .request()
-      .input("MaND", sql.VarChar(20), employeeData.MaND)
-      .input("TenDangNhap", sql.VarChar(50), employeeData.TenDangNhap)
-      .input("MatKhauHash", sql.VarChar(255), employeeData.MatKhauHash)
-      .input("HoTen", sql.NVarChar(100), employeeData.HoTen)
-      .input("Email", sql.VarChar(100), employeeData.Email)
-      .input("SDT", sql.VarChar(15), employeeData.SDT)
-      .input("MaVaiTro", sql.VarChar(20), "Employee").query(`
-                INSERT INTO NGUOIDUNG (MaND, TenDangNhap, MatKhauHash, HoTen, Email, SDT, MaVaiTro, TrangThai)
-                VALUES (@MaND, @TenDangNhap, @MatKhauHash, @HoTen, @Email, @SDT, @MaVaiTro, 1)
-            `);
-    return { MaND: employeeData.MaND, TenDangNhap: employeeData.TenDangNhap };
+    try {
+      const pool = await poolPromise;
+      const query = `
+        INSERT INTO nguoidung (mand, tendangnhap, matkhauhash, hoten, email, sdt, mavaitro, trangthai)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+      `;
+      const values = [
+        employeeData.MaND,
+        employeeData.TenDangNhap,
+        employeeData.MatKhauHash,
+        employeeData.HoTen,
+        employeeData.Email,
+        employeeData.SDT,
+        "Employee",
+      ];
+      await pool.query(query, values);
+      return { MaND: employeeData.MaND, TenDangNhap: employeeData.TenDangNhap };
+    } catch (error) {
+      throw error;
+    }
   }
 
   // 4. Cập nhật thông tin thông thường của nhân viên
   static async updateEmployee(id, employeeData) {
-    const pool = await poolPromise;
-    await pool
-      .request()
-      .input("MaND", sql.VarChar(20), id)
-      .input("HoTen", sql.NVarChar(100), employeeData.HoTen)
-      .input("Email", sql.VarChar(100), employeeData.Email)
-      .input("SDT", sql.VarChar(15), employeeData.SDT).query(`
-                UPDATE NGUOIDUNG 
-                SET HoTen = @HoTen, Email = @Email, SDT = @SDT 
-                WHERE MaND = @MaND AND MaVaiTro = 'Employee'
-            `);
-    return true;
+    try {
+      const pool = await poolPromise;
+      const query = `
+        UPDATE nguoidung 
+        SET hoten = $1, email = $2, sdt = $3 
+        WHERE mand = $4 AND mavaitro = 'Employee'
+      `;
+      const values = [
+        employeeData.HoTen,
+        employeeData.Email,
+        employeeData.SDT,
+        id,
+      ];
+      const result = await pool.query(query, values);
+      return result.rowCount > 0;
+    } catch (error) {
+      throw error;
+    }
   }
 
   // 5. Thay đổi trạng thái Hoạt động / Khóa tài khoản
   static async toggleStatus(id, status) {
-    const pool = await poolPromise;
-    await pool
-      .request()
-      .input("MaND", sql.VarChar(20), id)
-      .input("TrangThai", sql.Bit, status).query(`
-                UPDATE NGUOIDUNG 
-                SET TrangThai = @TrangThai 
-                WHERE MaND = @MaND AND MaVaiTro = 'Employee'
-            `);
-    return true;
+    try {
+      const pool = await poolPromise;
+      const query = `
+        UPDATE nguoidung 
+        SET trangthai = $1 
+        WHERE mand = $2 AND mavaitro = 'Employee'
+      `;
+      // Đảm bảo ép kiểu về Boolean chuẩn cho Postgres
+      const result = await pool.query(query, [status ? true : false, id]);
+      return result.rowCount > 0;
+    } catch (error) {
+      throw error;
+    }
   }
 }
 
