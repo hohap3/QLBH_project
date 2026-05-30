@@ -50,46 +50,51 @@ export async function initOrderManager() {
 
     orderTableBody.innerHTML = orders
       .map((order) => {
-        let statusClass = "";
-        switch (order.TrangThai) {
-          case "Thành công":
-            statusClass = "bg-success text-white"; // Hoặc class CSS tùy biến của bạn
-            break;
-          case "Đã giao":
-            statusClass = "status-delivered";
-            break;
-          case "Đang giao":
-            statusClass = "status-shipping";
+        // 🟢 SỬA TẠI ĐÂY: Thay thế hoàn toàn bằng hệ thống màu sắc chuẩn Bootstrap 5 + chống vỡ dòng
+        let statusBadge = "";
+        switch (order.trangthai) {
+          case "Chờ xác nhận":
+            statusBadge = `<span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;">Chờ xác nhận</span>`;
             break;
           case "Đang xử lý":
-            statusClass = "status-processing";
+            statusBadge = `<span class="badge bg-info text-dark rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;">Đang xử lý</span>`;
+            break;
+          case "Đang giao":
+            statusBadge = `<span class="badge bg-primary text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;">Đang giao</span>`;
+            break;
+          case "Đã giao":
+            statusBadge = `<span class="badge bg-success text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;">Đã giao</span>`;
+            break;
+          case "Thành công":
+            statusBadge = `<span class="badge bg-success text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;"><i class="fa-solid fa-circle-check me-1"></i>Thành công</span>`;
             break;
           case "Đã hủy":
-            statusClass = "status-cancelled";
+            statusBadge = `<span class="badge bg-danger text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;">Đã hủy</span>`;
             break;
           default:
-            statusClass = "bg-secondary text-white";
+            statusBadge = `<span class="badge bg-secondary text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;">${order.trangthai || "Chưa rõ"}</span>`;
         }
 
         const formattedTotal =
-          new Intl.NumberFormat("vi-VN").format(order.TongTien) + "đ";
-        const orderDate = order.NgayDat
-          ? new Date(order.NgayDat).toISOString().split("T")[0]
+          new Intl.NumberFormat("vi-VN").format(order.tongtien) + "đ";
+
+        const orderDate = order.ngaydat
+          ? new Date(order.ngaydat).toISOString().split("T")[0]
           : "---";
 
         return `
                 <tr>
-                    <td><a href="#" class="order-id" onclick="viewOrderDetails('${order.MaDonHang}')">${order.MaDonHang}</a></td>
+                    <td><a href="#" class="order-id fw-bold text-decoration-none" onclick="viewOrderDetails('${order.madonhang}')">${order.madonhang}</a></td>
                     <td>
-                        <div class="fw-bold">${order.TenKhachHang || "Khách vãng lai"}</div>
-                        <div class="small text-muted">${order.EmailKhachHang || ""}</div>
+                        <div class="fw-bold">${order.tenkhachhang || "Khách vãng lai"}</div>
+                        <div class="small text-muted">${order.emailkhachhang || ""}</div>
                     </td>
                     <td class="text-muted">${orderDate}</td>
-                    <td>${order.SoLuongSanPham || 0} sản phẩm</td>
-                    <td class="fw-bold">${formattedTotal}</td>
-                    <td><span class="status-badge ${statusClass}">${order.TrangThai}</span></td>
+                    <td>${order.soluongsanpham || 0} sản phẩm</td>
+                    <td class="fw-bold text-dark">${formattedTotal}</td>
+                    <td class="align-middle">${statusBadge}</td>
                     <td class="text-center">
-                        <button class="btn-view" onclick="viewOrderDetails('${order.MaDonHang}')">
+                        <button class="btn-view" onclick="viewOrderDetails('${order.madonhang}')">
                             <i class="fa-regular fa-eye"></i>
                         </button>
                     </td>
@@ -108,12 +113,12 @@ export async function initOrderManager() {
 
     const filtered = allOrders.filter((order) => {
       const matchSearch =
-        order.MaDonHang.toLowerCase().includes(searchTerm) ||
-        (order.TenKhachHang &&
-          order.TenKhachHang.toLowerCase().includes(searchTerm));
+        order.madonhang.toLowerCase().includes(searchTerm) ||
+        (order.tenkhachhang &&
+          order.tenkhachhang.toLowerCase().includes(searchTerm));
 
       const matchStatus =
-        statusTerm === "Tất cả" || statusTerm.includes(order.TrangThai);
+        statusTerm === "Tất cả" || statusTerm.includes(order.trangthai);
 
       return matchSearch && matchStatus;
     });
@@ -128,7 +133,6 @@ export async function initOrderManager() {
     let actionText = "";
     let confirmColor = "#0d6efd";
 
-    // Phân tích thông báo trực quan theo từng nấc trạng thái mới được yêu cầu
     switch (trangThaiMoi) {
       case "Đang xử lý":
         actionText = "XÁC NHẬN đơn hàng này";
@@ -223,7 +227,8 @@ export async function initOrderManager() {
       const order = response.data;
       Swal.close();
 
-      // Đổ thông tin Text đơn hàng
+      // 🟢 FIX 2: Ở tầng Controller mình đã giữ cấu trúc Object bọc ngoài là chữ hoa (MaDonHang, NgayDat,...)
+      // Tuy nhiên ở đây bạn viết nhầm order.ngaydat (chữ thường) khiến hàm Date sập tiếp. Sửa thành order.NgayDat!
       document.getElementById("modalMaDonHang").innerText = order.MaDonHang;
       document.getElementById("modalNgayDat").innerText = order.NgayDat
         ? new Date(order.NgayDat).toISOString().split("T")[0]
@@ -234,7 +239,7 @@ export async function initOrderManager() {
       document.getElementById("modalTongTien").innerText =
         new Intl.NumberFormat("vi-VN").format(order.TongTien) + "đ";
 
-      // Đổ thông tin khách hàng
+      // Đổ thông tin khách hàng (Dữ liệu bọc ngoài theo cấu trúc Controller phản hồi)
       document.getElementById("modalKhachHang").innerText =
         order.KhachHang.HoTen || "Khách vãng lai";
       document.getElementById("modalSDT").innerText =
@@ -256,6 +261,7 @@ export async function initOrderManager() {
         modalProductItems.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-muted">Đơn hàng không có sản phẩm nào</td></tr>`;
       } else {
         modalProductItems.innerHTML = order.Items.map((item) => {
+          // 🟢 FIX 3: Map đúng thuộc tính chữ Hoa của mảng Items từ Controller định nghĩa (MaSP, GiaBan, SoLuong, GiamGia)
           const price = Number(item.GiaBan || 0);
           const quantity = Number(item.SoLuong || 0);
           const discount = Number(item.GiamGia || 0);
@@ -273,10 +279,12 @@ export async function initOrderManager() {
         }).join("");
       }
 
-      // ─── 5. NÂNG CẤP BẬC ĐIỀU HƯỚNG NÚT BẤM THEO LUỒNG TRẠNG THÁI MỚI ───
+      // 5. Điều hướng nút bấm hành động dựa trên trạng thái
       const modalActionButtons = document.getElementById("modalActionButtons");
 
-      switch (order.TrangThai) {
+      switch (
+        order.TrangThai // 🟢 FIX 4: Sửa sang order.TrangThai đồng bộ
+      ) {
         case "Chờ xác nhận":
           modalActionButtons.innerHTML = `
                         <button class="btn btn-warning text-dark me-2 px-3 fw-bold" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đang xử lý')">
@@ -300,7 +308,6 @@ export async function initOrderManager() {
           break;
 
         case "Đang giao":
-          // 🟢 THÊM MỚI: Từ Đang giao hỗ trợ nâng cấp chuyển dịch sang Đã giao hoặc Hủy
           modalActionButtons.innerHTML = `
                         <button class="btn btn-success me-2 px-3 fw-bold" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đã giao')">
                             <i class="fa-solid fa-box-open me-1"></i> Đã giao hàng
@@ -312,7 +319,6 @@ export async function initOrderManager() {
           break;
 
         case "Đã giao":
-          // 🟢 THÊM MỚI: Từ Đã giao, cho phép kế toán/nhân viên xác thực đóng đơn sang trạng thái "Thành công"
           modalActionButtons.innerHTML = `
                         <button class="btn btn-success me-2 px-3 fw-bold" style="background-color: #198754;" onclick="handleUpdateStatus('${order.MaDonHang}', 'Thành công')">
                             <i class="fa-solid fa-circle-check me-1"></i> Hoàn thành (Tích điểm)
@@ -321,7 +327,6 @@ export async function initOrderManager() {
           break;
 
         default:
-          // Trạng thái 'Thành công' và 'Đã hủy' sẽ khóa, không hiển thị nút xử lý hành động nhanh nữa
           modalActionButtons.innerHTML = "";
           break;
       }
@@ -367,22 +372,22 @@ export async function initOrderManager() {
     headerRow.alignment = { vertical: "middle", horizontal: "center" };
 
     data.forEach((order) => {
+      // 🟢 FIX 5: Xuất file Excel đọc từ mảng danh sách (Dữ liệu thô từ hàm getAll của Model viết thường hoàn toàn)
       worksheet.addRow({
-        MaDonHang: order.MaDonHang,
-        TenKhachHang: order.TenKhachHang || "Khách vãng lai",
-        EmailKhachHang: order.EmailKhachHang || "",
-        NgayDat: order.NgayDat
-          ? new Date(order.NgayDat).toISOString().split("T")[0]
+        MaDonHang: order.madonhang,
+        TenKhachHang: order.tenkhachhang || "Khách vãng lai",
+        EmailKhachHang: order.emailkhachhang || "",
+        NgayDat: order.ngaydat
+          ? new Date(order.ngaydat).toISOString().split("T")[0]
           : "",
-        SoLuongSanPham: order.SoLuongSanPham,
-        TongTien: order.TongTien,
-        TrangThai: order.TrangThai,
+        SoLuongSanPham: order.soluongsanpham,
+        TongTien: order.tongtien,
+        TrangThai: order.trangthai,
       });
     });
 
     worksheet.getColumn("TongTien").numFmt = '#,##0"đ"';
 
-    // Cải tiến đồng bộ Font Segoe UI chuẩn văn phòng cho toàn bộ các ô dữ liệu
     worksheet.eachRow((row, rowNumber) => {
       row.eachCell((cell) => {
         if (rowNumber > 1) {
