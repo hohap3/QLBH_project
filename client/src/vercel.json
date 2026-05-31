@@ -3,11 +3,15 @@
   "rewrites": [
     {
       "source": "/src/pages/(.*).html",
-      "destination": "/src/pages/$1.html"
+      "destination": "/$1.html"
     },
     {
       "source": "/src/pages/(.*)",
-      "destination": "/src/pages/$1.html"
+      "destination": "/$1.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/$1.html"
     }
   ]
 }
