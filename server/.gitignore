@@ -53,8 +53,8 @@ temp/
 *.db
 
 # Uploads
-uploads/
-public/uploads/
+!uploads/
+!public/uploads/
 
 # Generated files
 *.tsbuildinfo
