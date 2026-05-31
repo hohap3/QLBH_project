@@ -48,8 +48,8 @@ export async function initEmployeeManager() {
 
     tableBody.innerHTML = data
       .map((nv) => {
-        const dateFormatted = nv.NgayTao
-          ? new Date(nv.NgayTao).toLocaleDateString("vi-VN")
+        const dateFormatted = nv.ngaytao
+          ? new Date(nv.ngaytao).toLocaleDateString("vi-VN")
           : "N/A";
         return `
                 <tr>
