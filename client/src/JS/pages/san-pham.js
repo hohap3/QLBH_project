@@ -30,7 +30,7 @@ export async function initProductManager() {
 
   // --- CÁC HÀM BỔ TRỢ (HELPER FUNCTIONS) ---
 
-  // 🟢 HÀM VALIDATE DỮ LIỆU SẢN PHẨM (MỚI CẬP NHẬT)
+  // 🟢 HÀM VALIDATE DỮ LIỆU SẢN PHẨM (ĐÃ CẬP NHẬT KIỂM TRA GIÁ BÁN > GIÁ NHẬP)
   const validateProductData = (tenSP, giaNhap, giaBan) => {
     const trimmedTen = tenSP ? tenSP.trim() : "";
 
@@ -54,7 +54,7 @@ export async function initProductManager() {
       return false;
     }
 
-    // 3. Kiểm tra giá nhập
+    // 3. Kiểm tra định dạng và hạn mức tối thiểu của giá nhập
     const numGiaNhap = Number(giaNhap);
     if (isNaN(numGiaNhap) || numGiaNhap < 10000) {
       Swal.fire(
@@ -65,12 +65,22 @@ export async function initProductManager() {
       return false;
     }
 
-    // 4. Kiểm tra giá bán
+    // 4. Kiểm tra định dạng và hạn mức tối thiểu của giá bán
     const numGiaBan = Number(giaBan);
     if (isNaN(numGiaBan) || numGiaBan < 10000) {
       Swal.fire(
         "Lỗi nhập liệu",
         "Giá bán sản phẩm phải từ 10.000đ trở lên!",
+        "warning",
+      );
+      return false;
+    }
+
+    // 🔥 5. Kiểm tra logic nghiệp vụ: Giá bán phải lớn hơn Giá nhập
+    if (numGiaBan <= numGiaNhap) {
+      Swal.fire(
+        "Lỗi chiến lược giá",
+        "Giá bán bắt buộc phải lớn hơn giá nhập để đảm bảo lợi nhuận!",
         "warning",
       );
       return false;
@@ -258,7 +268,7 @@ export async function initProductManager() {
     };
   }
 
-  // ✅ Xử lý Thêm mới (ĐÃ CẬP NHẬT LOGIC VALIDATE)
+  // Xử lý Thêm mới
   if (addForm) {
     addForm.onsubmit = async (e) => {
       e.preventDefault();
@@ -267,9 +277,8 @@ export async function initProductManager() {
       const giaNhap = document.getElementById("addGiaNhap").value;
       const giaBan = document.getElementById("addGiaBan").value;
 
-      // Kích hoạt hàm kiểm tra trước khi gửi API
       if (!validateProductData(tenSP, giaNhap, giaBan)) {
-        return; // Dừng lại nếu dữ liệu không đạt yêu cầu
+        return;
       }
 
       const formData = new FormData(addForm);
@@ -345,7 +354,7 @@ export async function initProductManager() {
     }
   });
 
-  // ✅ Xử lý Cập nhật (ĐÃ CẬP NHẬT LOGIC VALIDATE)
+  // Xử lý Cập nhật
   if (editForm) {
     editForm.onsubmit = async (e) => {
       e.preventDefault();
@@ -355,7 +364,6 @@ export async function initProductManager() {
       const giaNhap = document.getElementById("editGiaNhap").value;
       const giaBan = document.getElementById("editGiaBan").value;
 
-      // Kích hoạt hàm kiểm tra trước khi gửi API sửa
       if (!validateProductData(tenSP, giaNhap, giaBan)) {
         return;
       }
