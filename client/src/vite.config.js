@@ -2,12 +2,9 @@ import { resolve } from "path";
 import { defineConfig } from "vite";
 
 export default defineConfig({
-  // 🟢 Thêm base path để đảm bảo các file asset (.js, .css) tìm đúng đường dẫn tương đối sau khi build
   base: "./",
 
-  // 1. Cấu hình Server cho môi trường Development (npm run dev)
   server: {
-    // Ép server Vite trả về đúng file HTML tương ứng khi bạn gõ URL sạch trên trình duyệt (ví dụ: http://localhost:5173/cart)
     historyApiFallback: {
       rewrites: [
         { from: /^\/login$/, to: "/src/pages/login.html" },
@@ -33,9 +30,7 @@ export default defineConfig({
     },
   },
 
-  // 2. Cấu hình cho môi trường Production (npm run build)
   build: {
-    // 🟢 KHAI BÁO ĐẦY ĐỦ: Buộc Rollup phải quét và biên dịch toàn bộ các trang HTML này vào thư mục "dist"
     rollupOptions: {
       input: {
         main: resolve(__dirname, "index.html"),
@@ -44,20 +39,21 @@ export default defineConfig({
         dashboard: resolve(__dirname, "src/pages/dashboard.html"),
         cart: resolve(__dirname, "src/pages/cart.html"),
         checkout: resolve(__dirname, "src/pages/checkout.html"),
-        danhMuc: resolve(__dirname, "src/pages/danh-muc.html"),
-        donHang: resolve(__dirname, "src/pages/don-hang.html"),
-        orderHistory: resolve(__dirname, "src/pages/order-history.html"),
-        productDetail: resolve(__dirname, "src/pages/product-detail.html"),
+        // 🟢 SỬA TÊN KEY: Giữ đúng tên file vật lý để Vite build ra chính xác tên cũ
+        "danh-muc": resolve(__dirname, "src/pages/danh-muc.html"),
+        "don-hang": resolve(__dirname, "src/pages/don-hang.html"),
+        "order-history": resolve(__dirname, "src/pages/order-history.html"),
+        "product-detail": resolve(__dirname, "src/pages/product-detail.html"),
         hoso: resolve(__dirname, "src/pages/hoso.html"),
-        khachHang: resolve(__dirname, "src/pages/khach-hang.html"),
-        nhaCungCap: resolve(__dirname, "src/pages/nha-cung-cap.html"),
-        quanlyKhoHang: resolve(__dirname, "src/pages/quanly-khohang.html"),
-        quanlyNhanVien: resolve(__dirname, "src/pages/quanly-nhanvien.html"),
+        "khach-hang": resolve(__dirname, "src/pages/khach-hang.html"),
+        "nha-cung-cap": resolve(__dirname, "src/pages/nha-cung-cap.html"),
+        "quanly-khohang": resolve(__dirname, "src/pages/quanly-khohang.html"),
+        "quanly-nhanvien": resolve(__dirname, "src/pages/quanly-nhanvien.html"),
         employeeManager: resolve(__dirname, "src/pages/employeeManager.html"),
-        sanPham: resolve(__dirname, "src/pages/san-pham.html"),
-        tongQuan: resolve(__dirname, "src/pages/tong-quan.html"),
-        updatePass: resolve(__dirname, "src/pages/update-pass.html"),
-        caiDat: resolve(__dirname, "src/pages/cai-dat.html"),
+        "san-pham": resolve(__dirname, "src/pages/san-pham.html"),
+        "tong-quan": resolve(__dirname, "src/pages/tong-quan.html"),
+        "update-pass": resolve(__dirname, "src/pages/update-pass.html"),
+        "cai-dat": resolve(__dirname, "src/pages/cai-dat.html"),
       },
     },
   },

@@ -10,7 +10,7 @@
       "destination": "/$1.html"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!src|assets|node_modules|public).* )",
       "destination": "/$1.html"
     }
   ]
