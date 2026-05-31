@@ -5,14 +5,17 @@ import { BASE_URL } from "/src/JS/common/header";
 
 let editModal;
 let addModal;
+let viewModal; // 🔥 Khai báo biến quản lý Modal Xem chi tiết
 
 export async function initProductManager() {
   // 1. Khởi tạo Modals
   const editModalEl = document.getElementById("editProductModal");
   const addModalEl = document.getElementById("addProductModal");
+  const viewModalEl = document.getElementById("viewProductModal"); // 🔥 DOM của Modal xem chi tiết
 
   if (editModalEl) editModal = new Modal(editModalEl);
   if (addModalEl) addModal = new Modal(addModalEl);
+  if (viewModalEl) viewModal = new Modal(viewModalEl); // 🔥 Khởi tạo thực thể Bootstrap Modal
 
   // Dom Elements
   const tableBody = document.getElementById("productTableBody");
@@ -30,7 +33,7 @@ export async function initProductManager() {
 
   // --- CÁC HÀM BỔ TRỢ (HELPER FUNCTIONS) ---
 
-  // 🟢 HÀM VALIDATE DỮ LIỆU SẢN PHẨM (ĐÃ CẬP NHẬT KIỂM TRA GIÁ BÁN > GIÁ NHẬP)
+  // 🟢 HÀM VALIDATE DỮ LIỆU SẢN PHẨM
   const validateProductData = (tenSP, giaNhap, giaBan) => {
     const trimmedTen = tenSP ? tenSP.trim() : "";
 
@@ -76,7 +79,7 @@ export async function initProductManager() {
       return false;
     }
 
-    // 🔥 5. Kiểm tra logic nghiệp vụ: Giá bán phải lớn hơn Giá nhập
+    // 5. Kiểm tra logic nghiệp vụ: Giá bán phải lớn hơn Giá nhập
     if (numGiaBan <= numGiaNhap) {
       Swal.fire(
         "Lỗi chiến lược giá",
@@ -170,7 +173,8 @@ export async function initProductManager() {
                         ${statusText}
                     </span>
                 </td>
-                <td class="text-end">
+                <td class="text-end text-nowrap">
+                    <button class="btn btn-link text-primary p-1 mx-1 btn-view" data-id="${sp.masp}"><i class="fa-regular fa-eye"></i></button>
                     <button class="btn btn-link text-success p-1 mx-1 btn-edit" data-id="${sp.masp}"><i class="fa-regular fa-pen-to-square"></i></button>
                     <button class="btn btn-link text-danger p-1 mx-1 btn-delete" data-id="${sp.masp}"><i class="fa-regular fa-trash-can"></i></button>
                 </td>
@@ -298,13 +302,51 @@ export async function initProductManager() {
     };
   }
 
-  // Xử lý Sửa & Xóa trên bảng
+  // Xử lý Sửa, Xóa & XEM CHI TIẾT trên bảng dữ liệu
   tableBody.addEventListener("click", async (e) => {
     const target = e.target.closest("button");
     if (!target) return;
     const id = target.getAttribute("data-id");
 
-    // XÓA
+    // 🔥 1. XỬ LÝ SỰ KIỆN XEM CHI TIẾT SẢN PHẨM
+    if (target.classList.contains("btn-view")) {
+      try {
+        const res = await axios.get(`${BASE_URL}/products/${id}`);
+        const sp = res.data;
+        if (sp) {
+          // Gán dữ liệu thuần túy (Text) vào Modal Xem chi tiết
+          document.getElementById("viewMaSP").innerText = sp.masp;
+          document.getElementById("viewTenSP").innerText = sp.tensp;
+          document.getElementById("viewDanhMuc").innerText =
+            sp.TenDanhMuc || "Chưa phân loại";
+          document.getElementById("viewNhaCungCap").innerText =
+            sp.TenNCC || "Chưa xác định";
+          document.getElementById("viewGiaNhap").innerText =
+            new Intl.NumberFormat("vi-VN").format(sp.gianhap) + "đ";
+          document.getElementById("viewGiaBan").innerText =
+            new Intl.NumberFormat("vi-VN").format(sp.giaban) + "đ";
+          document.getElementById("viewSoLuongTon").innerText =
+            sp.soluongton + " sản phẩm";
+          document.getElementById("viewDonViTinh").innerText =
+            sp.donvitinh || "Chưa thiết lập";
+          document.getElementById("viewMoTa").innerText =
+            sp.mota || "(Không có mô tả sản phẩm)";
+
+          // Xử lý hiển thị ảnh
+          document.getElementById("viewImagePreview").src = sp.hinhanh
+            ? `https://qlbh-project.onrender.com/uploads/products/${sp.hinhanh}`
+            : "/assets/images/default-product.png";
+
+          // Hiển thị modal xem chi tiết
+          viewModal.show();
+        }
+      } catch (err) {
+        console.error("Lỗi lấy dữ liệu chi tiết:", err);
+        Swal.fire("Lỗi", "Không thể lấy thông tin chi tiết sản phẩm", "error");
+      }
+    }
+
+    // 2. XỬ LÝ SỰ KIỆN XÓA
     if (target.classList.contains("btn-delete")) {
       const result = await Swal.fire({
         title: "Xác nhận xóa?",
@@ -325,7 +367,7 @@ export async function initProductManager() {
       }
     }
 
-    // ĐỔ DỮ LIỆU VÀO MODAL SỬA
+    // 3. ĐỔ DỮ LIỆU VÀO MODAL SỬA
     if (target.classList.contains("btn-edit")) {
       try {
         const res = await axios.get(`${BASE_URL}/products/${id}`);

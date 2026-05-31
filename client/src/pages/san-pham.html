@@ -492,3 +492,82 @@
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="viewProductModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+          <i class="fa-regular fa-folder-open me-2"></i>Chi Tiết Sản Phẩm
+        </h5>
+        <button
+          type="button"
+          class="btn-close btn-close-white"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-4 text-center border-end">
+            <img
+              id="viewImagePreview"
+              src="/assets/images/default-product.png"
+              class="img-fluid rounded shadow-sm border mb-3"
+              style="max-height: 220px; object-fit: cover; width: 100%"
+            />
+          </div>
+          <div class="col-md-8">
+            <table class="table table-sm table-borderless align-middle">
+              <tr>
+                <th width="35%">Mã sản phẩm:</th>
+                <td id="viewMaSP" class="fw-bold text-secondary"></td>
+              </tr>
+              <tr>
+                <th>Tên sản phẩm:</th>
+                <td id="viewTenSP" class="fw-bold fs-5 text-dark"></td>
+              </tr>
+              <tr>
+                <th>Danh mục:</th>
+                <td id="viewDanhMuc" class="text-muted"></td>
+              </tr>
+              <tr>
+                <th>Nhà cung cấp:</th>
+                <td id="viewNhaCungCap" class="text-muted"></td>
+              </tr>
+              <tr class="table-light">
+                <th>Giá nhập hàng:</th>
+                <td id="viewGiaNhap" class="text-danger fw-semibold"></td>
+              </tr>
+              <tr class="table-light">
+                <th>Giá bán niêm yết:</th>
+                <td id="viewGiaBan" class="text-success fw-bold fs-5"></td>
+              </tr>
+              <tr>
+                <th>Số lượng tồn kho:</th>
+                <td id="viewSoLuongTon" class="fw-bold"></td>
+              </tr>
+              <tr>
+                <th>Đơn vị tính:</th>
+                <td id="viewDonViTinh"></td>
+              </tr>
+              <tr>
+                <th>Mô tả chi tiết:</th>
+                <td
+                  id="viewMoTa"
+                  class="text-muted fst-italic"
+                  style="white-space: pre-line"
+                ></td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+          Đóng lại
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
