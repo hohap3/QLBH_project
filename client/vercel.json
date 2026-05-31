@@ -1,17 +1,86 @@
 {
   "cleanUrls": true,
   "rewrites": [
+    { "source": "/login", "destination": "/login.html" },
+    { "source": "/src/pages/login.html", "destination": "/login.html" },
+    { "source": "/src/pages/login", "destination": "/login.html" },
+
+    { "source": "/register", "destination": "/register.html" },
+    { "source": "/src/pages/register.html", "destination": "/register.html" },
+
+    { "source": "/cart", "destination": "/cart.html" },
+    { "source": "/src/pages/cart.html", "destination": "/cart.html" },
+
+    { "source": "/dashboard", "destination": "/dashboard.html" },
+    { "source": "/src/pages/dashboard.html", "destination": "/dashboard.html" },
+
+    { "source": "/checkout", "destination": "/checkout.html" },
+    { "source": "/src/pages/checkout.html", "destination": "/checkout.html" },
+
+    { "source": "/danh-muc", "destination": "/danh-muc.html" },
+    { "source": "/src/pages/danh-muc.html", "destination": "/danh-muc.html" },
+
+    { "source": "/don-hang", "destination": "/don-hang.html" },
+    { "source": "/src/pages/don-hang.html", "destination": "/don-hang.html" },
+
+    { "source": "/order-history", "destination": "/order-history.html" },
     {
-      "source": "/src/pages/(.*).html",
-      "destination": "/$1.html"
+      "source": "/src/pages/order-history.html",
+      "destination": "/order-history.html"
     },
+
+    { "source": "/product-detail", "destination": "/product-detail.html" },
     {
-      "source": "/src/pages/(.*)",
-      "destination": "/$1.html"
+      "source": "/src/pages/product-detail.html",
+      "destination": "/product-detail.html"
     },
+
+    { "source": "/hoso", "destination": "/hoso.html" },
+    { "source": "/src/pages/hoso.html", "destination": "/hoso.html" },
+
+    { "source": "/khach-hang", "destination": "/khach-hang.html" },
     {
-      "source": "/((?!src|assets|node_modules|public).* )",
-      "destination": "/$1.html"
-    }
+      "source": "/src/pages/khach-hang.html",
+      "destination": "/khach-hang.html"
+    },
+
+    { "source": "/nha-cung-cap", "destination": "/nha-cung-cap.html" },
+    {
+      "source": "/src/pages/nha-cung-cap.html",
+      "destination": "/nha-cung-cap.html"
+    },
+
+    { "source": "/quanly-khohang", "destination": "/quanly-khohang.html" },
+    {
+      "source": "/src/pages/quanly-khohang.html",
+      "destination": "/quanly-khohang.html"
+    },
+
+    { "source": "/quanly-nhanvien", "destination": "/quanly-nhanvien.html" },
+    {
+      "source": "/src/pages/quanly-nhanvien.html",
+      "destination": "/quanly-nhanvien.html"
+    },
+
+    { "source": "/employeeManager", "destination": "/employeeManager.html" },
+    {
+      "source": "/src/pages/employeeManager.html",
+      "destination": "/employeeManager.html"
+    },
+
+    { "source": "/san-pham", "destination": "/san-pham.html" },
+    { "source": "/src/pages/san-pham.html", "destination": "/san-pham.html" },
+
+    { "source": "/tong-quan", "destination": "/tong-quan.html" },
+    { "source": "/src/pages/tong-quan.html", "destination": "/tong-quan.html" },
+
+    { "source": "/update-pass", "destination": "/update-pass.html" },
+    {
+      "source": "/src/pages/update-pass.html",
+      "destination": "/update-pass.html"
+    },
+
+    { "source": "/cai-dat", "destination": "/cai-dat.html" },
+    { "source": "/src/pages/cai-dat.html", "destination": "/cai-dat.html" }
   ]
 }
