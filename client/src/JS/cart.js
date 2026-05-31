@@ -104,51 +104,51 @@ function renderCartPage() {
 
       baseSubTotal += itemTotal;
 
-      const imgPath =
-        (item.hinhAnh || item.hinhanh) &&
-        (item.hinhAnh || item.hinhanh) !== "NULL"
-          ? `https://qlbh-project.onrender.com/uploads/products/${item.hinhAnh || item.hinhanh}`
-          : DEFAULT_IMAGE;
+      const rawImg = item.hinhanh || item.hinhAnh || item.HinhAnh;
+      const hasValidImg =
+        rawImg && rawImg !== "NULL" && rawImg !== "undefined" && rawImg !== "";
+
+      const imgPath = hasValidImg
+        ? `https://qlbh-project.onrender.com/uploads/products/${rawImg}`
+        : DEFAULT_IMAGE;
 
       const maSP = item.MaSP || item.masp;
 
       return `
-            <tr data-masp="${maSP}">
-                <td>
-                    <div class="d-flex align-items-center gap-3">
-                        <img src="${imgPath}" class="product-cart-img" alt="${item.TenSP || item.tensp || "Sản phẩm"}" style="width:70px; height:70px; object-fit:contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}'">
-                        <div>
-                            <h6 class="fw-bold text-dark mb-1 text-truncate" style="max-width: 250px;">${item.TenSP || item.tensp || "Không rõ tên"}</h6>
-                            <small class="text-muted d-block">Đơn giá: ${giaBan.toLocaleString("vi-VN")} đ</small>
-                        </div>
-                    </div>
-                </td>
-                <td>
-                    <div class="d-flex justify-content-center">
-                        <div class="quantity-input-group d-flex align-items-center" style="border: 1px solid #ddd; border-radius:5px;">
-                            <button type="button" class="btn btn-sm btn-light px-2" onclick="changeQty('${maSP}', -1)">-</button>
-                            <input type="text" value="${soLuong}" class="text-center border-0 fw-bold" style="width: 40px;" readonly>
-                            <button type="button" class="btn btn-sm btn-light px-2" onclick="changeQty('${maSP}', 1)">+</button>
-                        </div>
-                    </div>
-                </td>
-                <td class="text-end fw-bold text-dark">${itemTotal.toLocaleString("vi-VN")} đ</td>
-                <td class="text-center">
-                    <button class="btn btn-sm text-danger" onclick="removeCartItem('${maSP}')">
-                        <i class="fa-regular fa-trash-can fs-5"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
+    <tr data-masp="${maSP}">
+        <td>
+            <div class="d-flex align-items-center gap-3">
+                <img src="${imgPath}" class="product-cart-img" alt="${item.tensp || item.TenSP || "Sản phẩm"}" style="width:70px; height:70px; object-fit:contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}'">
+                <div>
+                    <h6 class="fw-bold text-dark mb-1 text-truncate" style="max-width: 250px;">${item.tensp || item.TenSP || item.tensanpham || "Không rõ tên"}</h6>
+                    <small class="text-muted d-block">Đơn giá: ${giaBan.toLocaleString("vi-VN")} đ</small>
+                </div>
+            </div>
+        </td>
+        <td>
+            <div class="d-flex justify-content-center">
+                <div class="quantity-input-group d-flex align-items-center" style="border: 1px solid #ddd; border-radius:5px;">
+                    <button type="button" class="btn btn-sm btn-light px-2" onclick="changeQty('${maSP}', -1)">-</button>
+                    <input type="text" value="${soLuong}" class="text-center border-0 fw-bold" style="width: 40px;" readonly>
+                    <button type="button" class="btn btn-sm btn-light px-2" onclick="changeQty('${maSP}', 1)">+</button>
+                </div>
+            </div>
+        </td>
+        <td class="text-end fw-bold text-dark">${itemTotal.toLocaleString("vi-VN")} đ</td>
+        <td class="text-center">
+            <button class="btn btn-sm text-danger" onclick="removeCartItem('${maSP}')">
+                <i class="fa-regular fa-trash-can fs-5"></i>
+            </button>
+        </td>
+    </tr>
+`;
     })
     .join("");
 
   tableBody.innerHTML = htmlRows;
 
-  // Vẽ giao diện khu vực chọn đổi điểm tích lũy lấy Voucher
   renderDiscountSection();
 
-  // Tính toán tiền dựa trên Voucher đang chọn (nếu có)
   calculateDiscount();
 }
 

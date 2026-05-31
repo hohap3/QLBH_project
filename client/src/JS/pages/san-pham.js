@@ -95,7 +95,7 @@ export async function initProductManager() {
                     <div class="d-flex align-items-center">
                         <div class="rounded-3 me-3 d-flex align-items-center justify-content-center bg-light" 
                              style="width: 45px; height: 45px; overflow: hidden; border: 1px solid #eee;">
-                             <img src="${sp.hinhanh ? `http://localhost:3000/uploads/products/${sp.hinhanh}` : "/assets/images/default-product.png"}" 
+                             <img src="${sp.hinhanh ? `https://qlbh-project.onrender.com/uploads/products/${sp.hinhanh}` : "/assets/images/default-product.png"}" 
                                 style="width: 100%; height: 100%; object-fit: cover;">
                         </div>
                         <div>
