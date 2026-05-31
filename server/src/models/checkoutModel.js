@@ -1,113 +1,125 @@
 // src/models/checkoutModel.js
-const { sql, poolPromise } = require("../config/database");
+const { pool } = require("../config/database");
 
 class CheckoutModel {
   static async saveCheckoutTransaction(checkoutData) {
-    const pool = await poolPromise;
-    const transaction = new sql.Transaction(pool);
+    // 1. Rút một kết nối đơn lẻ (client) từ Pool ra để chạy Transaction độc lập
+    const client = await pool.connect();
 
     try {
-      await transaction.begin();
+      // 2. BẮT ĐẦU TRANSACTION TRÊN POSTGRESQL
+      await client.query("BEGIN");
 
       // 🟢 BƯỚC BỔ SUNG: Tìm MaKH từ MaNguoiDung trước khi chèn đơn hàng
       let maKhachHang = null;
       if (checkoutData.MaNguoiDung) {
-        const findCustomerReq = new sql.Request(transaction);
-        const customerResult = await findCustomerReq
-          .input("MaND", sql.VarChar(20), checkoutData.MaNguoiDung)
-          .query(`SELECT MaKH FROM KHACHHANG WHERE MaND = @MaND`);
+        const findCustomerQuery = `SELECT "makh" FROM "khachhang" WHERE "mand" = $1`;
+        const customerResult = await client.query(findCustomerQuery, [
+          checkoutData.MaNguoiDung,
+        ]);
 
-        // Nếu tìm thấy tài khoản này đã có thông tin Khách Hàng, gán vào biến
-        if (customerResult.recordset.length > 0) {
-          maKhachHang = customerResult.recordset[0].MaKH;
+        // Lưu ý: Postgres tự động viết thường tên cột nếu không bọc nháy kép, bạn check lại đúng tên cột trong DB nhé
+        if (customerResult.rows && customerResult.rows.length > 0) {
+          maKhachHang =
+            customerResult.rows[0].makh || customerResult.rows[0].MaKH;
         }
       }
 
-      // 1. SINH MÃ ĐƠN HÀNG TỰ ĐỘNG
+      // 3. SINH MÃ ĐƠN HÀNG TỰ ĐỘNG
       const maDonHang = "DH" + Date.now().toString().slice(-8);
 
-      // Tính toán tổng tiền thực tế
+      // Tính toán tổng tiền thực tế từ giỏ hàng
       const tongTien = checkoutData.ChiTiet.reduce(
         (sum, item) => sum + item.GiaBan * item.SoLuong,
         0,
       );
 
-      // 2. CHÈN VÀO TABLE: DONHANG (Đã sửa truyền biến maKhachHang thay vì null)
-      const orderReq = new sql.Request(transaction);
-      await orderReq
-        .input("MaDonHang", sql.VarChar(20), maDonHang)
-        .input("MaKH", sql.VarChar(20), maKhachHang) // 🟢 Thay đổi tại đây
-        .input("MaNguoiDung", sql.VarChar(20), checkoutData.MaNguoiDung)
-        .input("TrangThai", sql.NVarChar(50), "Chờ xác nhận")
-        .input("TongTien", sql.Decimal(18, 2), tongTien)
-        .input("GhiChu", sql.NVarChar(255), checkoutData.GhiChu).query(`
-                    INSERT INTO DONHANG (MaDonHang, MaKH, MaNguoiDung, NgayDat, TrangThai, TongTien, GhiChu)
-                    VALUES (@MaDonHang, @MaKH, @MaNguoiDung, GETDATE(), @TrangThai, @TongTien, @GhiChu)
-                `);
+      // 4. CHÈN VÀO TABLE: DONHANG (Sử dụng tham số dạng $1, $2, $3 của pg)
+      const insertOrderQuery = `
+        INSERT INTO "donhang" ("madonhang", "makh", "manguoidung", "ngaydat", "trangthai", "tongtien", "ghichu")
+        VALUES ($1, $2, $3, NOW(), $4, $5, $6)
+      `;
+      const orderValues = [
+        maDonHang,
+        maKhachHang,
+        checkoutData.MaNguoiDung,
+        "Chờ xác nhận",
+        tongTien,
+        checkoutData.GhiChu,
+      ];
+      await client.query(insertOrderQuery, orderValues);
 
-      // 3. CHÈN VÀO TABLE: CHITIET_DONHANG & TRỪ KHO SANPHAM
+      // 5. CHÈN VÀO TABLE: CHITIET_DONHANG & TRỪ KHO SANPHAM
+      const insertDetailQuery = `
+        INSERT INTO "chitiet_donhang" ("madonhang", "masp", "soluong", "giaban", "giamgia")
+        VALUES ($1, $2, $3, $4, 0)
+      `;
+      const updateStockQuery = `
+        UPDATE "sanpham" 
+        SET "soluongton" = "soluongton" - $1 
+        WHERE "masp" = $2
+      `;
+
       for (const item of checkoutData.ChiTiet) {
-        const insertDetailReq = new sql.Request(transaction);
+        // Chèn chi tiết đơn hàng
+        await client.query(insertDetailQuery, [
+          maDonHang,
+          item.MaSP,
+          item.SoLuong,
+          item.GiaBan,
+        ]);
 
-        await insertDetailReq
-          .input("MaDonHang", sql.VarChar(20), maDonHang)
-          .input("MaSP", sql.VarChar(20), item.MaSP)
-          .input("SoLuong", sql.Int, item.SoLuong)
-          .input("GiaBan", sql.Decimal(18, 2), item.GiaBan).query(`
-                        INSERT INTO CHITIET_DONHANG (MaDonHang, MaSP, SoLuong, GiaBan, GiamGia)
-                        VALUES (@MaDonHang, @MaSP, @SoLuong, @GiaBan, 0)
-                    `);
-
-        const updateStockReq = new sql.Request(transaction);
-        await updateStockReq
-          .input("MaSP", sql.VarChar(20), item.MaSP)
-          .input("SoLuong", sql.Int, item.SoLuong).query(`
-                        UPDATE SANPHAM 
-                        SET SoLuongTon = SoLuongTon - @SoLuong 
-                        WHERE MaSP = @MaSP
-                    `);
+        // Cập nhật số lượng tồn kho sản phẩm
+        await client.query(updateStockQuery, [item.SoLuong, item.MaSP]);
       }
 
-      // 4. CHÈN VÀO TABLE: PHIEUGIAOHANG
+      // 6. CHÈN VÀO TABLE: PHIEUGIAOHANG
       const maGiaoHang = "GH" + Date.now().toString().slice(-8);
-      const deliveryReq = new sql.Request(transaction);
+      const insertDeliveryQuery = `
+        INSERT INTO "phieugiaohang" ("magiaohang", "madonhang", "diachi", "ngaygiao", "trangthai", "nguoinhan", "sdtnguoinhan")
+        VALUES ($1, $2, $3, NOW(), $4, $5, $6)
+      `;
+      const deliveryValues = [
+        maGiaoHang,
+        maDonHang,
+        checkoutData.DiaChi,
+        "Chưa Giao",
+        checkoutData.NguoiNhan,
+        checkoutData.SDTNguoiNhan,
+      ];
+      await client.query(insertDeliveryQuery, deliveryValues);
 
-      await deliveryReq
-        .input("MaGiaoHang", sql.VarChar(20), maGiaoHang)
-        .input("MaDonHang", sql.VarChar(20), maDonHang)
-        .input("DiaChi", sql.NVarChar(255), checkoutData.DiaChi)
-        .input("TrangThaiGH", sql.NVarChar(30), "Chưa Giao")
-        .input("NguoiNhan", sql.NVarChar(100), checkoutData.NguoiNhan)
-        .input("SDTNguoiNhan", sql.VarChar(15), checkoutData.SDTNguoiNhan)
-        .query(`
-                    INSERT INTO PHIEUGIAOHANG (MaGiaoHang, MaDonHang, DiaChi, NgayGiao, TrangThai, NguoiNhan, SDTNguoiNhan)
-                    VALUES (@MaGiaoHang, @MaDonHang, @DiaChi, GETDATE(), @TrangThaiGH, @NguoiNhan, @SDTNguoiNhan)
-                `);
-
-      // 5. CHÈN VÀO TABLE: THANHTOAN
+      // 7. CHÈN VÀO TABLE: THANHTOAN
       const maThanhToan = "TT" + Date.now().toString().slice(-8);
-      const paymentReq = new sql.Request(transaction);
       const trangThaiTT =
         checkoutData.PhuongThucThanhToan === "COD"
           ? "Chưa Thanh Toán"
           : "Chờ Xác Nhận";
 
-      await paymentReq
-        .input("MaThanhToan", sql.VarChar(20), maThanhToan)
-        .input("MaDonHang", sql.VarChar(20), maDonHang)
-        .input("SoTien", sql.Decimal(18, 2), tongTien)
-        .input("PhuongThuc", sql.NVarChar(30), checkoutData.PhuongThucThanhToan)
-        .input("MaGiaoDich", sql.VarChar(50), null)
-        .input("TrangThaiTT", sql.NVarChar(30), trangThaiTT).query(`
-                    INSERT INTO THANHTOAN (MaThanhToan, MaDonHang, NgayThanhToan, SoTien, PhuongThuc, MaGiaoDich, TrangThai)
-                    VALUES (@MaThanhToan, @MaDonHang, GETDATE(), @SoTien, @PhuongThuc, @MaGiaoDich, @TrangThaiTT)
-                `);
+      const insertPaymentQuery = `
+        INSERT INTO "thanhtoan" ("mathanhtoan", "madonhang", "ngaythanhtoan", "sotien", "phuongthuc", "magiaodich", "trangthai")
+        VALUES ($1, $2, NOW(), $3, $4, NULL, $5)
+      `;
+      const paymentValues = [
+        maThanhToan,
+        maDonHang,
+        tongTien,
+        checkoutData.PhuongThucThanhToan,
+        trangThaiTT,
+      ];
+      await client.query(insertPaymentQuery, paymentValues);
 
-      await transaction.commit();
-      return { success: true, maDonHang };
+      // 🟢 XÁC NHẬN LƯU TẤT CẢ DỮ LIỆU VÀO POSTGRESQL NẾU KHÔNG CÓ LỖI
+      await client.query("COMMIT");
+
+      return { maDonHang: maDonHang };
     } catch (error) {
-      await transaction.rollback();
+      // 🔴 HOÀN TÁC TOÀN BỘ NẾU XẢY RA LỖI GIỮA CHỪNG (Chống rác database)
+      await client.query("ROLLBACK");
       throw error;
+    } finally {
+      // 🟢 GIẢI PHÓNG KẾT NỐI: Trả client lại cho pool quản lý
+      client.release();
     }
   }
 }
