@@ -31,7 +31,7 @@ async function searchProducts() {
           .map(
             (sp) => `
                     <a href="/src/pages/product-detail.html?id=${sp.masp}" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-2">
-                        <img src="${BASE_URL.replace("/api", "")}/uploads/products/${sp.HinhAnh}" alt="${sp.tensp}" style="width: 40px; height: 40px; object-fit: contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
+                        <img src="${BASE_URL.replace("/api", "")}/uploads/products/${sp.hinhanh}" alt="${sp.tensp}" style="width: 40px; height: 40px; object-fit: contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
                         <div class="overflow-hidden">
                             <div class="fw-bold text-truncate" style="font-size: 0.9rem;">${sp.tensp}</div>
                             <div class="text-primary small fw-bold">${new Intl.NumberFormat("vi-VN").format(sp.giaban)}đ</div>

@@ -1,6 +1,7 @@
 require("dotenv").config();
 const app = require("./app"); // App đã chứa cors, json và routes
 const { poolPromise } = require("../src/config/database");
+const path = require("path");
 
 // Kết nối Database trước, khởi động Server sau
 poolPromise
@@ -10,6 +11,11 @@ poolPromise
     console.log("✅ Database: PostgreSQL (Neon.tech) đã sẵn sàng.");
 
     // Ưu tiên lấy PORT từ biến môi trường của Render, nếu không có thì dùng 3000
+    app.use(
+      "/uploads",
+      express.static(path.join(__dirname, "src/public/uploads")),
+    );
+    console.log("📂 Thư mục static '/uploads' đã được cấu hình.");
     const PORT = process.env.PORT || 3000;
 
     app.listen(PORT, () => {
