@@ -4,12 +4,19 @@ const userModel = {
   // 1. Lấy thông tin chi tiết người dùng bằng mand
   getUserById: async (maND) => {
     try {
-      // Postgres chuyển tên bảng/cột thành chữ thường: nguoidung, mand, tendangnhap...
       const query = `
-        SELECT mand, tendangnhap, hoten, email, sdt, mavaitro 
-        FROM nguoidung 
-        WHERE mand = $1
-      `;
+      SELECT 
+        nd.mand, 
+        nd.tendangnhap, 
+        nd.hoten, 
+        nd.email, 
+        nd.sdt, 
+        nd.mavaitro,
+        COALESCE(kh.diemtichluy, 0) AS diemtichluy -- Nếu không có trong bảng khachhang thì mặc định trả về 0
+      FROM nguoidung nd
+      LEFT JOIN khachhang kh ON nd.mand = kh.mand
+      WHERE nd.mand = $1
+    `;
       const result = await pool.query(query, [maND]);
 
       // Trả về bản ghi đầu tiên nếu tìm thấy, ngược lại trả về null

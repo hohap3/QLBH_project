@@ -1,17 +1,15 @@
-// src/JS/checkout.js
-
 import Swal from "sweetalert2";
+import { BASE_URL } from "/src/JS/common/header";
 
 const MY_ACCOUNT = "0934135205";
 const DEFAULT_IMAGE = "/img/default.jpg";
-let baseTotalMoney = 0;
-import { BASE_URL } from "/src/JS/common/header";
+let baseTotalMoney = 0; // Tổng tiền sản phẩm gốc
+let voucherDiscountAmount = 0; // Số tiền được giảm từ đổi điểm
 
-// THÔNG TIN TÀI KHOẢN NGÂN HÀNG CỦA SHOP (Cấu hình để sinh VietQR)
 const BANK_CONFIG = {
-  bankId: "mbbank", // Tên viết tắt của ngân hàng (vcb, mbbank, tcb, acb...)
-  accountNo: MY_ACCOUNT, // Số tài khoản ngân hàng của bạn
-  accountName: "CONG TY HP STORE", // Tên chủ tài khoản
+  bankId: "mbbank",
+  accountNo: MY_ACCOUNT,
+  accountName: "CONG TY HP STORE",
 };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -33,29 +31,48 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function getCartKey() {
   const userData = JSON.parse(localStorage.getItem("hpstore_user"));
-  if (userData && (userData.MaND || userData.id)) {
-    return `hpstore_cart_${userData.MaND || userData.id}`;
+  if (
+    userData &&
+    (userData.maND || userData.id || userData.MaND || userData.mand)
+  ) {
+    return `hpstore_cart_${userData.maND || userData.id || userData.MaND || userData.mand}`;
   }
   return "hpstore_cart_guest";
 }
 
 async function autofillUserInfo() {
   const userData = JSON.parse(localStorage.getItem("hpstore_user"));
-  if (!userData || !(userData.MaND || userData.id)) {
+  const maND =
+    userData?.maND || userData?.id || userData?.MaND || userData?.mand;
+
+  if (!maND) {
     resetPlaceholdersToGuest();
     return;
   }
-  const maND = userData.MaND || userData.id;
+
   try {
+    // 🟢 ĐỒNG BỘ ĐÚNG ROUTE PARAMS: Thay vì dùng (?id=), truyền trực tiếp giá trị vào URL khớp với req.params ở Controller
     const res = await fetch(`${BASE_URL}/account/checkout-info/${maND}`);
     const result = await res.json();
+
     if (result.success && result.data) {
       const user = result.data;
-      if (user.HoTen)
-        document.getElementById("checkout-fullname").value = user.HoTen;
-      if (user.SDT) document.getElementById("checkout-phone").value = user.SDT;
-      if (user.DiaChi)
-        document.getElementById("checkout-address").value = user.DiaChi;
+
+      // Khớp chính xác các trường chữ thường từ PostgreSQL trả về
+      if (user.hoten) {
+        document.getElementById("checkout-fullname").value = user.hoten;
+      }
+      if (user.sdt) {
+        document.getElementById("checkout-phone").value = user.sdt;
+      }
+      if (user.diachi) {
+        document.getElementById("checkout-address").value = user.diachi;
+      }
+
+      // Thiết lập lưu trữ điểm tích lũy cục bộ nếu hệ thống cần dùng đến dữ liệu này
+      if (user.diemtichluy !== undefined) {
+        localStorage.setItem("hpstore_user_points", user.diemtichluy);
+      }
     } else {
       resetPlaceholdersToGuest();
     }
@@ -66,10 +83,10 @@ async function autofillUserInfo() {
 }
 
 function resetPlaceholdersToGuest() {
-  document.getElementById("checkout-fullname").placeholder =
-    "Nhập họ tên người nhận...";
-  document.getElementById("checkout-phone").placeholder =
-    "Nhập số điện thoại nhận hàng...";
+  const nameEl = document.getElementById("checkout-fullname");
+  const phoneEl = document.getElementById("checkout-phone");
+  if (nameEl) nameEl.placeholder = "Nhập họ tên người nhận...";
+  if (phoneEl) phoneEl.placeholder = "Nhập số điện thoại nhận hàng...";
 }
 
 function renderCheckoutSummary() {
@@ -91,26 +108,30 @@ function renderCheckoutSummary() {
     return;
   }
 
+  // 🟢 ĐỒNG BỘ: Hỗ trợ linh hoạt cả chữ HOA/thường của thuộc tính sản phẩm từ Postgres
   baseTotalMoney = cart.reduce((sum, item) => {
-    const gia = parseFloat(item.GiaBan) || 0;
-    const qty = parseInt(item.SoLuong) || 0;
+    const gia = parseFloat(item.GiaBan || item.giaban) || 0;
+    const qty = parseInt(item.SoLuong || item.soluong) || 0;
     return sum + gia * qty;
   }, 0);
 
   container.innerHTML = cart
     .map((item) => {
-      const gia = parseFloat(item.GiaBan) || 0;
-      const qty = parseInt(item.SoLuong) || 0;
+      const gia = parseFloat(item.GiaBan || item.giaban) || 0;
+      const qty = parseInt(item.SoLuong || item.soluong) || 0;
+      const hinhAnh = item.HinhAnh || item.hinhanh;
+      const tenSP = item.TenSP || item.tensp || "Sản phẩm";
+
       const imgPath =
-        item.HinhAnh && item.HinhAnh !== "NULL"
-          ? `${BASE_URL}/uploads/products/${item.HinhAnh}`
+        hinhAnh && hinhAnh !== "NULL"
+          ? `${BASE_URL}/uploads/products/${hinhAnh}`
           : DEFAULT_IMAGE;
 
       return `
             <div class="d-flex align-items-center gap-3 mb-3">
-                <img src="${imgPath}" class="product-checkout-img border" alt="${item.TenSP || "Sản phẩm"}" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
+                <img src="${imgPath}" class="product-checkout-img border" alt="${tenSP}" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';" style="width:50px; height:50px; object-fit:contain;">
                 <div class="flex-grow-1 min-w-0">
-                    <h6 class="small fw-bold text-dark mb-0 text-truncate" style="max-width: 220px;">${item.TenSP || "Sản phẩm"}</h6>
+                    <h6 class="small fw-bold text-dark mb-0 text-truncate" style="max-width: 220px;">${tenSP}</h6>
                     <small class="text-muted">SL: ${qty} x ${gia.toLocaleString("vi-VN")} đ</small>
                 </div>
                 <span class="small fw-bold text-dark text-end">${(gia * qty).toLocaleString("vi-VN")} đ</span>
@@ -121,6 +142,24 @@ function renderCheckoutSummary() {
 
   document.getElementById("checkout-subtotal").innerText =
     `${baseTotalMoney.toLocaleString("vi-VN")} đ`;
+
+  // 🟢 TÍCH HỢP: Đọc dữ liệu giảm giá đổi điểm từ localStorage (nếu có)
+  const discountInfo = JSON.parse(
+    localStorage.getItem("hpstore_checkout_discount"),
+  );
+  const discountLabelEl = document.getElementById("checkout-discount-fee"); // Thẻ hiển thị số tiền giảm trên giao diện checkout
+
+  if (discountInfo && discountInfo.amount > 0) {
+    voucherDiscountAmount = discountInfo.amount;
+    if (discountLabelEl) {
+      discountLabelEl.innerText = `-${voucherDiscountAmount.toLocaleString("vi-VN")} đ (${discountInfo.percent}%)`;
+      discountLabelEl.className = "fw-bold text-danger";
+    }
+  } else {
+    voucherDiscountAmount = 0;
+    if (discountLabelEl) discountLabelEl.innerText = "0 đ";
+  }
+
   updateFinalTotalDisplay();
 }
 
@@ -141,9 +180,16 @@ function updateFinalTotalDisplay() {
     }
   }
 
-  const finalTotal = baseTotalMoney + shipFee;
-  document.getElementById("checkout-total").innerText =
-    `${finalTotal.toLocaleString("vi-VN")} đ`;
+  // Tổng thanh toán = Tiền hàng gốc + Phí Ship - Tiền giảm giá Voucher
+  const finalTotal = Math.max(
+    0,
+    baseTotalMoney + shipFee - voucherDiscountAmount,
+  );
+
+  const totalEl = document.getElementById("checkout-total");
+  if (totalEl) {
+    totalEl.innerText = `${finalTotal.toLocaleString("vi-VN")} đ`;
+  }
   return finalTotal;
 }
 
@@ -154,9 +200,15 @@ async function handleCheckoutSubmit(e) {
   const phone = document.getElementById("checkout-phone").value.trim();
   const address = document.getElementById("checkout-address").value.trim();
   const note = document.getElementById("checkout-note").value.trim();
-  const paymentMethod = document.querySelector(
+  const paymentElement = document.querySelector(
     'input[name="paymentMethod"]:checked',
-  ).value;
+  );
+
+  if (!paymentElement) {
+    Swal.fire("Thông báo", "Vui lòng chọn phương thức thanh toán!", "warning");
+    return;
+  }
+  const paymentMethod = paymentElement.value;
 
   if (!name || !phone || !address) {
     Swal.fire({
@@ -173,18 +225,39 @@ async function handleCheckoutSubmit(e) {
   const userData = JSON.parse(localStorage.getItem("hpstore_user")) || {};
   const finalTotalMoney = updateFinalTotalDisplay();
 
+  // Lấy thông tin voucher để trừ điểm ở Backend và chia đều giảm giá vào ChiTiet
+  const discountInfo = JSON.parse(
+    localStorage.getItem("hpstore_checkout_discount"),
+  ) || { percent: 0, amount: 0, pointsToDeduct: 0 };
+
+  // 🟢 TỐI ƯU PAYLOAD POSTGRESQL: Đồng bộ hóa cấu trúc gửi lên API xử lý hóa đơn
   const checkoutPayload = {
-    MaNguoiDung: userData.MaND || userData.id || null,
+    MaNguoiDung:
+      userData.maND || userData.id || userData.MaND || userData.mand || null,
     GhiChu: note || null,
     NguoiNhan: name,
     SDTNguoiNhan: phone,
     DiaChi: address,
     PhuongThucThanhToan: paymentMethod,
-    ChiTiet: cart.map((item) => ({
-      MaSP: item.MaSP,
-      SoLuong: parseInt(item.SoLuong),
-      GiaBan: parseFloat(item.GiaBan),
-    })),
+    PointsToDeduct: discountInfo.pointsToDeduct, // Gửi số điểm cần trừ của khách hàng lên DB
+    TongGiamGia: discountInfo.amount,
+    ChiTiet: cart.map((item) => {
+      const giaBan = parseFloat(item.GiaBan || item.giaban) || 0;
+      const soLuong = parseInt(item.SoLuong || item.soluong) || 0;
+
+      // Tính toán chia tỷ lệ giảm giá cho từng mặt hàng (áp dụng vào trường GiamGia decimal của CHITIET_DONHANG)
+      let itemDiscount = 0;
+      if (discountInfo.percent > 0) {
+        itemDiscount = Math.round(giaBan * (discountInfo.percent / 100));
+      }
+
+      return {
+        MaSP: item.MaSP || item.masp,
+        SoLuong: soLuong,
+        GiaBan: giaBan,
+        GiamGia: itemDiscount, // Khớp thuộc tính GiamGia trong TABLE CHITIET_DONHANG
+      };
+    }),
   };
 
   try {
@@ -197,7 +270,6 @@ async function handleCheckoutSubmit(e) {
       },
     });
 
-    // 1. Gọi API gửi thông tin tạo đơn hàng lưu xuống Database SQL Server
     const response = await fetch(`${BASE_URL}/checkout/process`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -207,9 +279,11 @@ async function handleCheckoutSubmit(e) {
     const result = await response.json();
 
     if (response.ok && result.success) {
-      const createdOrderId = result.maDonHang;
+      const createdOrderId = result.maDonHang || result.MaDonHang;
 
-      // 🌟 LUỒNG XỬ LÝ: NẾU KHÁCH CHỌN CHUYỂN KHOẢN NGÂN HÀNG / QR
+      // Xóa thông tin giảm giá tạm sau khi đặt đơn thành công
+      localStorage.removeItem("hpstore_checkout_discount");
+
       if (
         paymentMethod === "CHUYEN_KHOAN" ||
         paymentMethod === "BANK_TRANSFER"
@@ -221,7 +295,7 @@ async function handleCheckoutSubmit(e) {
           title: "Thanh Toán Chuyển Khoản QR",
           html: `
             <div class="text-center">
-              <p class="text-muted small mb-2">Vui lòng quét mã QR dưới đây bằng ứng dụng Ngân hàng (Banking) để thanh toán đơn hàng.</p>
+              <p class="text-muted small mb-2">Vui lòng quét mã QR dưới đây bằng ứng dụng Ngân hàng để thanh toán.</p>
               <div class="p-2 border rounded bg-light d-inline-block mb-3">
                 <img src="${qrUrl}" alt="Mã QR Thanh Toán" style="max-width: 240px; width: 100%; height: auto;">
               </div>
@@ -231,7 +305,7 @@ async function handleCheckoutSubmit(e) {
                 <div class="mb-1"><b>Số tiền:</b> <span class="text-danger fw-bold">${finalTotalMoney.toLocaleString("vi-VN")} đ</span></div>
                 <div><b>Nội dung chuyển:</b> <span class="text-success fw-bold">${memo}</span></div>
               </div>
-              <p class="text-warning small mt-2 mb-0"><i class="fa fa-info-circle"></i> Hệ thống sẽ xác nhận đơn hàng sau khi nhận được tiền.</p>
+              <p class="text-warning small mt-2 mb-0"><i class="fa fa-info-circle"></i> Hệ thống sẽ duyệt đơn tự động khi nhận được tiền.</p>
             </div>
           `,
           showCancelButton: false,
@@ -244,7 +318,6 @@ async function handleCheckoutSubmit(e) {
           }
         });
       } else {
-        // 🌟 LUỒNG XỬ LÝ: NẾU KHÁCH CHỌN COD
         Swal.fire({
           icon: "success",
           title: "Đặt hàng thành công!",
@@ -278,6 +351,5 @@ function clearCartAndRedirect(cartKey) {
   localStorage.removeItem(cartKey);
   const badge = document.getElementById("cart-count");
   if (badge) badge.innerText = "0";
-
   window.location.href = "/";
 }
