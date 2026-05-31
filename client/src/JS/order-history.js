@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupFilterEvents();
 });
 
-// 🟢 CẢI TIẾN: Thêm hiệu ứng Skeleton Loading giúp giao diện mượt mà hơn
+// Hiệu ứng Skeleton Loading giúp giao diện mượt mà hơn
 function showSkeletonLoading() {
   const listContainer = document.getElementById("order-history-list");
   listContainer.innerHTML = Array(2)
@@ -163,12 +163,8 @@ function renderOrdersToUI(ordersList) {
 
       let statusBadgeHTML = "";
 
-      // 🟢 CẢI TIẾN: Thay vì điều hướng thô sơ, ta bọc hàm reBuyOrder() truyền mã đơn hàng vào xử lý
-      let actionButtonsHTML = `
-        <button class="btn btn-outline-primary btn-action-order px-3" onclick="reBuyOrder('${order.madonhang}')">
-            <i class="fa-solid fa-rotate-left me-1"></i> Mua lại
-        </button>
-      `;
+      // 🟢 ĐÃ THAY ĐỔI: Khởi tạo chuỗi rỗng mặc định cho khu vực nút hành động
+      let actionButtonsHTML = "";
 
       switch (order.trangthai) {
         case "Chờ xác nhận":
@@ -182,12 +178,10 @@ function renderOrdersToUI(ordersList) {
           break;
         case "Thành công":
           statusBadgeHTML = `<span class="badge-status status-success" style="background-color: #e8f5e9; color: #1b5e20; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-circle-check"></i> Thành công</span>`;
+          // Chỉ giữ lại nút Xuất hóa đơn cho đơn hàng thành công
           actionButtonsHTML = `
-            <button class="btn btn-success px-3 me-2 text-white" style="border-radius: 8px;" onclick="viewInvoice('${order.madonhang}')">
+            <button class="btn btn-success px-3 text-white" style="border-radius: 8px;" onclick="viewInvoice('${order.madonhang}')">
                 <i class="fa-solid fa-file-invoice me-1"></i> Xuất hóa đơn
-            </button>
-            <button class="btn btn-outline-primary btn-action-order px-3" onclick="reBuyOrder('${order.madonhang}')">
-                <i class="fa-solid fa-rotate-left me-1"></i> Mua lại
             </button>
           `;
           break;
@@ -208,7 +202,6 @@ function renderOrdersToUI(ordersList) {
             ? `https://qlbh-project.onrender.com/uploads/products/${item.hinhanh}`
             : DEFAULT_IMAGE;
 
-          // 🟢 CẢI TIẾN: Bọc kĩ toán tử ép kiểu phòng lỗi dữ liệu trống từ database
           const priceFormatted = (Number(item.giaban) || 0).toLocaleString(
             "vi-VN",
           );
@@ -278,49 +271,6 @@ function renderOrdersToUI(ordersList) {
     })
     .join("");
 }
-
-// 🟢 CẢI TIẾN MỚI: Hàm "Mua lại" tự động nhồi sản phẩm vào LocalStorage giỏ hàng hiện tại
-window.reBuyOrder = function (maDonHang) {
-  const order = globalOrdersArray.find((o) => o.madonhang === maDonHang);
-  if (!order || !order.sanpham || order.sanpham.length === 0) return;
-
-  // Giả sử key giỏ hàng của bạn là 'hpstore_cart'
-  let currentCart = JSON.parse(localStorage.getItem("hpstore_cart")) || [];
-
-  order.sanpham.forEach((oldItem) => {
-    const existingProductIndex = currentCart.findIndex(
-      (cartItem) => cartItem.maSP === oldItem.masp,
-    );
-
-    if (existingProductIndex > -1) {
-      // Nếu sản phẩm đã tồn tại trong giỏ thì cộng dồn số lượng cũ vào
-      currentCart[existingProductIndex].soLuong += Number(oldItem.soluong);
-    } else {
-      // Chưa có thì đẩy object mới (khớp với cấu trúc Model Cart trên máy bạn) vào mảng
-      currentCart.push({
-        maSP: oldItem.masp,
-        tenSP: oldItem.tensp,
-        hinhAnh: oldItem.hinhanh,
-        giaBan: Number(oldItem.giaban),
-        soLuong: Number(oldItem.soluong),
-      });
-    }
-  });
-
-  localStorage.setItem("hpstore_cart", JSON.stringify(currentCart));
-
-  // Bật thông báo ngọt ngào trước khi nhảy trang
-  Swal.fire({
-    icon: "success",
-    title: "Đã thêm vào giỏ hàng!",
-    text: "Toàn bộ sản phẩm thuộc đơn hàng này đã được nạp lại vào giỏ.",
-    confirmButtonColor: "#6f42c1",
-    timer: 1500,
-    showConfirmButton: false,
-  }).then(() => {
-    window.location.href = "/src/pages/cart.html";
-  });
-};
 
 // HÀM XỬ LÝ BẬT POPUP XEM HÓA ĐƠN ĐIỆN TỬ
 window.viewInvoice = function (maDonHang) {
