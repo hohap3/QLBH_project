@@ -30,6 +30,55 @@ export async function initProductManager() {
 
   // --- CÁC HÀM BỔ TRỢ (HELPER FUNCTIONS) ---
 
+  // 🟢 HÀM VALIDATE DỮ LIỆU SẢN PHẨM (MỚI CẬP NHẬT)
+  const validateProductData = (tenSP, giaNhap, giaBan) => {
+    const trimmedTen = tenSP ? tenSP.trim() : "";
+
+    // 1. Kiểm tra tên trống hoặc chỉ có dấu cách
+    if (!trimmedTen) {
+      Swal.fire(
+        "Lỗi nhập liệu",
+        "Tên sản phẩm không được để trống!",
+        "warning",
+      );
+      return false;
+    }
+
+    // 2. Kiểm tra tên sản phẩm bắt buộc phải có dấu cách phân tách từ
+    if (!trimmedTen.includes(" ")) {
+      Swal.fire(
+        "Lỗi nhập liệu",
+        "Tên sản phẩm phải có đầy đủ các từ và cách nhau bằng dấu cách (Ví dụ: Áo sơ mi, Điện thoại...).",
+        "warning",
+      );
+      return false;
+    }
+
+    // 3. Kiểm tra giá nhập
+    const numGiaNhap = Number(giaNhap);
+    if (isNaN(numGiaNhap) || numGiaNhap < 10000) {
+      Swal.fire(
+        "Lỗi nhập liệu",
+        "Giá nhập sản phẩm phải từ 10.000đ trở lên!",
+        "warning",
+      );
+      return false;
+    }
+
+    // 4. Kiểm tra giá bán
+    const numGiaBan = Number(giaBan);
+    if (isNaN(numGiaBan) || numGiaBan < 10000) {
+      Swal.fire(
+        "Lỗi nhập liệu",
+        "Giá bán sản phẩm phải từ 10.000đ trở lên!",
+        "warning",
+      );
+      return false;
+    }
+
+    return true;
+  };
+
   // Tải danh mục và nhà cung cấp vào các Select Box
   const loadDropdowns = async () => {
     try {
@@ -57,7 +106,6 @@ export async function initProductManager() {
       if (document.getElementById("addMaDanhMuc"))
         document.getElementById("addMaDanhMuc").innerHTML = dmOptions;
 
-      // ✅ ĐÃ SỬA: Đổ dữ liệu nhà cung cấp vào cả modal Thêm và modal Sửa
       if (document.getElementById("addMaNCC"))
         document.getElementById("addMaNCC").innerHTML = nccOptions;
       if (document.getElementById("editMaNCC"))
@@ -155,7 +203,7 @@ export async function initProductManager() {
       }
 
       const formData = new FormData();
-      formData.append("excelFile", file); // Khớp chuẩn xác 100% với backend excelUpload.single("excelFile")
+      formData.append("excelFile", file);
 
       try {
         Swal.fire({
@@ -210,10 +258,20 @@ export async function initProductManager() {
     };
   }
 
-  // Xử lý Thêm mới
+  // ✅ Xử lý Thêm mới (ĐÃ CẬP NHẬT LOGIC VALIDATE)
   if (addForm) {
     addForm.onsubmit = async (e) => {
       e.preventDefault();
+
+      const tenSP = document.getElementById("addTenSP").value;
+      const giaNhap = document.getElementById("addGiaNhap").value;
+      const giaBan = document.getElementById("addGiaBan").value;
+
+      // Kích hoạt hàm kiểm tra trước khi gửi API
+      if (!validateProductData(tenSP, giaNhap, giaBan)) {
+        return; // Dừng lại nếu dữ liệu không đạt yêu cầu
+      }
+
       const formData = new FormData(addForm);
 
       try {
@@ -276,7 +334,7 @@ export async function initProductManager() {
 
           document.getElementById("editHinhAnhCu").value = sp.hinhanh || "";
           document.getElementById("editImagePreview").src = sp.hinhanh
-            ? `http://localhost:3000/uploads/products/${sp.hinhanh}`
+            ? `https://qlbh-project.onrender.com/uploads/products/${sp.hinhanh}`
             : "/assets/images/default-product.png";
 
           editModal.show();
@@ -287,11 +345,20 @@ export async function initProductManager() {
     }
   });
 
-  // Xử lý Cập nhật (Submit Edit Form)
+  // ✅ Xử lý Cập nhật (ĐÃ CẬP NHẬT LOGIC VALIDATE)
   if (editForm) {
     editForm.onsubmit = async (e) => {
       e.preventDefault();
+
       const maSP = document.getElementById("editMaSP").value;
+      const tenSP = document.getElementById("editTenSP").value;
+      const giaNhap = document.getElementById("editGiaNhap").value;
+      const giaBan = document.getElementById("editGiaBan").value;
+
+      // Kích hoạt hàm kiểm tra trước khi gửi API sửa
+      if (!validateProductData(tenSP, giaNhap, giaBan)) {
+        return;
+      }
 
       const formData = new FormData(editForm);
       const fileInput = document.getElementById("editFileHinhAnh");
@@ -300,15 +367,12 @@ export async function initProductManager() {
       formData.delete("editFileHinhAnh");
       formData.delete("HinhAnh");
 
-      // Đóng gói chuẩn xác duy nhất 1 key hình ảnh theo đúng yêu cầu từ backend
       if (!fileInput.files[0]) {
-        // Nếu không chọn ảnh mới -> Gửi lại chuỗi tên ảnh cũ
         formData.append(
           "HinhAnh",
           document.getElementById("editHinhAnhCu").value,
         );
       } else {
-        // Nếu có chọn ảnh mới -> Gửi file ảnh mới lên
         formData.append("HinhAnh", fileInput.files[0]);
       }
 

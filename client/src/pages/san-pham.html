@@ -306,7 +306,6 @@
                 id="addMaSP"
                 name="MaSP"
                 placeholder="Ví dụ: SP001"
-                required
               />
             </div>
 
@@ -315,7 +314,7 @@
               <label class="form-label small text-muted fw-bold"
                 >Nhà cung cấp <span class="text-danger">*</span></label
               >
-              <select class="form-select" id="addMaNCC" name="MaNCC" required>
+              <select class="form-select" id="addMaNCC" name="MaNCC">
                 <option value="" selected disabled>Chọn nhà cung cấp</option>
                 <!-- Dữ liệu NCC render từ JS -->
               </select>
@@ -332,7 +331,6 @@
                 id="addTenSP"
                 name="TenSP"
                 placeholder="Nhập tên sản phẩm"
-                required
               />
             </div>
 
@@ -341,12 +339,7 @@
               <label class="form-label small text-muted fw-bold"
                 >Danh mục <span class="text-danger">*</span></label
               >
-              <select
-                class="form-select"
-                id="addMaDanhMuc"
-                name="MaDanhMuc"
-                required
-              >
+              <select class="form-select" id="addMaDanhMuc" name="MaDanhMuc">
                 <option value="" selected disabled>Chọn danh mục</option>
                 <!-- Dữ liệu danh mục render từ JS -->
               </select>
