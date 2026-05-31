@@ -39,17 +39,17 @@
         hàng
       </h3>
 
-      <form id="checkout-form" novalidate>
+      <form id="checkout-form" onsubmit="return false;" novalidate>
         <div class="row">
           <div class="col-lg-7 mb-4">
             <div class="card checkout-card p-4 mb-4">
               <div
-                class="card-title-custom d-flex align-items-center justify-content-between"
+                class="card-title-custom d-flex align-items-center justify-content-between mb-3"
               >
-                <span
-                  ><i class="fa-solid fa-user-check me-2 text-primary"></i>Thông
-                  tin nhận hàng</span
-                >
+                <span class="fw-bold text-dark">
+                  <i class="fa-solid fa-user-check me-2 text-primary"></i>Thông
+                  tin nhận hàng
+                </span>
                 <small class="text-muted fw-normal"
                   >Dữ liệu tự động lấy từ tài khoản</small
                 >
@@ -109,13 +109,13 @@
             </div>
 
             <div class="card checkout-card p-4 mb-4">
-              <div class="card-title-custom">
+              <div class="card-title-custom mb-3 fw-bold text-dark">
                 <i class="fa-solid fa-truck-fast me-2 text-primary"></i>Cách
                 thức vận chuyển
               </div>
 
               <div class="d-flex flex-column gap-3">
-                <label class="m-0 position-relative">
+                <label class="m-0 position-relative" style="cursor: pointer">
                   <input
                     type="radio"
                     name="shippingMethod"
@@ -125,7 +125,7 @@
                     checked
                   />
                   <div
-                    class="selection-box d-flex align-items-center justify-content-between"
+                    class="selection-box d-flex align-items-center justify-content-between p-3 border rounded"
                   >
                     <div class="d-flex align-items-center gap-3">
                       <i
@@ -144,7 +144,7 @@
                   </div>
                 </label>
 
-                <label class="m-0 position-relative">
+                <label class="m-0 position-relative" style="cursor: pointer">
                   <input
                     type="radio"
                     name="shippingMethod"
@@ -153,7 +153,7 @@
                     class="real-radio position-absolute top-0 start-0 opacity-0"
                   />
                   <div
-                    class="selection-box d-flex align-items-center justify-content-between"
+                    class="selection-box d-flex align-items-center justify-content-between p-3 border rounded"
                   >
                     <div class="d-flex align-items-center gap-3">
                       <i class="fa-solid fa-bolt text-warning fs-4"></i>
@@ -173,13 +173,13 @@
             </div>
 
             <div class="card checkout-card p-4">
-              <div class="card-title-custom">
+              <div class="card-title-custom mb-3 fw-bold text-dark">
                 <i class="fa-solid fa-credit-card me-2 text-primary"></i>Phương
                 thức thanh toán
               </div>
 
               <div class="d-flex flex-column gap-3">
-                <label class="m-0 position-relative">
+                <label class="m-0 position-relative" style="cursor: pointer">
                   <input
                     type="radio"
                     name="paymentMethod"
@@ -188,7 +188,7 @@
                     checked
                   />
                   <div
-                    class="selection-box d-flex align-items-center justify-content-between"
+                    class="selection-box d-flex align-items-center justify-content-between p-3 border rounded"
                   >
                     <div class="d-flex align-items-center gap-3">
                       <i
@@ -203,11 +203,13 @@
                         >
                       </div>
                     </div>
-                    <i class="fa-solid fa-circle-check check-icon"></i>
+                    <i
+                      class="fa-solid fa-circle-check check-icon text-success"
+                    ></i>
                   </div>
                 </label>
 
-                <label class="m-0 position-relative">
+                <label class="m-0 position-relative" style="cursor: pointer">
                   <input
                     type="radio"
                     name="paymentMethod"
@@ -215,7 +217,7 @@
                     class="real-radio position-absolute top-0 start-0 opacity-0"
                   />
                   <div
-                    class="selection-box d-flex align-items-center justify-content-between"
+                    class="selection-box d-flex align-items-center justify-content-between p-3 border rounded"
                   >
                     <div class="d-flex align-items-center gap-3">
                       <i class="fa-solid fa-qrcode text-primary fs-4"></i>
@@ -229,7 +231,9 @@
                         >
                       </div>
                     </div>
-                    <i class="fa-solid fa-circle-check check-icon"></i>
+                    <i
+                      class="fa-solid fa-circle-check check-icon text-primary"
+                    ></i>
                   </div>
                 </label>
               </div>
@@ -241,12 +245,16 @@
               class="card checkout-card p-4 position-sticky"
               style="top: 24px"
             >
-              <div class="card-title-custom">
+              <div class="card-title-custom mb-3 fw-bold text-dark">
                 <i class="fa-solid fa-bag-shopping me-2 text-primary"></i>Đơn
                 hàng của bạn
               </div>
 
-              <div id="checkout-items-list" class="style-scroll mb-3"></div>
+              <div
+                id="checkout-items-list"
+                class="style-scroll mb-3"
+                style="max-height: 300px; overflow-y: auto"
+              ></div>
 
               <hr class="text-muted" />
 
@@ -286,7 +294,7 @@
                 class="btn btn-primary btn-lg w-100 fw-bold py-3"
                 style="
                   border-radius: 10px;
-                  background-color: var(--primary-color);
+                  background-color: #6366f1;
                   border: none;
                 "
               >
