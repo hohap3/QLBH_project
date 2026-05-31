@@ -1,3 +1,4 @@
+import axios from "axios"; // Đồng bộ sử dụng axios giống cart.js nếu cần, hoặc dùng fetch chuẩn hóa
 import Swal from "sweetalert2";
 import { BASE_URL } from "/src/JS/common/header";
 
@@ -51,25 +52,27 @@ async function autofillUserInfo() {
   }
 
   try {
-    // 🟢 ĐỒNG BỘ ĐÚNG ROUTE PARAMS: Thay vì dùng (?id=), truyền trực tiếp giá trị vào URL khớp với req.params ở Controller
-    const res = await fetch(`${BASE_URL}/account/checkout-info/${maND}`);
+    // 🟢 FIX 1: Đồng bộ đúng API Route `/user/profile` giống như trang cart.js đã chạy ổn định
+    const res = await fetch(`${BASE_URL}/user/profile?id=${maND}`);
     const result = await res.json();
 
-    if (result.success && result.data) {
-      const user = result.data;
+    // Hỗ trợ bóc tách linh hoạt cấu trúc data trả về từ server
+    const user = result.data || result;
 
+    if (user) {
       // Khớp chính xác các trường chữ thường từ PostgreSQL trả về
-      if (user.hoten) {
-        document.getElementById("checkout-fullname").value = user.hoten;
+      if (user.hoten || user.HoTen) {
+        document.getElementById("checkout-fullname").value =
+          user.hoten || user.HoTen;
       }
-      if (user.sdt) {
-        document.getElementById("checkout-phone").value = user.sdt;
+      if (user.sdt || user.SDT) {
+        document.getElementById("checkout-phone").value = user.sdt || user.SDT;
       }
-      if (user.diachi) {
-        document.getElementById("checkout-address").value = user.diachi;
+      if (user.diachi || user.DiaChi) {
+        document.getElementById("checkout-address").value =
+          user.diachi || user.DiaChi;
       }
 
-      // Thiết lập lưu trữ điểm tích lũy cục bộ nếu hệ thống cần dùng đến dữ liệu này
       if (user.diemtichluy !== undefined) {
         localStorage.setItem("hpstore_user_points", user.diemtichluy);
       }
@@ -108,7 +111,6 @@ function renderCheckoutSummary() {
     return;
   }
 
-  // 🟢 ĐỒNG BỘ: Hỗ trợ linh hoạt cả chữ HOA/thường của thuộc tính sản phẩm từ Postgres
   baseTotalMoney = cart.reduce((sum, item) => {
     const gia = parseFloat(item.GiaBan || item.giaban) || 0;
     const qty = parseInt(item.SoLuong || item.soluong) || 0;
@@ -119,17 +121,19 @@ function renderCheckoutSummary() {
     .map((item) => {
       const gia = parseFloat(item.GiaBan || item.giaban) || 0;
       const qty = parseInt(item.SoLuong || item.soluong) || 0;
-      const hinhAnh = item.HinhAnh || item.hinhanh;
-      const tenSP = item.TenSP || item.tensp || "Sản phẩm";
+      const rawImg = item.hinhanh || item.hinhAnh || item.HinhAnh;
+      const tenSP = item.tensp || item.TenSP || "Sản phẩm";
 
-      const imgPath =
-        hinhAnh && hinhAnh !== "NULL"
-          ? `${BASE_URL}/uploads/products/${hinhAnh}`
-          : DEFAULT_IMAGE;
+      // 🟢 FIX 2: Chuẩn hóa đường dẫn tránh chuỗi "undefined" rác làm lỗi hiển thị ảnh
+      const hasValidImg =
+        rawImg && rawImg !== "NULL" && rawImg !== "undefined" && rawImg !== "";
+      const imgPath = hasValidImg
+        ? `https://qlbh-project.onrender.com/uploads/products/${rawImg}`
+        : DEFAULT_IMAGE;
 
       return `
             <div class="d-flex align-items-center gap-3 mb-3">
-                <img src="${imgPath}" class="product-checkout-img border" alt="${tenSP}" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';" style="width:50px; height:50px; object-fit:contain;">
+                <img src="${imgPath}" class="product-checkout-img border" alt="${tenSP}" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';" style="width:50px; height:50px; object-fit:contain; border-radius: 6px;">
                 <div class="flex-grow-1 min-w-0">
                     <h6 class="small fw-bold text-dark mb-0 text-truncate" style="max-width: 220px;">${tenSP}</h6>
                     <small class="text-muted">SL: ${qty} x ${gia.toLocaleString("vi-VN")} đ</small>
@@ -143,11 +147,10 @@ function renderCheckoutSummary() {
   document.getElementById("checkout-subtotal").innerText =
     `${baseTotalMoney.toLocaleString("vi-VN")} đ`;
 
-  // 🟢 TÍCH HỢP: Đọc dữ liệu giảm giá đổi điểm từ localStorage (nếu có)
   const discountInfo = JSON.parse(
     localStorage.getItem("hpstore_checkout_discount"),
   );
-  const discountLabelEl = document.getElementById("checkout-discount-fee"); // Thẻ hiển thị số tiền giảm trên giao diện checkout
+  const discountLabelEl = document.getElementById("checkout-discount-fee");
 
   if (discountInfo && discountInfo.amount > 0) {
     voucherDiscountAmount = discountInfo.amount;
@@ -180,7 +183,6 @@ function updateFinalTotalDisplay() {
     }
   }
 
-  // Tổng thanh toán = Tiền hàng gốc + Phí Ship - Tiền giảm giá Voucher
   const finalTotal = Math.max(
     0,
     baseTotalMoney + shipFee - voucherDiscountAmount,
@@ -225,12 +227,10 @@ async function handleCheckoutSubmit(e) {
   const userData = JSON.parse(localStorage.getItem("hpstore_user")) || {};
   const finalTotalMoney = updateFinalTotalDisplay();
 
-  // Lấy thông tin voucher để trừ điểm ở Backend và chia đều giảm giá vào ChiTiet
   const discountInfo = JSON.parse(
     localStorage.getItem("hpstore_checkout_discount"),
   ) || { percent: 0, amount: 0, pointsToDeduct: 0 };
 
-  // 🟢 TỐI ƯU PAYLOAD POSTGRESQL: Đồng bộ hóa cấu trúc gửi lên API xử lý hóa đơn
   const checkoutPayload = {
     MaNguoiDung:
       userData.maND || userData.id || userData.MaND || userData.mand || null,
@@ -239,13 +239,12 @@ async function handleCheckoutSubmit(e) {
     SDTNguoiNhan: phone,
     DiaChi: address,
     PhuongThucThanhToan: paymentMethod,
-    PointsToDeduct: discountInfo.pointsToDeduct, // Gửi số điểm cần trừ của khách hàng lên DB
+    PointsToDeduct: discountInfo.pointsToDeduct,
     TongGiamGia: discountInfo.amount,
     ChiTiet: cart.map((item) => {
       const giaBan = parseFloat(item.GiaBan || item.giaban) || 0;
       const soLuong = parseInt(item.SoLuong || item.soluong) || 0;
 
-      // Tính toán chia tỷ lệ giảm giá cho từng mặt hàng (áp dụng vào trường GiamGia decimal của CHITIET_DONHANG)
       let itemDiscount = 0;
       if (discountInfo.percent > 0) {
         itemDiscount = Math.round(giaBan * (discountInfo.percent / 100));
@@ -255,7 +254,7 @@ async function handleCheckoutSubmit(e) {
         MaSP: item.MaSP || item.masp,
         SoLuong: soLuong,
         GiaBan: giaBan,
-        GiamGia: itemDiscount, // Khớp thuộc tính GiamGia trong TABLE CHITIET_DONHANG
+        GiamGia: itemDiscount,
       };
     }),
   };
@@ -281,18 +280,20 @@ async function handleCheckoutSubmit(e) {
     if (response.ok && result.success) {
       const createdOrderId = result.maDonHang || result.MaDonHang;
 
-      // Xóa thông tin giảm giá tạm sau khi đặt đơn thành công
       localStorage.removeItem("hpstore_checkout_discount");
 
+      // 🟢 FIX 3: Chuyển đổi .toUpperCase() để tối ưu kiểm tra chuỗi thanh toán không phân biệt hoa thường
+      const methodCheck = paymentMethod.toUpperCase();
       if (
-        paymentMethod === "CHUYEN_KHOAN" ||
-        paymentMethod === "BANK_TRANSFER"
+        methodCheck === "CHUYEN_KHOAN" ||
+        methodCheck === "BANK_TRANSFER" ||
+        methodCheck === "CHUYENKHOAN"
       ) {
         const memo = `HPSTORE DH${createdOrderId}`;
         const qrUrl = `https://img.vietqr.io/image/${BANK_CONFIG.bankId}-${BANK_CONFIG.accountNo}-compact2.jpg?amount=${finalTotalMoney}&addInfo=${encodeURIComponent(memo)}&accountName=${encodeURIComponent(BANK_CONFIG.accountName)}`;
 
         Swal.fire({
-          title: "Thanh Toán Chuyển Khoản QR",
+          title: "Thanh Tán Chuyển Khoản QR",
           html: `
             <div class="text-center">
               <p class="text-muted small mb-2">Vui lòng quét mã QR dưới đây bằng ứng dụng Ngân hàng để thanh toán.</p>

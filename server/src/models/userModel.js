@@ -12,6 +12,7 @@ const userModel = {
         nd.email, 
         nd.sdt, 
         nd.mavaitro,
+        kh.diachi,
         COALESCE(kh.diemtichluy, 0) AS diemtichluy -- Nếu không có trong bảng khachhang thì mặc định trả về 0
       FROM nguoidung nd
       LEFT JOIN khachhang kh ON nd.mand = kh.mand
