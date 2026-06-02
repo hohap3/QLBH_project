@@ -8,7 +8,7 @@ class WarehouseController {
       res.status(200).json({
         success: true,
         message: "Lấy lịch sử giao dịch kho thành công!",
-        data: data, // Mảng các Object dạng chữ thường (masp, tensp, ngaygd...)
+        data: data,
       });
     } catch (error) {
       res.status(500).json({
@@ -43,8 +43,14 @@ class WarehouseController {
     try {
       const { maGD, maSP, loaiGD, soLuong } = req.body;
 
-      // Đảm bảo dữ liệu truyền lên đầy đủ
-      if (!maGD || !maSP || loaiGD === undefined || !soLuong) {
+      // 🟢 FIX LỖI LOGIC: Kiểm tra sự hiện diện của các trường dữ liệu bắt buộc
+      if (
+        !maGD ||
+        !maSP ||
+        loaiGD === undefined ||
+        soLuong === undefined ||
+        soLuong === ""
+      ) {
         return res.status(400).json({
           success: false,
           message:
@@ -52,13 +58,22 @@ class WarehouseController {
         });
       }
 
-      const parsedSoLuong = parseInt(soLuong);
-      const parsedLoaiGD = parseInt(loaiGD);
+      const parsedSoLuong = parseInt(soLuong, 10);
+      const parsedLoaiGD = parseInt(loaiGD, 10);
 
+      // 🟢 BỔ SUNG VALIDATE CHẶN SỐ LƯỢNG KHO (1 - 10,000)
       if (isNaN(parsedSoLuong) || parsedSoLuong <= 0) {
         return res.status(400).json({
           success: false,
-          message: "Số lượng giao dịch kho phải lớn hơn 0!",
+          message: "Số lượng giao dịch kho bắt buộc phải lớn hơn 0!",
+        });
+      }
+
+      if (parsedSoLuong > 10000) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Số lượng cho mỗi giao dịch không được phép vượt quá 10.000 đơn vị!",
         });
       }
 
@@ -69,8 +84,9 @@ class WarehouseController {
         });
       }
 
+      // Thực hiện nghiệp vụ lưu vào DB
       const result = await WarehouseModel.createTransaction({
-        maGD,
+        maGD: maGD.trim(),
         maSP,
         loaiGD: parsedLoaiGD,
         soLuong: parsedSoLuong,
@@ -85,6 +101,15 @@ class WarehouseController {
         data: result,
       });
     } catch (error) {
+      // 🟢 BẮT LỖI TRÙNG MÃ GIAO DỊCH (Unique Violation của Postgres mã lỗi 23505)
+      if (error.code === "23505") {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Mã giao dịch này đã tồn tại trong hệ thống! Vui lòng nhập mã khác.",
+        });
+      }
+
       res.status(400).json({
         success: false,
         message: error.message || "Thao tác kho hàng thất bại!",

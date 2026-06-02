@@ -62,7 +62,7 @@ async function fetchWarehouseLogs() {
   }
 }
 
-// 2. Render danh sách ra bảng HTML (Đã tối ưu badge và style cho đồng bộ)
+// 2. Render danh sách ra bảng HTML
 function renderTable(data) {
   const tbody = document.getElementById("warehouseDataBody");
   if (!tbody) return;
@@ -74,7 +74,6 @@ function renderTable(data) {
 
   tbody.innerHTML = data
     .map((item) => {
-      // 🟢 Đồng bộ chữ thường theo Postgres: item.loaigd
       const isNhap = item.loaigd === 1;
       const badgeClass = isNhap
         ? "bg-success text-white rounded-pill px-3 py-1 fw-semibold"
@@ -100,7 +99,7 @@ function renderTable(data) {
     .join("");
 }
 
-// 3. Xử lý bộ lọc (Lọc theo tên/mã SP hoặc Loại GD)
+// 3. Xử lý bộ lọc
 function applyFilters() {
   const searchVal = document
     .getElementById("searchWarehouse")
@@ -109,7 +108,6 @@ function applyFilters() {
   const filterLoai = document.getElementById("filterLoaiGD").value;
 
   const filtered = warehouseList.filter((item) => {
-    // 🟢 FIX LỖI 1: Chuyển toàn bộ thuộc tính sang chữ thường để đọc đúng dữ liệu Postgres
     const matchesSearch =
       (item.magd && item.magd.toLowerCase().includes(searchVal)) ||
       (item.tensp && item.tensp.toLowerCase().includes(searchVal)) ||
@@ -138,7 +136,6 @@ async function loadProductsToSelect() {
     const response = await axios.get(`${BASE_URL}/products`);
     const products = response.data.data || response.data;
 
-    // 🟢 FIX LỖI 2: Đảm bảo kiểm tra và map đúng chữ thường/hoa tùy thuộc vào endpoint /products phản hồi
     select.innerHTML = products
       .map((p) => {
         const maSP = p.masp || p.MaSP;
@@ -161,8 +158,11 @@ async function handleCreateTransaction(e) {
   const loaiGDElement = document.querySelector(
     'input[name="radioLoaiGD"]:checked',
   );
-  const soLuong = document.getElementById("numSoLuong").value;
 
+  // Lấy chuỗi thô từ input để kiểm tra độ dài trước
+  const soLuongRaw = document.getElementById("numSoLuong").value.trim();
+
+  // 1. Kiểm tra không chọn Loại giao dịch
   if (!loaiGDElement) {
     Swal.fire(
       "Thông báo",
@@ -172,12 +172,49 @@ async function handleCreateTransaction(e) {
     return;
   }
 
+  // 2. Chặn trường hợp cố tình nhập chuỗi quá dài gây tràn số (Giống trong hình ảnh)
+  if (soLuongRaw.length > 5) {
+    Swal.fire({
+      icon: "warning",
+      title: "Số lượng quá lớn",
+      text: "Số lượng nhập vào vượt quá hạn mức cho phép tối đa (10.000)!",
+      confirmButtonColor: "#6138ff",
+    });
+    return;
+  }
+
+  // Chuyển đổi an toàn sang kiểu số nguyên (Integer)
+  const soLuong = parseInt(soLuongRaw, 10);
+
+  // 3. Kiểm tra số lượng phải là số hợp lệ và lớn hơn 0
+  if (isNaN(soLuong) || soLuong <= 0) {
+    Swal.fire({
+      icon: "warning",
+      title: "Lỗi nhập liệu",
+      text: "Số lượng giao dịch kho bắt buộc phải là số và lớn hơn 0!",
+      confirmButtonColor: "#6138ff",
+    });
+    return;
+  }
+
+  // 4. Kiểm tra hạn mức tối đa 10.000
+  if (soLuong > 10000) {
+    Swal.fire({
+      icon: "warning",
+      title: "Vượt quá hạn mức",
+      text: "Số lượng cho mỗi giao dịch không được phép vượt quá 10.000 đơn vị!",
+      confirmButtonColor: "#6138ff",
+    });
+    return;
+  }
+
+  // --- GỬI API KHI DỮ LIỆU ĐÃ HOÀN TOÀN HỢP LỆ ---
   try {
     const response = await axios.post(`${BASE_URL}/warehouse/transaction`, {
       maGD,
       maSP,
-      loaiGD: parseInt(loaiGDElement.value),
-      soLuong: parseInt(soLuong),
+      loaiGD: parseInt(loaiGDElement.value, 10),
+      soLuong: soLuong, // Đảm bảo số truyền lên sạch và nằm trong khoảng 1-10000
     });
 
     if (response.data.success) {
@@ -192,7 +229,7 @@ async function handleCreateTransaction(e) {
         modal.hide();
       }
 
-      // Tải lại bảng dữ liệu mới
+      // Tải lại bảng dữ liệu mới để cập nhật đúng số lượng thực tế
       await fetchWarehouseLogs();
     }
   } catch (error) {
@@ -222,7 +259,6 @@ function exportToExcel() {
     return;
   }
 
-  // 🟢 FIX LỖI 3: Chuyển đổi toàn bộ map sang chữ thường để tránh lỗi 'undefined' cột dữ liệu trong Excel
   const excelData = warehouseList.map((item, index) => ({
     STT: index + 1,
     "Mã Giao Dịch": item.magd,
@@ -253,7 +289,7 @@ function exportToExcel() {
     { wch: 6 }, // STT
     { wch: 15 }, // Mã GD
     { wch: 20 }, // Mã SP
-    { wch: max_len + 5 }, // Tên SP (Tự động nới rộng thêm 5 khoảng trắng cho đẹp)
+    { wch: max_len + 5 }, // Tên SP
     { wch: 15 }, // Loại GD
     { wch: 10 }, // Số lượng
     { wch: 12 }, // Đơn vị tính
