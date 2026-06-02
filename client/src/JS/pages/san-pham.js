@@ -198,38 +198,98 @@ export async function initProductManager() {
       return;
     }
 
-    let html = `
+    let html = "";
+
+    // 1. NÚT BACK (Về trang trước)
+    html += `
       <li class="page-item ${currentPage === 1 ? "disabled" : ""}">
-        <button class="page-link" data-page="${currentPage - 1}">&laquo;</button>
+        <button class="page-link" data-page="${currentPage - 1}" aria-label="Previous">
+          <span aria-hidden="true">&laquo;</span>
+        </button>
       </li>
     `;
 
+    // Khai báo các biến thiết lập vùng hiển thị xung quanh trang hiện tại
+    const delta = 1; // Số lượng trang hiển thị ở mỗi bên trang hiện tại (Ví dụ: [currentPage - 1] và [currentPage + 1])
+    const range = [];
+
     for (let i = 1; i <= totalPages; i++) {
-      html += `
-        <li class="page-item ${i === currentPage ? "active" : ""}">
-          <button class="page-link" data-page="${i}">${i}</button>
-        </li>
-      `;
+      if (
+        i === 1 || // Luôn hiện trang đầu
+        i === totalPages || // Luôn hiện trang cuối
+        (i >= currentPage - delta && i <= currentPage + delta) // Các trang nằm trong khoảng lân cận trang hiện tại
+      ) {
+        range.push(i);
+      }
     }
 
+    // Tiến hành duyệt mảng số trang đã lọc để chèn dấu ba chấm "..."
+    let l;
+    for (let i of range) {
+      if (l) {
+        if (i - l === 2) {
+          // Khoảng cách bằng 2 thì điền số bị thiếu vào luôn
+          html += `
+            <li class="page-item">
+              <button class="page-link" data-page="${l + 1}">${l + 1}</button>
+            </li>
+          `;
+        } else if (i - l > 2) {
+          // Khoảng cách lớn hơn 2 thì chèn dấu ba chấm ngắt quãng
+          html += `
+            <li class="page-item disabled">
+              <span class="page-link bg-light text-muted">...</span>
+            </li>
+          `;
+        }
+      }
+
+      // Render nút số trang bình thường
+      html += `
+        <li class="page-item ${i === currentPage ? "active" : ""}">
+          <button class="page-link ${i === currentPage ? "fw-bold shadow-sm" : ""}" data-page="${i}">${i}</button>
+        </li>
+      `;
+      l = i;
+    }
+
+    // 2. NÚT NEXT (Sang trang tiếp theo)
     html += `
       <li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
-        <button class="page-link" data-page="${currentPage + 1}">&raquo;</button>
+        <button class="page-link" data-page="${currentPage + 1}" aria-label="Next">
+          <span aria-hidden="true">&raquo;</span>
+        </button>
       </li>
     `;
 
     paginationContainer.innerHTML = html;
 
-    // Lắng nghe sự kiện click chuyển trang
-    paginationContainer.querySelectorAll(".page-link").forEach((btn) => {
-      btn.onclick = (e) => {
-        const targetPage = parseInt(e.target.getAttribute("data-page"));
-        if (targetPage && targetPage !== currentPage) {
-          currentPage = targetPage;
-          loadData();
-        }
-      };
-    });
+    // 3. LẮNG NGHE SỰ KIỆN CLICK CHUYỂN TRANG
+    paginationContainer
+      .querySelectorAll(".page-link:not(.disabled)")
+      .forEach((btn) => {
+        btn.onclick = (e) => {
+          // Lấy thẻ button đích danh kể cả khi bấm trúng thẻ con span bên trong
+          const button = e.target.closest(".page-link");
+          if (!button) return;
+
+          const targetPage = parseInt(button.getAttribute("data-page"));
+          if (
+            targetPage &&
+            targetPage !== currentPage &&
+            targetPage >= 1 &&
+            targetPage <= totalPages
+          ) {
+            currentPage = targetPage;
+            loadData(); // Tải lại dữ liệu trang mới
+
+            // Cuộn mượt màn hình lên đầu bảng danh sách để người dùng dễ theo dõi dữ liệu mới
+            const tableEl = document.getElementById("productTableBody");
+            if (tableEl)
+              tableEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          }
+        };
+      });
   };
 
   // 🔥 Hàm tải dữ liệu đồng bộ cấu trúc phân trang từ Server API
@@ -474,42 +534,59 @@ export async function initProductManager() {
       e.preventDefault();
 
       const maSP = document.getElementById("editMaSP").value;
-      const tenSP = document.getElementById("editTenSP").value;
-      const giaNhap = document.getElementById("editGiaNhap").value;
-      const giaBan = document.getElementById("editGiaBan").value;
 
-      if (!validateProductData(tenSP, giaNhap, giaBan)) return;
+      // 1. Khởi tạo một đối tượng FormData trống hoàn toàn
+      const formData = new FormData();
 
-      // 1. Tạo đối tượng FormData từ chính Form
-      const formData = new FormData(editForm);
+      // 2. Chủ động thêm các trường text thông thường
+      formData.append("TenSP", document.getElementById("editTenSP").value);
+      formData.append("GiaNhap", document.getElementById("editGiaNhap").value);
+      formData.append("GiaBan", document.getElementById("editGiaBan").value);
+      formData.append(
+        "SoLuongTon",
+        document.getElementById("editSoLuongTon").value,
+      );
+      formData.append("MoTa", document.getElementById("editMoTa").value);
+      formData.append(
+        "DonViTinh",
+        document.getElementById("editDonViTinh").value,
+      );
+      formData.append(
+        "MaDanhMuc",
+        document.getElementById("editMaDanhMuc").value,
+      );
+      formData.append("MaNCC", document.getElementById("editMaNCC").value);
+
+      // 3. Xử lý logic File ảnh
       const fileInput = document.getElementById("editFileHinhAnh");
 
-      // 2. Kiểm tra xem người dùng có chọn file mới không
-      if (!fileInput || !fileInput.files[0]) {
-        // Nếu KHÔNG chọn file mới -> Xóa trường file trống đi để tránh lỗi Multer
-        formData.delete("HinhAnh");
-        // Gửi URL ảnh cũ qua một biến text thường
+      if (fileInput && fileInput.files[0]) {
+        // 🌟 NẾU CÓ ĐỔI ẢNH: Đặt tên key CHÍNH XÁC là "HinhAnh" để trùng với Backend
+        formData.append("HinhAnh", fileInput.files[0]);
+      } else {
+        // 🌟 NẾU KHÔNG ĐỔI ẢNH: Gửi link ảnh cũ qua một key thường
         formData.append(
           "HinhAnhCu",
           document.getElementById("editHinhAnhCu").value,
         );
-      } else {
-        // Nếu CÓ chọn file mới -> Đảm bảo key gửi đi là "HinhAnh" trùng khớp với Backend
-        formData.delete("HinhAnh"); // Xóa dữ liệu cũ nếu có trùng
-        formData.append("HinhAnh", fileInput.files[0]);
       }
 
       try {
-        await axios.put(`${BASE_URL}/products/update/${maSP}`, formData);
+        // Gửi API UPDATE lên Server
+        await axios.put(`${BASE_URL}/products/update/${maSP}`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
         editModal.hide();
-        Swal.fire("Thành công", "Đã cập nhật sản phẩm", "success");
-        loadData();
+        Swal.fire("Thành công", "Đã cập nhật sản phẩm thành công!", "success");
+        loadData(); // Tải lại bảng dữ liệu
       } catch (err) {
         console.error("Lỗi cập nhật frontend:", err);
-        // 🔥 Hiện thông báo lỗi chi tiết từ server trả về lên màn hình UI luôn để dễ nhìn
-        const serverError =
-          err.response?.data?.error || "Không thể cập nhật sản phẩm";
-        Swal.fire("Lỗi hệ thống", serverError, "error");
+        Swal.fire(
+          "Lỗi",
+          err.response?.data?.message || "Không thể cập nhật",
+          "error",
+        );
       }
     };
   }

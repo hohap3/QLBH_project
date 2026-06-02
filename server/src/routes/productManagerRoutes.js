@@ -8,7 +8,6 @@ const uploadCloud = require("../middleware/cloudinaryConfig");
 const excelUpload = multer({ storage: multer.memoryStorage() });
 
 router.get("/", productController.getProducts);
-router.get("/:id", productController.getProductById);
 
 // 🔥 Đổi thành uploadCloud
 router.post(
@@ -16,6 +15,9 @@ router.post(
   uploadCloud.single("HinhAnh"),
   productController.addProduct,
 );
+
+router.get("/:id", productController.getProductById);
+
 router.put(
   "/update/:id",
   (req, res, next) => {

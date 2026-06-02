@@ -3,10 +3,12 @@ const XLSX = require("xlsx");
 
 const productManagerController = {
   // Lấy danh sách sản phẩm có Phân trang 10 và tìm kiếm
+  // Trong productManagerController.js:
   getProducts: async (req, res) => {
     try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
+      // Ép kiểu chắc chắn sang số nguyên cơ số 10 để Model tính toán OFFSET không bị NaN
+      const page = parseInt(req.query.page, 10) || 1;
+      const limit = parseInt(req.query.limit, 10) || 10;
       const search = req.query.search || "";
 
       const offset = (page - 1) * limit;
@@ -16,6 +18,7 @@ const productManagerController = {
         offset,
         search,
       );
+
       const totalPages = Math.ceil(totalItems / limit);
 
       res.status(200).json({
