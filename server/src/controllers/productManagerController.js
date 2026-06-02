@@ -110,8 +110,10 @@ const productManagerController = {
     } catch (error) {
       console.error("Lỗi cập nhật SP:", error.message);
       res.status(500).json({
-        message: "Lỗi hệ thống khi cập nhật sản phẩm",
+        success: false,
+        message: "Lỗi hệ thống chi tiết phục vụ debug",
         error: error.message,
+        stack: error.stack, // Cho biết chính xác lỗi ở dòng số bao nhiêu trong file nào
       });
     }
   },
