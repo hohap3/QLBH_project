@@ -13,17 +13,21 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: "hpstore_products", // Tên thư mục sẽ tự động tạo trên Cloudinary của bạn
+    folder: "hpstore_products", // Tên thư mục tự động tạo trên Cloudinary
     allowed_formats: ["jpg", "jpeg", "png", "webp"], // Các định dạng file cho phép
 
     // Tự động tối ưu dung lượng & kích thước ngay khi upload để tiết kiệm bộ nhớ
     transformation: [
-      { width: 600, height: 600, crop: "limit" }, // Giới hạn ảnh tối đa 600x600 (tránh ảnh quá nặng)
-      { quality: "auto" }, // Tự động nén dung lượng mà không làm giảm chất lượng mắt thường thấy
+      { width: 600, height: 600, crop: "limit" }, // Giới hạn ảnh tối đa 600x600
+      { quality: "auto" }, // Tự động nén dung lượng tối ưu mắt thường
     ],
 
-    // Tạo tên file ngẫu nhiên trên cloud để không bị trùng lặp dữ liệu
+    // 🌟 ĐÃ SỬA CHỐNG SẬP: Kiểm tra file tồn tại trước khi bóc tách originalname
     public_id: (req, file) => {
+      if (!file || !file.originalname) {
+        return null; // Trả về null nếu không nhận diện được file, tránh crash TypeError
+      }
+
       const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
       // Loại bỏ đuôi file mở rộng cũ, chỉ lấy tên sạch + mã độc nhất
       const name = file.originalname.split(".")[0].replace(/\s+/g, "-");
