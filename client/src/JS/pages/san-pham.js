@@ -7,7 +7,7 @@ let editModal;
 let addModal;
 let viewModal;
 
-// 🔥 Khai báo các biến trạng thái phân trang và tìm kiếm (State)
+// Khai báo các biến trạng thái phân trang và tìm kiếm (State)
 let currentPage = 1;
 const limit = 10;
 let currentSearch = "";
@@ -22,14 +22,11 @@ export async function initProductManager() {
   if (addModalEl) addModal = new Modal(addModalEl);
   if (viewModalEl) viewModal = new Modal(viewModalEl);
 
-  // DOM Elements bổ sung hoặc giữ nguyên
+  // DOM Elements
   const tableBody = document.getElementById("productTableBody");
   const totalCount = document.getElementById("totalProducts");
   const searchInput = document.getElementById("searchProduct");
   const btnAddProduct = document.getElementById("btnAddProduct");
-
-  // 🔥 DOM Container phục vụ việc hiển thị các nút phân trang (Cần thêm thẻ này ở HTML của bạn nếu chưa có)
-  // Ví dụ ở HTML: <nav><ul id="paginationContainer" class="pagination justify-content-end"></ul></nav>
   const paginationContainer = document.getElementById("paginationContainer");
 
   // Excel Elements
@@ -105,7 +102,7 @@ export async function initProductManager() {
       ]);
 
       const dmOptions =
-        '<option value="" disabled>-- Chọn danh mục --</option>' +
+        '<option value="" disabled selected>-- Chọn danh mục --</option>' +
         resDM.data
           .map(
             (dm) => `<option value="${dm.madanhmuc}">${dm.tendanhmuc}</option>`,
@@ -147,6 +144,7 @@ export async function initProductManager() {
 
   // Render bảng sản phẩm
   const renderProducts = (products) => {
+    if (!tableBody) return;
     if (!products || products.length === 0) {
       tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">Không tìm thấy sản phẩm nào phù hợp.</td></tr>`;
       return;
@@ -190,8 +188,8 @@ export async function initProductManager() {
       .join("");
   };
 
-  // 🔥 Render thanh phân trang động dựa theo tổng số trang trả về từ Backend
-  const renderPagination = (totalPages, currentPage) => {
+  // 🔥 SỬA ĐỔI 1: Tối ưu Render thanh phân trang & Ngăn lỗi click lặp lại
+  const renderPagination = (totalPages, pageCurrent) => {
     if (!paginationContainer) return;
     if (totalPages <= 1) {
       paginationContainer.innerHTML = "";
@@ -200,42 +198,38 @@ export async function initProductManager() {
 
     let html = "";
 
-    // 1. NÚT BACK (Về trang trước)
+    // 1. NÚT BACK
     html += `
-      <li class="page-item ${currentPage === 1 ? "disabled" : ""}">
-        <button class="page-link" data-page="${currentPage - 1}" aria-label="Previous">
+      <li class="page-item ${pageCurrent === 1 ? "disabled" : ""}">
+        <button class="page-link" data-page="${pageCurrent - 1}" ${pageCurrent === 1 ? "disabled" : ""} aria-label="Previous">
           <span aria-hidden="true">&laquo;</span>
         </button>
       </li>
     `;
 
-    // Khai báo các biến thiết lập vùng hiển thị xung quanh trang hiện tại
-    const delta = 1; // Số lượng trang hiển thị ở mỗi bên trang hiện tại (Ví dụ: [currentPage - 1] và [currentPage + 1])
+    const delta = 1;
     const range = [];
 
     for (let i = 1; i <= totalPages; i++) {
       if (
-        i === 1 || // Luôn hiện trang đầu
-        i === totalPages || // Luôn hiện trang cuối
-        (i >= currentPage - delta && i <= currentPage + delta) // Các trang nằm trong khoảng lân cận trang hiện tại
+        i === 1 ||
+        i === totalPages ||
+        (i >= pageCurrent - delta && i <= pageCurrent + delta)
       ) {
         range.push(i);
       }
     }
 
-    // Tiến hành duyệt mảng số trang đã lọc để chèn dấu ba chấm "..."
     let l;
     for (let i of range) {
       if (l) {
         if (i - l === 2) {
-          // Khoảng cách bằng 2 thì điền số bị thiếu vào luôn
           html += `
             <li class="page-item">
               <button class="page-link" data-page="${l + 1}">${l + 1}</button>
             </li>
           `;
         } else if (i - l > 2) {
-          // Khoảng cách lớn hơn 2 thì chèn dấu ba chấm ngắt quãng
           html += `
             <li class="page-item disabled">
               <span class="page-link bg-light text-muted">...</span>
@@ -244,55 +238,46 @@ export async function initProductManager() {
         }
       }
 
-      // Render nút số trang bình thường
       html += `
-        <li class="page-item ${i === currentPage ? "active" : ""}">
-          <button class="page-link ${i === currentPage ? "fw-bold shadow-sm" : ""}" data-page="${i}">${i}</button>
+        <li class="page-item ${i === pageCurrent ? "active" : ""}">
+          <button class="page-link ${i === pageCurrent ? "fw-bold shadow-sm" : ""}" data-page="${i}">${i}</button>
         </li>
       `;
       l = i;
     }
 
-    // 2. NÚT NEXT (Sang trang tiếp theo)
+    // 2. NÚT NEXT
     html += `
-      <li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
-        <button class="page-link" data-page="${currentPage + 1}" aria-label="Next">
+      <li class="page-item ${pageCurrent === totalPages ? "disabled" : ""}">
+        <button class="page-link" data-page="${pageCurrent + 1}" ${pageCurrent === totalPages ? "disabled" : ""} aria-label="Next">
           <span aria-hidden="true">&raquo;</span>
         </button>
       </li>
     `;
 
     paginationContainer.innerHTML = html;
-
-    // 3. LẮNG NGHE SỰ KIỆN CLICK CHUYỂN TRANG
-    paginationContainer
-      .querySelectorAll(".page-link:not(.disabled)")
-      .forEach((btn) => {
-        btn.onclick = (e) => {
-          // Lấy thẻ button đích danh kể cả khi bấm trúng thẻ con span bên trong
-          const button = e.target.closest(".page-link");
-          if (!button) return;
-
-          const targetPage = parseInt(button.getAttribute("data-page"));
-          if (
-            targetPage &&
-            targetPage !== currentPage &&
-            targetPage >= 1 &&
-            targetPage <= totalPages
-          ) {
-            currentPage = targetPage;
-            loadData(); // Tải lại dữ liệu trang mới
-
-            // Cuộn mượt màn hình lên đầu bảng danh sách để người dùng dễ theo dõi dữ liệu mới
-            const tableEl = document.getElementById("productTableBody");
-            if (tableEl)
-              tableEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
-          }
-        };
-      });
   };
 
-  // 🔥 Hàm tải dữ liệu đồng bộ cấu trúc phân trang từ Server API
+  // 🔥 SỬA ĐỔI 2: Sử dụng Ủy quyền sự kiện (Event Delegation) cho phân trang độc lập, tránh xung đột click
+  if (paginationContainer) {
+    paginationContainer.onclick = (e) => {
+      const button = e.target.closest(".page-link");
+      if (!button || button.parentElement.classList.contains("disabled"))
+        return;
+
+      const targetPage = parseInt(button.getAttribute("data-page"));
+      if (targetPage && targetPage !== currentPage) {
+        currentPage = targetPage;
+        loadData(); // Gọi hàm tải trang mới
+
+        if (tableBody) {
+          tableBody.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+      }
+    };
+  }
+
+  // Hàm tải dữ liệu từ Server API
   const loadData = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/products`, {
@@ -303,12 +288,12 @@ export async function initProductManager() {
         },
       });
 
-      // Bóc tách cấu trúc mới của API trả về
+      // Bóc tách cấu trúc từ backend trả về
       const { products, totalItems, totalPages } = res.data;
 
       renderProducts(products);
       renderPagination(totalPages, currentPage);
-      totalCount.innerText = totalItems;
+      if (totalCount) totalCount.innerText = totalItems;
     } catch (err) {
       console.error("Lỗi tải danh sách sản phẩm:", err);
     }
@@ -316,16 +301,18 @@ export async function initProductManager() {
 
   // --- LẮNG NGHE SỰ KIỆN HỆ THỐNG ---
 
-  // 🔥 Xử lý tìm kiếm Real-time trực tiếp từ Database PostgreSQL bằng chống nhiễu (Debounce) nhẹ
-  let searchTimeout;
-  searchInput.oninput = (e) => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      currentSearch = e.target.value;
-      currentPage = 1; // Khởi động lại về trang 1 khi lọc từ khóa mới
-      loadData();
-    }, 400); // Đợi 400ms sau khi dừng gõ phím mới tạo Request để giảm tải server
-  };
+  // Xử lý tìm kiếm Real-time bằng Debounce
+  if (searchInput) {
+    let searchTimeout;
+    searchInput.oninput = (e) => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        currentSearch = e.target.value;
+        currentPage = 1; // Reset về trang 1 khi gõ tìm kiếm mới
+        loadData();
+      }, 400);
+    };
+  }
 
   // Xử lý sự kiện Import Excel
   if (btnImportExcel && excelFileInput) {
@@ -394,10 +381,10 @@ export async function initProductManager() {
   // Mở modal thêm sản phẩm
   if (btnAddProduct) {
     btnAddProduct.onclick = () => {
-      addForm.reset();
-      document.getElementById("addImgPreview").src =
-        "/assets/images/default-product.png";
-      addModal.show();
+      if (addForm) addForm.reset();
+      const defaultImg = document.getElementById("addImgPreview");
+      if (defaultImg) defaultImg.src = "/assets/images/default-product.png";
+      if (addModal) addModal.show();
     };
   }
 
@@ -416,7 +403,7 @@ export async function initProductManager() {
 
       try {
         await axios.post(`${BASE_URL}/products/add`, formData);
-        addModal.hide();
+        if (addModal) addModal.hide();
         Swal.fire("Thành công", "Đã thêm sản phẩm mới", "success");
         loadData();
       } catch (err) {
@@ -430,115 +417,118 @@ export async function initProductManager() {
   }
 
   // Xử lý Sửa, Xóa & Xem chi tiết dữ liệu
-  tableBody.addEventListener("click", async (e) => {
-    const target = e.target.closest("button");
-    if (!target) return;
-    const id = target.getAttribute("data-id");
+  if (tableBody) {
+    tableBody.addEventListener("click", async (e) => {
+      const target = e.target.closest("button");
+      if (!target) return;
+      const id = target.getAttribute("data-id");
 
-    // 1. XEM CHI TIẾT
-    if (target.classList.contains("btn-view")) {
-      try {
-        const res = await axios.get(`${BASE_URL}/products/${id}`);
-        const sp = res.data;
-        if (sp) {
-          document.getElementById("viewMaSP").innerText = sp.masp;
-          document.getElementById("viewTenSP").innerText = sp.tensp;
-          document.getElementById("viewDanhMuc").innerText =
-            sp.tendanhmuc || "Chưa phân loại";
-          document.getElementById("viewNhaCungCap").innerText =
-            sp.tenncc || "Chưa xác định";
-          document.getElementById("viewGiaNhap").innerText =
-            new Intl.NumberFormat("vi-VN").format(sp.gianhap) + "đ";
-          document.getElementById("viewGiaBan").innerText =
-            new Intl.NumberFormat("vi-VN").format(sp.giaban) + "đ";
-          document.getElementById("viewSoLuongTon").innerText =
-            sp.soluongton + " sản phẩm";
-          document.getElementById("viewDonViTinh").innerText =
-            sp.donvitinh || "Chưa thiết lập";
-          document.getElementById("viewMoTa").innerText =
-            sp.mota || "(Không có mô tả sản phẩm)";
-
-          document.getElementById("viewImagePreview").src = sp.hinhanh
-            ? sp.hinhanh
-            : "/assets/images/default-product.png";
-
-          viewModal.show();
-        }
-      } catch (err) {
-        console.error("Lỗi lấy dữ liệu chi tiết:", err);
-        Swal.fire("Lỗi", "Không thể lấy thông tin chi tiết sản phẩm", "error");
-      }
-    }
-
-    // 2. 🔥 XÓA SẢN PHẨM (Hiển thị thông báo chi tiết trả về từ Backend)
-    if (target.classList.contains("btn-delete")) {
-      const result = await Swal.fire({
-        title: "Xác nhận xóa?",
-        text: "Dữ liệu sẽ không thể khôi phục!",
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#dc3545",
-        cancelButtonColor: "#6c757d",
-        confirmButtonText: "Xóa ngay",
-        cancelButtonText: "Hủy",
-      });
-
-      if (result.isConfirmed) {
+      // 1. XEM CHI TIẾT
+      if (target.classList.contains("btn-view")) {
         try {
-          await axios.delete(`${BASE_URL}/products/delete/${id}`);
-          Swal.fire("Đã xóa!", "Sản phẩm đã được gỡ khỏi hệ thống.", "success");
-          loadData();
+          const res = await axios.get(`${BASE_URL}/products/${id}`);
+          const sp = res.data;
+          if (sp) {
+            document.getElementById("viewMaSP").innerText = sp.masp;
+            document.getElementById("viewTenSP").innerText = sp.tensp;
+            document.getElementById("viewDanhMuc").innerText =
+              sp.tendanhmuc || "Chưa phân loại";
+            document.getElementById("viewNhaCungCap").innerText =
+              sp.tenncc || "Chưa xác định";
+            document.getElementById("viewGiaNhap").innerText =
+              new Intl.NumberFormat("vi-VN").format(sp.gianhap) + "đ";
+            document.getElementById("viewGiaBan").innerText =
+              new Intl.NumberFormat("vi-VN").format(sp.giaban) + "đ";
+            document.getElementById("viewSoLuongTon").innerText =
+              sp.soluongton + " sản phẩm";
+            document.getElementById("viewDonViTinh").innerText =
+              sp.donvitinh || "Chưa thiết lập";
+            document.getElementById("viewMoTa").innerText =
+              sp.mota || "(Không có mô tả sản phẩm)";
+            document.getElementById("viewImagePreview").src = sp.hinhanh
+              ? sp.hinhanh
+              : "/assets/images/default-product.png";
+
+            if (viewModal) viewModal.show();
+          }
         } catch (err) {
-          console.error("Lỗi khi xóa:", err);
-          // 🔥 Bóc tách câu thông báo nghiệp vụ chi tiết từ Server phản hồi (Chặn xóa do dính đơn hàng)
-          const errorMessage =
-            err.response?.data?.message ||
-            "Không thể thực hiện lệnh xóa sản phẩm này.";
-          Swal.fire("Không thể xóa!", errorMessage, "error");
+          console.error("Lỗi lấy dữ liệu chi tiết:", err);
+          Swal.fire(
+            "Lỗi",
+            "Không thể lấy thông tin chi tiết sản phẩm",
+            "error",
+          );
         }
       }
-    }
 
-    // 3. ĐỔ DỮ LIỆU SỬA
-    if (target.classList.contains("btn-edit")) {
-      try {
-        const res = await axios.get(`${BASE_URL}/products/${id}`);
-        const sp = res.data;
-        if (sp) {
-          document.getElementById("editMaSP").value = sp.masp;
-          document.getElementById("editMaNCC").value = sp.mancc;
-          document.getElementById("editTenSP").value = sp.tensp;
-          document.getElementById("editGiaNhap").value = sp.gianhap;
-          document.getElementById("editGiaBan").value = sp.giaban;
-          document.getElementById("editSoLuongTon").value = sp.soluongton;
-          document.getElementById("editMoTa").value = sp.mota || "";
-          document.getElementById("editDonViTinh").value = sp.donvitinh || "";
-          document.getElementById("editMaDanhMuc").value = sp.madanhmuc;
+      // 2. XÓA SẢN PHẨM
+      if (target.classList.contains("btn-delete")) {
+        const result = await Swal.fire({
+          title: "Xác nhận xóa?",
+          text: "Dữ liệu sẽ không thể khôi phục!",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#dc3545",
+          cancelButtonColor: "#6c757d",
+          confirmButtonText: "Xóa ngay",
+          cancelButtonText: "Hủy",
+        });
 
-          document.getElementById("editHinhAnhCu").value = sp.hinhanh || "";
-          document.getElementById("editImagePreview").src = sp.hinhanh
-            ? sp.hinhanh
-            : "/assets/images/default-product.png";
-
-          editModal.show();
+        if (result.isConfirmed) {
+          try {
+            await axios.delete(`${BASE_URL}/products/delete/${id}`);
+            Swal.fire(
+              "Đã xóa!",
+              "Sản phẩm đã được gỡ khỏi hệ thống.",
+              "success",
+            );
+            loadData();
+          } catch (err) {
+            console.error("Lỗi khi xóa:", err);
+            const errorMessage =
+              err.response?.data?.message ||
+              "Không thể thực hiện lệnh xóa sản phẩm này.";
+            Swal.fire("Không thể xóa!", errorMessage, "error");
+          }
         }
-      } catch (err) {
-        Swal.fire("Lỗi", "Lỗi lấy dữ liệu chi tiết", "error");
       }
-    }
-  });
+
+      // 3. ĐỔ DỮ LIỆU SỬA
+      if (target.classList.contains("btn-edit")) {
+        try {
+          const res = await axios.get(`${BASE_URL}/products/${id}`);
+          const sp = res.data;
+          if (sp) {
+            document.getElementById("editMaSP").value = sp.masp;
+            document.getElementById("editMaNCC").value = sp.mancc;
+            document.getElementById("editTenSP").value = sp.tensp;
+            document.getElementById("editGiaNhap").value = sp.gianhap;
+            document.getElementById("editGiaBan").value = sp.giaban;
+            document.getElementById("editSoLuongTon").value = sp.soluongton;
+            document.getElementById("editMoTa").value = sp.mota || "";
+            document.getElementById("editDonViTinh").value = sp.donvitinh || "";
+            document.getElementById("editMaDanhMuc").value = sp.madanhmuc;
+            document.getElementById("editHinhAnhCu").value = sp.hinhanh || "";
+            document.getElementById("editImagePreview").src = sp.hinhanh
+              ? sp.hinhanh
+              : "/assets/images/default-product.png";
+
+            if (editModal) editModal.show();
+          }
+        } catch (err) {
+          Swal.fire("Lỗi", "Lỗi lấy dữ liệu chi tiết", "error");
+        }
+      }
+    });
+  }
 
   // Xử lý Cập nhật
   if (editForm) {
     editForm.onsubmit = async (e) => {
       e.preventDefault();
-
       const maSP = document.getElementById("editMaSP").value;
-
-      // 1. Khởi tạo một đối tượng FormData trống hoàn toàn
       const formData = new FormData();
 
-      // 2. Chủ động thêm các trường text thông thường
       formData.append("TenSP", document.getElementById("editTenSP").value);
       formData.append("GiaNhap", document.getElementById("editGiaNhap").value);
       formData.append("GiaBan", document.getElementById("editGiaBan").value);
@@ -557,14 +547,10 @@ export async function initProductManager() {
       );
       formData.append("MaNCC", document.getElementById("editMaNCC").value);
 
-      // 3. Xử lý logic File ảnh
       const fileInput = document.getElementById("editFileHinhAnh");
-
       if (fileInput && fileInput.files[0]) {
-        // 🌟 NẾU CÓ ĐỔI ẢNH: Đặt tên key CHÍNH XÁC là "HinhAnh" để trùng với Backend
         formData.append("HinhAnh", fileInput.files[0]);
       } else {
-        // 🌟 NẾU KHÔNG ĐỔI ẢNH: Gửi link ảnh cũ qua một key thường
         formData.append(
           "HinhAnhCu",
           document.getElementById("editHinhAnhCu").value,
@@ -572,14 +558,13 @@ export async function initProductManager() {
       }
 
       try {
-        // Gửi API UPDATE lên Server
         await axios.put(`${BASE_URL}/products/update/${maSP}`, formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
 
-        editModal.hide();
+        if (editModal) editModal.hide();
         Swal.fire("Thành công", "Đã cập nhật sản phẩm thành công!", "success");
-        loadData(); // Tải lại bảng dữ liệu
+        loadData();
       } catch (err) {
         console.error("Lỗi cập nhật frontend:", err);
         Swal.fire(
@@ -591,9 +576,10 @@ export async function initProductManager() {
     };
   }
 
-  // --- KHỞI CHẠY LẦN ĐẦU ---
+  // --- KHỞI CHẠY LẦN ĐẦU THEO THỨ TỰ AN TOÀN ---
   setupImagePreview("editFileHinhAnh", "editImagePreview");
   setupImagePreview("addFileHinhAnh", "addImgPreview");
-  await loadDropdowns();
-  await loadData();
+
+  // Gọi bất đồng bộ song song để tăng tốc độ load trang
+  await Promise.all([loadDropdowns(), loadData()]);
 }
