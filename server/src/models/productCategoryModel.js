@@ -2,13 +2,13 @@ const { pool } = require("../config/database");
 
 const productCategoryModel = {
   // 1. Lấy tất cả danh mục
-  getAllCategories: async () => {
+  getAllCategories: async (limit = 8, offset = 0) => {
     try {
-      // Viết thường hoàn toàn, không nháy kép theo đúng cấu trúc trên Neon.tech
       const result = await pool.query(
-        "SELECT madanhmuc, tendanhmuc, mota FROM danhmuc",
+        "SELECT madanhmuc, tendanhmuc, mota FROM danhmuc ORDER BY madanhmuc ASC LIMIT $1 OFFSET $2",
+        [limit, offset],
       );
-      return result.rows; // Trả về mảng dữ liệu
+      return result.rows;
     } catch (error) {
       throw error;
     }

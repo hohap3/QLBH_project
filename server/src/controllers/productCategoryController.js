@@ -4,8 +4,28 @@ const productCategoryController = {
   // API Lấy danh sách danh mục
   getCategories: async (req, res) => {
     try {
-      const categories = await categoryModel.getAllCategories();
-      res.status(200).json(categories);
+      // Ép kiểu các tham số truyền lên từ URL, mặc định hiển thị trang 1, mỗi trang 8 mục
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 8;
+      const offset = (page - 1) * limit;
+
+      // Chạy song song lấy dữ liệu phân trang và đếm tổng số danh mục
+      const [categories, totalItems] = await Promise.all([
+        categoryModel.getAllCategories(limit, offset),
+        categoryModel.countAllCategories(),
+      ]);
+
+      const totalPages = Math.ceil(totalItems / limit);
+
+      res.status(200).json({
+        data: categories,
+        pagination: {
+          total: totalItems,
+          page: page,
+          limit: limit,
+          totalPages: totalPages,
+        },
+      });
     } catch (error) {
       res
         .status(500)
