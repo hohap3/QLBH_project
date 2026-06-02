@@ -43,7 +43,46 @@ export async function initCaiDat() {
     profileForm.onsubmit = async (e) => {
       e.preventDefault();
 
-      // Hiệu ứng loading cho nút lưu
+      // --- 🟢 BỔ SUNG LOGIC VALIDATE DỮ LIỆU ---
+      const hoTen = document.getElementById("txtHoTen").value.trim();
+      const email = document.getElementById("txtEmail").value.trim();
+      const sdt = document.getElementById("txtSDT").value.trim();
+
+      // 1. Kiểm tra họ tên không được để trống
+      if (!hoTen) {
+        Swal.fire("Lỗi nhập liệu", "Họ và tên không được để trống!", "warning");
+        return;
+      }
+
+      // 2. Kiểm tra định dạng Email hợp lệ bằng Regular Expression
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        Swal.fire("Lỗi nhập liệu", "Định dạng Email không hợp lệ!", "warning");
+        return;
+      }
+
+      // 3. Kiểm tra số điện thoại có phải hoàn toàn là số hay không
+      const phoneRegex = /^[0-9]+$/;
+      if (!phoneRegex.test(sdt)) {
+        Swal.fire(
+          "Lỗi nhập liệu",
+          "Số điện thoại bắt buộc phải là các ký tự số!",
+          "warning",
+        );
+        return;
+      }
+
+      // 4. Kiểm tra độ dài tối thiểu của Số điện thoại
+      if (sdt.length < 10) {
+        Swal.fire(
+          "Lỗi nhập liệu",
+          "Số điện thoại phải từ 10 ký tự trở lên!",
+          "warning",
+        );
+        return;
+      }
+
+      // --- 🟡 TIẾN HÀNH XỬ LÝ GỬI DỮ LIỆU LÊN SERVER ---
       const submitBtn = profileForm.querySelector('button[type="submit"]');
       const originalBtnHtml = submitBtn.innerHTML;
       submitBtn.disabled = true;
@@ -52,9 +91,9 @@ export async function initCaiDat() {
 
       const updateData = {
         MaND: userStorage.id, // ID để backend định danh
-        HoTen: document.getElementById("txtHoTen").value.trim(),
-        Email: document.getElementById("txtEmail").value.trim(),
-        SDT: document.getElementById("txtSDT").value.trim(),
+        HoTen: hoTen,
+        Email: email,
+        SDT: sdt,
       };
 
       try {
@@ -63,12 +102,12 @@ export async function initCaiDat() {
         await Swal.fire({
           icon: "success",
           title: "Thành công!",
-          text: response.data.message,
+          text: response.data.message || "Cập nhật thông tin thành công!",
           timer: 2000,
           showConfirmButton: false,
         });
 
-        // Cập nhật lại localStorage nếu bạn muốn hiển thị tên mới trên Header ngay lập tức
+        // Cập nhật lại localStorage để đồng bộ hiển thị tên mới trên Header ngay lập tức
         const newUserInfo = { ...userStorage, HoTen: updateData.HoTen };
         localStorage.setItem("hpstore_user", JSON.stringify(newUserInfo));
       } catch (error) {
@@ -79,7 +118,7 @@ export async function initCaiDat() {
           error.response?.data?.message || "Có lỗi xảy ra khi cập nhật";
         Swal.fire("Thất bại", errorMsg, "error");
       } finally {
-        // Khôi phục trạng thái nút bấm
+        // Khôi phục trạng thái nút bấm ban đầu
         submitBtn.disabled = false;
         submitBtn.innerHTML = originalBtnHtml;
       }

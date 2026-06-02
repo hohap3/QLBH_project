@@ -115,12 +115,66 @@ function initUIEvents(maND, token) {
     formInfo.onsubmit = async (e) => {
       e.preventDefault();
 
-      // 🟢 ĐÃ CẬP NHẬT: Giữ nguyên key PascalCase gửi lên body, Controller ở Backend sẽ tự ánh xạ lại sang chữ thường
+      // Lấy dữ liệu và thực hiện loại bỏ khoảng trắng thừa (.trim())
+      const hoTen = document.getElementById("info-fullname").value.trim();
+      const sdt = document.getElementById("info-phone").value.trim();
+      const email = document.getElementById("info-email").value.trim();
+      const diaChi = document.getElementById("info-address").value.trim();
+
+      // --- 🟢 BỔ SUNG LOGIC VALIDATE DỮ LIỆU ---
+
+      // 1. Kiểm tra họ và tên trống
+      if (!hoTen) {
+        Swal.fire({
+          icon: "warning",
+          title: "Lỗi nhập liệu",
+          text: "Họ và tên không được để trống!",
+          confirmButtonColor: "#6138ff",
+        });
+        return;
+      }
+
+      // 2. Kiểm tra định dạng Email hợp lệ bằng Regular Expression
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        Swal.fire({
+          icon: "warning",
+          title: "Lỗi nhập liệu",
+          text: "Định dạng Email không hợp lệ!",
+          confirmButtonColor: "#6138ff",
+        });
+        return;
+      }
+
+      // 3. Kiểm tra số điện thoại bắt buộc phải là các ký tự số
+      const phoneRegex = /^[0-9]+$/;
+      if (!phoneRegex.test(sdt)) {
+        Swal.fire({
+          icon: "warning",
+          title: "Lỗi nhập liệu",
+          text: "Số điện thoại bắt buộc phải là các ký tự số từ 0-9!",
+          confirmButtonColor: "#6138ff",
+        });
+        return;
+      }
+
+      // 4. Kiểm tra độ dài tối thiểu của Số điện thoại (từ 10 số trở lên)
+      if (sdt.length < 10) {
+        Swal.fire({
+          icon: "warning",
+          title: "Lỗi nhập liệu",
+          text: "Số điện thoại phải từ 10 ký tự trở lên!",
+          confirmButtonColor: "#6138ff",
+        });
+        return;
+      }
+
+      // 🟢 ĐÃ CẬP NHẬT: Gửi chuỗi dữ liệu sạch sau khi đã kiểm tra định dạng thành công
       const payload = {
-        HoTen: document.getElementById("info-fullname").value.trim(),
-        SDT: document.getElementById("info-phone").value.trim(),
-        Email: document.getElementById("info-email").value.trim(),
-        DiaChi: document.getElementById("info-address").value.trim(),
+        HoTen: hoTen,
+        SDT: sdt,
+        Email: email,
+        DiaChi: diaChi,
       };
 
       try {
