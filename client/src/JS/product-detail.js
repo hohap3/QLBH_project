@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const sp = await res.json();
     currentProductData = sp;
 
-    // Đổ dữ liệu ra các thẻ HTML tương ứng (Đồng bộ chữ thường theo Postgres)
+    // Đổ dữ liệu ra các thẻ HTML tương ứng
     document.getElementById("breadcrumb-category").innerText = sp.tendanhmuc;
     document.getElementById("breadcrumb-product").innerText = sp.tensp;
 
@@ -53,18 +53,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       statusElement.innerText = "Còn hàng";
       statusElement.className = "text-success fw-bold";
     } else {
-      // 1. Cập nhật nhãn thông tin kho
       statusElement.innerText = "Hết hàng";
       statusElement.className = "text-danger fw-bold";
 
-      // 2. Vô hiệu hóa nút bấm giỏ hàng chính
       if (btnAddToCart) {
         btnAddToCart.disabled = true;
         btnAddToCart.innerHTML = `<i class="fa-solid fa-ban me-2"></i>Hết hàng`;
         btnAddToCart.className = "btn btn-secondary w-100 py-3 disabled";
       }
 
-      // 3. Khóa ô nhập số lượng
       if (quantityInput) {
         quantityInput.value = 0;
         quantityInput.disabled = true;
@@ -78,7 +75,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     setupQuantityEvents(sp.soluongton);
 
-    // Chờ tải xong xuôi sản phẩm liên quan rồi mới kích hoạt sự kiện nút bấm giỏ hàng
+    // Chờ tải xong sản phẩm liên quan
     await loadRelatedProducts(sp.madanhmuc, sp.masp);
 
     setupAddToCartButton();
@@ -103,7 +100,6 @@ function setupAddToCartButton() {
 }
 
 function executeAddProductToCart(product, quantityToBuy) {
-  // Chuẩn hóa linh hoạt hỗ trợ cả đối tượng viết hoa hoặc viết thường từ hàm truyền vào
   const stock =
     product.soluongton !== undefined ? product.soluongton : product.SoLuongTon;
   const maSP = product.masp || product.MaSP;
@@ -111,7 +107,7 @@ function executeAddProductToCart(product, quantityToBuy) {
   const giaBan = product.giaban || product.GiaBan;
   const hinhAnh = product.hinhanh || product.HinhAnh;
 
-  // Chặn trường hợp cố tình gọi hàm khi hàng trong kho bằng 0
+  // 🟢 CHẶN 1: Hàng trong kho đã hết hoàn toàn
   if (stock <= 0) {
     Swal.fire(
       "Hết hàng",
@@ -122,7 +118,6 @@ function executeAddProductToCart(product, quantityToBuy) {
   }
 
   const userData = JSON.parse(localStorage.getItem("hpstore_user"));
-
   if (!userData || !userData.token) {
     Swal.fire({
       title: "Yêu cầu đăng nhập",
@@ -141,10 +136,34 @@ function executeAddProductToCart(product, quantityToBuy) {
   let userCart = JSON.parse(localStorage.getItem(userCartKey)) || [];
   const existIndex = userCart.findIndex((item) => item.MaSP === maSP);
 
+  // 🟢 CHẶN 2: Kiểm tra tổng số lượng sau khi cộng dồn giỏ hàng cũ và mới
   if (existIndex > -1) {
-    const newQty = userCart[existIndex].SoLuong + quantityToBuy;
+    const currentInCart = userCart[existIndex].SoLuong;
+    const newQty = currentInCart + quantityToBuy;
 
+    // Nếu số lượng mới vượt quá số lượng tối đa của kho
     if (newQty > stock) {
+      const maxCanAdd = stock - currentInCart; // Số lượng tối đa còn lại có thể mua thêm
+
+      if (maxCanAdd <= 0) {
+        Swal.fire(
+          "Giới hạn kho hàng",
+          `Bạn đã thêm tối đa số lượng cho phép của sản phẩm này vào giỏ hàng (${stock} sản phẩm).`,
+          "warning",
+        );
+      } else {
+        Swal.fire(
+          "Vượt quá số lượng",
+          `Sản phẩm này đã có ${currentInCart} cái trong giỏ. Kho chỉ còn tồn ${stock} cái, bạn chỉ có thể thêm tối đa ${maxCanAdd} cái nữa thôi!`,
+          "error",
+        );
+      }
+      return;
+    }
+    userCart[existIndex].SoLuong = newQty;
+  } else {
+    // Nếu chưa có trong giỏ, kiểm tra xem số chọn mua trực tiếp có lọt kho không
+    if (quantityToBuy > stock) {
       Swal.fire(
         "Vượt quá số lượng",
         `Trong kho chỉ còn tối đa ${stock} sản phẩm.`,
@@ -152,9 +171,7 @@ function executeAddProductToCart(product, quantityToBuy) {
       );
       return;
     }
-    userCart[existIndex].SoLuong = newQty;
-  } else {
-    // Giữ nguyên key viết hoa lưu vào LocalStorage để không làm gãy trang Giỏ hàng hiện tại của bạn
+
     userCart.push({
       MaSP: maSP,
       TenSP: tenSP,
@@ -183,7 +200,6 @@ function executeAddProductToCart(product, quantityToBuy) {
   }
 }
 
-// Xử lý thêm nhanh sản phẩm liên quan ra phạm vi window toàn cục
 window.quickAddToCart = function (productStr) {
   try {
     const product = JSON.parse(decodeURIComponent(productStr));
@@ -214,7 +230,11 @@ function setupQuantityEvents(maxStock) {
     if (val < maxStock) {
       input.value = val + 1;
     } else {
-      alert(`Sản phẩm này hiện chỉ còn tối đa ${maxStock} cái trong kho.`);
+      Swal.fire(
+        "Thông báo",
+        `Sản phẩm này hiện chỉ còn tối đa ${maxStock} cái trong kho.`,
+        "info",
+      );
     }
   };
 
@@ -223,7 +243,11 @@ function setupQuantityEvents(maxStock) {
     if (isNaN(val) || val < 1) input.value = 1;
     if (val > maxStock) {
       input.value = maxStock;
-      alert(`Sản phẩm này hiện chỉ còn tối đa ${maxStock} cái trong kho.`);
+      Swal.fire(
+        "Thông báo",
+        `Sản phẩm này hiện chỉ còn tối đa ${maxStock} cái trong kho.`,
+        "info",
+      );
     }
   };
 }
