@@ -48,6 +48,26 @@ function updateCartBadgeCount() {
   }
 }
 
+// 🟢 HÀM CHUẨN HÓA ĐƯỜNG DẪN ẢNH (TỰ ĐỘNG NHẬN DIỆN CLOUDINARY)
+function getProductImageUrl(hinhanh) {
+  if (
+    !hinhanh ||
+    hinhanh === "NULL" ||
+    hinhanh === "null" ||
+    hinhanh === "undefined" ||
+    hinhanh.trim() === ""
+  ) {
+    return DEFAULT_IMAGE;
+  }
+  // Nếu DB lưu full URL trực tiếp từ Cloudinary hoặc Server bên ngoài
+  if (hinhanh.startsWith("http://") || hinhanh.startsWith("https://")) {
+    return hinhanh;
+  }
+  // Trường hợp fallback nếu DB chỉ lưu tên file cục bộ (Nối chuỗi từ server Render)
+  const rootUrl = BASE_URL.replace("/api", "");
+  return `${rootUrl}/uploads/products/${hinhanh}`;
+}
+
 // 🟢 BỔ SUNG: Lấy điểm tích lũy của khách hàng từ Backend Postgres
 async function fetchUserPoints() {
   const userData = JSON.parse(localStorage.getItem("hpstore_user"));
@@ -57,13 +77,10 @@ async function fetchUserPoints() {
   if (!maND) return;
 
   try {
-    // Gọi API lấy thông tin profile/khách hàng liên kết với MaND
     const response = await axios.get(`${BASE_URL}/user/profile?id=${maND}`);
-    // Đọc trường diemtichluy (Postgres trả về chữ thường)
     userPoints =
       parseInt(response.data.diemtichluy || response.data.DiemTichLuy) || 0;
 
-    // Hiển thị điểm lên giao diện nếu có thẻ hiển thị
     const pointsEl = document.getElementById("user-current-points");
     if (pointsEl) {
       pointsEl.innerText = `${userPoints} điểm`;
@@ -105,12 +122,9 @@ function renderCartPage() {
       baseSubTotal += itemTotal;
 
       const rawImg = item.hinhanh || item.hinhAnh || item.HinhAnh;
-      const hasValidImg =
-        rawImg && rawImg !== "NULL" && rawImg !== "undefined" && rawImg !== "";
 
-      const imgPath = hasValidImg
-        ? `https://qlbh-project.onrender.com/uploads/products/${rawImg}`
-        : DEFAULT_IMAGE;
+      // 🟢 ĐỔI LOGIC: Gọi hàm chuẩn hóa tự động xử lý link Cloudinary tuyệt đối
+      const imgPath = getProductImageUrl(rawImg);
 
       const maSP = item.MaSP || item.masp;
 
@@ -152,12 +166,10 @@ function renderCartPage() {
   calculateDiscount();
 }
 
-// 🟢 BỔ SUNG: Render khu vực chọn Voucher giảm giá đổi bằng điểm
 function renderDiscountSection() {
   const discountContainer = document.getElementById("discount-reward-section");
   if (!discountContainer) return;
 
-  // Cấu hình các mốc đổi điểm thưởng
   const rewards = [
     { percent: 5, points: 75, label: "Giảm giá 5%" },
     { percent: 10, points: 150, label: "Giảm giá 10%" },
@@ -173,7 +185,7 @@ function renderDiscountSection() {
   `;
 
   rewards.forEach((r) => {
-    const isEligible = userPoints >= r.points; // Kiểm tra đủ điểm không
+    const isEligible = userPoints >= r.points;
     const isChecked = currentDiscountPercent === r.percent ? "checked" : "";
     const isDisabled =
       (!isEligible && currentDiscountPercent === 0) ||
@@ -203,7 +215,6 @@ function renderDiscountSection() {
   discountContainer.innerHTML = htmlOptions;
 }
 
-// 🟢 BỔ SUNG: Xử lý khi click chọn một Option giảm giá
 window.handleSelectDiscount = function (radioElement) {
   const percent = parseInt(radioElement.value);
   const requiredPoints = parseInt(radioElement.getAttribute("data-points"));
@@ -230,7 +241,6 @@ window.handleSelectDiscount = function (radioElement) {
   }).then((result) => {
     if (result.isConfirmed) {
       currentDiscountPercent = percent;
-      // Khóa tạm thời lựa chọn (Chỉ được chọn 1 mục và áp dụng 1 lần)
       calculateDiscount();
       renderDiscountSection();
     } else {
@@ -239,7 +249,6 @@ window.handleSelectDiscount = function (radioElement) {
   });
 };
 
-// 🟢 BỔ SUNG: Hủy chọn Voucher để chọn lại mốc khác
 window.cancelSelectedDiscount = function () {
   currentDiscountPercent = 0;
   currentDiscountAmount = 0;
@@ -247,7 +256,6 @@ window.cancelSelectedDiscount = function () {
   renderDiscountSection();
 };
 
-// 🟢 BỔ SUNG: Tính toán số tiền được giảm tương ứng %
 function calculateDiscount() {
   if (currentDiscountPercent > 0) {
     currentDiscountAmount = Math.round(
@@ -268,7 +276,6 @@ function updateSummary(subTotal) {
   if (subtotalEl)
     subtotalEl.innerText = `${subTotal.toLocaleString("vi-VN")} đ`;
 
-  // Cập nhật dòng giảm giá hiển thị trực quan
   if (discountRowEl && discountEl) {
     if (currentDiscountPercent > 0) {
       discountRowEl.classList.remove("d-none");
@@ -392,7 +399,6 @@ function handleCheckoutRedirect() {
     return;
   }
 
-  // 🟢 TIẾN TRÌNH: Lưu thông tin giảm giá vào localStorage để trang checkout.html đọc và trừ vào hóa đơn thực tế
   const checkoutDiscountInfo = {
     percent: currentDiscountPercent,
     amount: currentDiscountAmount,

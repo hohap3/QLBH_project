@@ -41,6 +41,26 @@ function getCartKey() {
   return "hpstore_cart_guest";
 }
 
+// 🟢 CHUẨN HÓA ĐƯỜNG DẪN ẢNH ĐỒNG BỘ CLOUDINARY
+function getProductImageUrl(hinhanh) {
+  if (
+    !hinhanh ||
+    hinhanh === "NULL" ||
+    hinhanh === "null" ||
+    hinhanh === "undefined" ||
+    hinhanh.trim() === ""
+  ) {
+    return DEFAULT_IMAGE;
+  }
+  // Nếu DB lưu full URL trực tiếp từ Cloudinary
+  if (hinhanh.startsWith("http://") || hinhanh.startsWith("https://")) {
+    return hinhanh;
+  }
+  // Trường hợp fallback nếu DB chỉ lưu tên file cục bộ
+  const rootUrl = BASE_URL.replace("/api", "");
+  return `${rootUrl}/uploads/products/${hinhanh}`;
+}
+
 async function autofillUserInfo() {
   const userData = JSON.parse(localStorage.getItem("hpstore_user"));
   const maND =
@@ -52,15 +72,12 @@ async function autofillUserInfo() {
   }
 
   try {
-    // 🟢 FIX 1: Đồng bộ đúng API Route `/user/profile` giống như trang cart.js đã chạy ổn định
     const res = await fetch(`${BASE_URL}/user/profile?id=${maND}`);
     const result = await res.json();
 
-    // Hỗ trợ bóc tách linh hoạt cấu trúc data trả về từ server
     const user = result.data || result;
 
     if (user) {
-      // Khớp chính xác các trường chữ thường từ PostgreSQL trả về
       if (user.hoten || user.HoTen) {
         document.getElementById("checkout-fullname").value =
           user.hoten || user.HoTen;
@@ -124,12 +141,8 @@ function renderCheckoutSummary() {
       const rawImg = item.hinhanh || item.hinhAnh || item.HinhAnh;
       const tenSP = item.tensp || item.TenSP || "Sản phẩm";
 
-      // 🟢 FIX 2: Chuẩn hóa đường dẫn tránh chuỗi "undefined" rác làm lỗi hiển thị ảnh
-      const hasValidImg =
-        rawImg && rawImg !== "NULL" && rawImg !== "undefined" && rawImg !== "";
-      const imgPath = hasValidImg
-        ? `https://qlbh-project.onrender.com/uploads/products/${rawImg}`
-        : DEFAULT_IMAGE;
+      // 🟢 ĐỔI LOGIC: Sử dụng hàm chuẩn hóa tự động xử lý Cloudinary hoặc link tuyệt đối
+      const imgPath = getProductImageUrl(rawImg);
 
       return `
             <div class="d-flex align-items-center gap-3 mb-3">
@@ -282,7 +295,6 @@ async function handleCheckoutSubmit(e) {
 
       localStorage.removeItem("hpstore_checkout_discount");
 
-      // 🟢 FIX 3: Chuyển đổi .toUpperCase() để tối ưu kiểm tra chuỗi thanh toán không phân biệt hoa thường
       const methodCheck = paymentMethod.toUpperCase();
       if (
         methodCheck === "CHUYEN_KHOAN" ||
