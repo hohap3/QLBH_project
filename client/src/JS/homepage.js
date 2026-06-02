@@ -9,8 +9,26 @@ let currentCategory = "all";
 let currentBestSellerPage = 1;
 const LIMIT = 8;
 
-// Hàm tìm kiếm gợi ý
-// Hàm tìm kiếm gợi ý thông minh (Đã sửa lỗi đồng bộ dữ liệu cấu trúc Postgres mới)
+// ─── HÀM BỔ TRỢ: CHUẨN HÓA ĐƯỜNG DẪN ẢNH ĐỒNG BỘ ĐÚNG CHUẨN ───
+function getProductImageUrl(hinhanh) {
+  if (
+    !hinhanh ||
+    hinhanh === "NULL" ||
+    hinhanh === "null" ||
+    hinhanh.trim() === ""
+  ) {
+    return DEFAULT_IMAGE;
+  }
+  // Nếu DB lưu full link (đường dẫn từ Cloud/Server bên ngoài)
+  if (hinhanh.startsWith("http://") || hinhanh.startsWith("https://")) {
+    return hinhanh;
+  }
+  // Nếu chỉ lưu tên file, nối với endpoint uploads của Server
+  const rootUrl = BASE_URL.replace("/api", "");
+  return `${rootUrl}/uploads/products/${hinhanh}`;
+}
+
+// ─── HÀM TÌM KIẾM GỢI Ý THÔNG MINH ───
 async function searchProducts() {
   const searchInput = document.getElementById("search-input");
   const suggestionsBox = document.getElementById("search-suggestions");
@@ -28,21 +46,17 @@ async function searchProducts() {
       );
       const result = await res.json();
 
-      // 🟢 BÓC TÁCH CHUẨN: Lấy mảng từ thuộc tính .data theo cấu trúc mới của Controller
       const products = result.data || (Array.isArray(result) ? result : []);
 
       if (products && products.length > 0) {
         suggestionsBox.innerHTML = products
           .map((sp) => {
-            // Chuẩn hóa đường dẫn ảnh an toàn
-            const imgPath =
-              sp.hinhanh && sp.hinhanh !== "NULL" && sp.hinhanh !== ""
-                ? `${BASE_URL.replace("/api", "")}/uploads/products/${sp.hinhanh}`
-                : DEFAULT_IMAGE;
+            // 🔥 Cập nhật hàm xử lý ảnh chuẩn hóa
+            const imgPath = getProductImageUrl(sp.hinhanh);
 
             return `
               <a href="/src/pages/product-detail.html?id=${sp.masp}" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-2">
-                  <img src="${imgPath}" alt="${sp.tensp}" style="width: 45px; height: 45px; object-fit: contain; border-radius: 8px;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
+                  <img src="${imgPath}" alt="${sp.tensp || "Sản phẩm"}" style="width: 45px; height: 45px; object-fit: cover; border-radius: 8px;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
                   <div class="overflow-hidden flex-grow-1">
                       <div class="fw-bold text-dark text-truncate" style="font-size: 0.9rem; margin-bottom: 2px;">${sp.tensp}</div>
                       <div class="d-flex align-items-center justify-content-between">
@@ -56,7 +70,6 @@ async function searchProducts() {
           .join("");
         suggestionsBox.classList.remove("d-none");
       } else {
-        // Nếu API chạy đúng nhưng không tìm thấy kết quả nào tương thích
         suggestionsBox.innerHTML = `<div class="list-group-item text-center text-muted small py-3">Không tìm thấy sản phẩm hoặc danh mục phù hợp.</div>`;
         suggestionsBox.classList.remove("d-none");
       }
@@ -65,7 +78,6 @@ async function searchProducts() {
     }
   });
 
-  // Sự kiện click ra ngoài để đóng hộp gợi ý nhanh
   document.addEventListener("click", (e) => {
     if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
       suggestionsBox.classList.add("d-none");
@@ -90,7 +102,6 @@ async function loadProducts(maDM = "all", page = 1) {
     );
     const data = await res.json();
 
-    // Đồng bộ cấu trúc bóc tách mảng từ Postgres endpoint
     const products =
       data.products || data.data || (Array.isArray(data) ? data : []);
     const totalPages =
@@ -106,10 +117,8 @@ async function loadProducts(maDM = "all", page = 1) {
     // Render danh sách sản phẩm
     productContainer.innerHTML = products
       .map((sp) => {
-        const imgPath =
-          sp.hinhanh && sp.hinhanh !== "NULL" && sp.hinhanh !== ""
-            ? `${BASE_URL.replace("/api", "")}/uploads/products/${sp.hinhanh}`
-            : DEFAULT_IMAGE;
+        // 🔥 Cập nhật hàm xử lý ảnh chuẩn hóa
+        const imgPath = getProductImageUrl(sp.hinhanh);
 
         return `
                 <div class="col-lg-3 col-md-6 mb-4">
@@ -141,7 +150,6 @@ async function loadProducts(maDM = "all", page = 1) {
         totalPages,
         currentProductPage,
         async (targetPage) => {
-          // Tối ưu UX: Đợi API trả data xong mới cuộn trang lên mượt mà
           await loadProducts(currentCategory, targetPage);
           productContainer.scrollIntoView({ behavior: "smooth" });
         },
@@ -183,17 +191,15 @@ async function loadBestSellers(page = 1) {
 
     container.innerHTML = products
       .map((sp) => {
-        const imgPath =
-          sp.hinhanh && sp.hinhanh !== "NULL" && sp.hinhanh !== ""
-            ? `${BASE_URL.replace("/api", "")}/uploads/products/${sp.hinhanh}`
-            : DEFAULT_IMAGE;
+        // 🔥 Cập nhật hàm xử lý ảnh chuẩn hóa
+        const imgPath = getProductImageUrl(sp.hinhanh);
 
         return `
                 <div class="col-lg-3 col-md-6 mb-4">
                     <div class="card h-100 border-0 shadow-sm product-card" style="border-radius: 15px; overflow: hidden;">
                         <a href="/src/pages/product-detail.html?id=${sp.masp}" class="text-decoration-none text-dark">
                             <div class="p-3 text-center bg-white">
-                                <img src="${imgPath}" class="card-img-top mx-auto" alt="${sp.tensp}" style="height: 160px; width: 100%; object-fit: contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
+                                <img src="${imgPath}" class="card-img-top mx-auto" alt="${sp.tensp || "Sản phẩm"}" style="height: 160px; width: 100%; object-fit: contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
                             </div>
                             <div class="card-body">
                                 <h6 class="card-title text-truncate fw-bold mb-1">${sp.tensp}</h6>
@@ -233,14 +239,12 @@ function renderPaginationUI(container, totalPages, currentPage, onPageChange) {
 
   let html = `<ul class="pagination pagination-sm justify-content-center mt-3 shadow-sm rounded-pill p-1 bg-white" style="width: fit-content; margin: 0 auto; list-style: none; display: flex; align-items: center;">`;
 
-  // Nút Quay lại (Previous)
   html += `
         <li class="page-item ${currentPage === 1 ? "disabled" : ""}">
             <a class="page-link page-item-link border-0 rounded-circle me-1 d-flex align-items-center justify-content-center" href="#" data-page="${currentPage - 1}" style="width: 32px; height: 32px;"><i class="fa-solid fa-chevron-left"></i></a>
         </li>
     `;
 
-  // Các nút số trang cụ thể
   for (let i = 1; i <= totalPages; i++) {
     const isActive = currentPage === i;
     html += `
@@ -251,7 +255,6 @@ function renderPaginationUI(container, totalPages, currentPage, onPageChange) {
         `;
   }
 
-  // Nút Kế tiếp (Next)
   html += `
         <li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
             <a class="page-link page-item-link border-0 rounded-circle ms-1 d-flex align-items-center justify-content-center" href="#" data-page="${currentPage + 1}" style="width: 32px; height: 32px;"><i class="fa-solid fa-chevron-right"></i></a>
@@ -277,7 +280,7 @@ function renderPaginationUI(container, totalPages, currentPage, onPageChange) {
   });
 }
 
-// Hàm khởi tạo danh mục
+// ─── 4. HÀM KHỞI TẠO DANH MỤC ───
 async function renderCategoryButtons() {
   try {
     const res = await fetch(`${BASE_URL}/categories`);
@@ -323,7 +326,7 @@ function updateActiveButton(activeBtn) {
   activeBtn.classList.add("active");
 }
 
-// Khởi chạy đồng thời tăng tốc độ tải
+// ─── KHỞI CHẠY ĐỒNG THỜI ───
 document.addEventListener("DOMContentLoaded", () => {
   Promise.all([
     loadBestSellers(1),

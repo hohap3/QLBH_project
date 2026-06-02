@@ -1,9 +1,28 @@
-const BASE_URL = "https://qlbh-project.onrender.com/api";
-const IMAGE_BASE_URL = "https://qlbh-project.onrender.com/uploads/products";
-const DEFAULT_IMAGE = "/img/default.jpg";
 import Swal from "sweetalert2";
 
+const BASE_URL = "https://qlbh-project.onrender.com/api";
+const DEFAULT_IMAGE = "/img/default.jpg";
+
 let currentProductData = null;
+
+// ─── HÀM BỔ TRỢ: CHUẨN HÓA ĐƯỜNG DẪN ẢNH ĐỒNG BỘ ĐÚNG CHUẨN HOMEPAGE ───
+function getProductImageUrl(hinhanh) {
+  if (
+    !hinhanh ||
+    hinhanh === "NULL" ||
+    hinhanh === "null" ||
+    hinhanh.trim() === ""
+  ) {
+    return DEFAULT_IMAGE;
+  }
+  // Nếu DB lưu full link (đường dẫn từ Cloud/Server bên ngoài)
+  if (hinhanh.startsWith("http://") || hinhanh.startsWith("https://")) {
+    return hinhanh;
+  }
+  // Tự động bóc tách từ BASE_URL để nối chuỗi chuẩn xác như bên homepage.js
+  const rootUrl = BASE_URL.replace("/api", "");
+  return `${rootUrl}/uploads/products/${hinhanh}`;
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
   const urlParams = new URLSearchParams(window.location.search);
@@ -27,11 +46,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("breadcrumb-product").innerText = sp.tensp;
 
     const imgElement = document.getElementById("product-detail-img");
-    imgElement.src =
-      sp.hinhanh && sp.hinhanh !== "NULL" && sp.hinhanh !== ""
-        ? `${IMAGE_BASE_URL}/${sp.hinhanh}`
-        : DEFAULT_IMAGE;
-    imgElement.alt = sp.tensp;
+    // 🟢 Đã đồng bộ sử dụng hàm check ảnh tự động detect URL Cloud/Server
+    imgElement.src = getProductImageUrl(sp.hinhanh);
+    imgElement.alt = sp.tensp || "Sản phẩm";
 
     document.getElementById("product-detail-category").innerText =
       sp.tendanhmuc;
@@ -107,7 +124,6 @@ function executeAddProductToCart(product, quantityToBuy) {
   const giaBan = product.giaban || product.GiaBan;
   const hinhAnh = product.hinhanh || product.HinhAnh;
 
-  // 🟢 CHẶN 1: Hàng trong kho đã hết hoàn toàn
   if (stock <= 0) {
     Swal.fire(
       "Hết hàng",
@@ -136,14 +152,12 @@ function executeAddProductToCart(product, quantityToBuy) {
   let userCart = JSON.parse(localStorage.getItem(userCartKey)) || [];
   const existIndex = userCart.findIndex((item) => item.MaSP === maSP);
 
-  // 🟢 CHẶN 2: Kiểm tra tổng số lượng sau khi cộng dồn giỏ hàng cũ và mới
   if (existIndex > -1) {
     const currentInCart = userCart[existIndex].SoLuong;
     const newQty = currentInCart + quantityToBuy;
 
-    // Nếu số lượng mới vượt quá số lượng tối đa của kho
     if (newQty > stock) {
-      const maxCanAdd = stock - currentInCart; // Số lượng tối đa còn lại có thể mua thêm
+      const maxCanAdd = stock - currentInCart;
 
       if (maxCanAdd <= 0) {
         Swal.fire(
@@ -162,7 +176,6 @@ function executeAddProductToCart(product, quantityToBuy) {
     }
     userCart[existIndex].SoLuong = newQty;
   } else {
-    // Nếu chưa có trong giỏ, kiểm tra xem số chọn mua trực tiếp có lọt kho không
     if (quantityToBuy > stock) {
       Swal.fire(
         "Vượt quá số lượng",
@@ -269,10 +282,8 @@ async function loadRelatedProducts(categoryId, currentProductId) {
     }
 
     relatedProducts.forEach((sp) => {
-      const imgUrl =
-        sp.hinhanh && sp.hinhanh !== "NULL" && sp.hinhanh !== ""
-          ? `${IMAGE_BASE_URL}/${sp.hinhanh}`
-          : DEFAULT_IMAGE;
+      // 🟢 Đã đồng bộ cho khối sản phẩm liên quan
+      const imgUrl = getProductImageUrl(sp.hinhanh);
 
       const targetObjectString = encodeURIComponent(JSON.stringify(sp));
 
@@ -294,12 +305,12 @@ async function loadRelatedProducts(categoryId, currentProductId) {
                     <div class="card h-100 border-0 shadow-sm" style="border-radius: 15px; overflow: hidden; transition: transform 0.2s;">
                         <a href="product-detail.html?id=${sp.masp}" class="text-decoration-none">
                             <div class="text-center p-3" style="background: #fdfdfd; height: 160px; display: flex; align-items: center; justify-content: center;">
-                                <img src="${imgUrl}" class="card-img-top p-2" alt="${sp.tensp}" style="max-height: 100%; object-fit: contain;">
+                                <img src="${imgUrl}" class="card-img-top p-2" alt="${sp.tensp || "Sản phẩm"}" style="max-height: 100%; object-fit: contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
                             </div>
                         </a>
                         <div class="card-body d-flex flex-column justify-content-between">
                             <div>
-                                <small class="text-primary fw-bold d-block mb-1" style="font-size: 0.8rem;">${sp.tendanhmuc}</small>
+                                <small class="text-primary fw-bold d-block mb-1" style="font-size: 0.8rem;">${sp.tendanhmuc || "Công nghệ"}</small>
                                 <a href="product-detail.html?id=${sp.masp}" class="text-decoration-none text-dark">
                                     <h6 class="card-title text-truncate fw-bold mb-1" style="font-size: 0.95rem;">${sp.tensp}</h6>
                                 </a>
