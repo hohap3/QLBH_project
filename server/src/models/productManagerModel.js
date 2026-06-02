@@ -50,6 +50,11 @@ const productManagerModel = {
   getProductById: async (maSP) => {
     try {
       const pool = await poolPromise;
+
+      // Nếu cột masp trong DB là INT, hãy chuyển đổi nó sang số.
+      // Nếu masp của bạn bản chất là chuỗi (VARCHAR), hãy giữ nguyên maSP.
+      const parsedId = isNaN(maSP) ? maSP : parseInt(maSP, 10);
+
       const query = `
         SELECT sp.*, dm.tendanhmuc AS "tendanhmuc", ncc.tenncc AS "tenncc"
         FROM sanpham sp
@@ -57,7 +62,7 @@ const productManagerModel = {
         LEFT JOIN nhacungcap ncc ON sp.mancc = ncc.mancc
         WHERE sp.masp = $1
       `;
-      const result = await pool.query(query, [maSP]);
+      const result = await pool.query(query, [parsedId]);
       return result.rows[0];
     } catch (error) {
       throw error;
@@ -95,6 +100,10 @@ const productManagerModel = {
   updateProduct: async (maSP, data) => {
     try {
       const pool = await poolPromise;
+
+      // 🌟 ÉP KIỂU AN TOÀN: Nếu ID là số thì chuyển về số, nếu là chuỗi (như Sony_WH-1000XM5) giữ nguyên
+      const parsedId = isNaN(maSP) ? maSP : parseInt(maSP, 10);
+
       const query = `
         UPDATE sanpham 
         SET tensp = $1, gianhap = $2, giaban = $3, 
@@ -106,18 +115,19 @@ const productManagerModel = {
         data.TenSP,
         parseFloat(data.GiaNhap) || 0,
         parseFloat(data.GiaBan) || 0,
-        parseInt(data.SoLuongTon) || 0,
+        parseInt(data.SoLuongTon, 10) || 0,
         data.MoTa || null,
         data.DonViTinh || null,
         data.MaDanhMuc,
         data.MaNCC,
         data.HinhAnh || null,
-        maSP,
+        parsedId, // <-- Đã được xử lý bọc lót chống crash lỗi kiểu dữ liệu
       ];
+
       await pool.query(query, values);
       return true;
     } catch (error) {
-      throw error;
+      throw error; // Ném lỗi để Controller bắt được trọn vẹn chi tiết dữ liệu
     }
   },
 

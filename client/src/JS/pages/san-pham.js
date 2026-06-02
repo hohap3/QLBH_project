@@ -480,24 +480,23 @@ export async function initProductManager() {
 
       if (!validateProductData(tenSP, giaNhap, giaBan)) return;
 
+      // 1. Tạo đối tượng FormData từ chính Form
       const formData = new FormData(editForm);
       const fileInput = document.getElementById("editFileHinhAnh");
 
-      // Xóa sạch các key ảnh cũ để chuẩn hóa cấu trúc dữ liệu gửi đi
-      formData.delete("HinhAnhFile");
-      formData.delete("editFileHinhAnh");
-      formData.delete("HinhAnh");
-
-      if (fileInput.files[0]) {
-        // 🌟 NẾU CÓ CHỌN FILE MỚI: Gửi lên bằng key "HinhAnh" để Multer xử lý
-        formData.append("HinhAnh", fileInput.files[0]);
-      } else {
-        // 🌟 NẾU KHÔNG ĐỔI ẢNH: Gửi link URL cũ qua một key text thường là "HinhAnhCu"
-        // Tránh gửi vào key "HinhAnh" làm Multer bị lỗi ép kiểu file
+      // 2. Kiểm tra xem người dùng có chọn file mới không
+      if (!fileInput || !fileInput.files[0]) {
+        // Nếu KHÔNG chọn file mới -> Xóa trường file trống đi để tránh lỗi Multer
+        formData.delete("HinhAnh");
+        // Gửi URL ảnh cũ qua một biến text thường
         formData.append(
           "HinhAnhCu",
           document.getElementById("editHinhAnhCu").value,
         );
+      } else {
+        // Nếu CÓ chọn file mới -> Đảm bảo key gửi đi là "HinhAnh" trùng khớp với Backend
+        formData.delete("HinhAnh"); // Xóa dữ liệu cũ nếu có trùng
+        formData.append("HinhAnh", fileInput.files[0]);
       }
 
       try {
@@ -506,12 +505,11 @@ export async function initProductManager() {
         Swal.fire("Thành công", "Đã cập nhật sản phẩm", "success");
         loadData();
       } catch (err) {
-        console.error("Lỗi cập nhật:", err);
-        Swal.fire(
-          "Lỗi",
-          err.response?.data?.message || "Không thể cập nhật sản phẩm",
-          "error",
-        );
+        console.error("Lỗi cập nhật frontend:", err);
+        // 🔥 Hiện thông báo lỗi chi tiết từ server trả về lên màn hình UI luôn để dễ nhìn
+        const serverError =
+          err.response?.data?.error || "Không thể cập nhật sản phẩm";
+        Swal.fire("Lỗi hệ thống", serverError, "error");
       }
     };
   }

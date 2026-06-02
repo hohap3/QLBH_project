@@ -102,18 +102,23 @@ const productManagerController = {
         MaDanhMuc: req.body.MaDanhMuc,
         MaNCC: req.body.MaNCC,
 
-        HinhAnh: req.file ? req.file.path : req.body.HinhAnhCu || null,
+        HinhAnh: req.file
+          ? req.file.path
+          : req.body.HinhAnhCu || req.body.HinhAnh || null,
       };
 
       await productModel.updateProduct(id, updateData);
       res.status(200).json({ message: "Cập nhật sản phẩm thành công" });
     } catch (error) {
-      console.error("Lỗi cập nhật SP:", error.message);
-      res.status(500).json({
+      console.error("🔥 Lỗi chi tiết tại editProduct Controller:", error);
+
+      // Trả thông tin debug chi tiết về giao diện Client/Postman thay vì chữ Internal Server Error chung chung
+      return res.status(500).json({
         success: false,
-        message: "Lỗi hệ thống chi tiết phục vụ debug",
-        error: error.message,
-        stack: error.stack, // Cho biết chính xác lỗi ở dòng số bao nhiêu trong file nào
+        message: "Lỗi hệ thống khi thực hiện cập nhật sản phẩm.",
+        error: error.message || String(error),
+        dbCode: error.code || null, // Mã lỗi PostgreSQL (Ví dụ: 22P02, 23505...)
+        dbDetail: error.detail || null, // Chi tiết trường lỗi từ Database ném lên
       });
     }
   },
