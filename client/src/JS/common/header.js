@@ -46,10 +46,10 @@ export function renderHeader() {
 
                 <div class="col-lg-5 col-md-4 d-none d-md-block position-relative">
                     <div class="input-group">
-                        <input type="text" id="search-input" class="form-control search-bar" placeholder="Tìm kiếm sản phẩm..." style="border-radius: 20px 0 0 20px;">
-                        <button class="btn btn-outline-primary" style="border-radius: 0 20px 20px 0;">
-                            <i class="fa fa-search"></i>
-                        </button>
+                        <div class="position-relative w-100">
+                          <input type="text" id="search-input" class="form-control" placeholder="Tìm sản phẩm hoặc danh mục...">
+                          <div id="search-suggestions" class="list-group position-absolute w-100 shadow-lg d-none" style="top: 100%; z-index: 1050; max-height: 350px; overflow-y: auto;"></div>
+                        </div>
                     </div>
                     <div id="search-suggestions" class="list-group position-absolute w-100 shadow-sm d-none" style="z-index: 1000; top: 100%; max-height: 300px; overflow-y: auto;">
                     </div>

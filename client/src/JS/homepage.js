@@ -10,6 +10,7 @@ let currentBestSellerPage = 1;
 const LIMIT = 8;
 
 // Hàm tìm kiếm gợi ý
+// Hàm tìm kiếm gợi ý thông minh (Đã sửa lỗi đồng bộ dữ liệu cấu trúc Postgres mới)
 async function searchProducts() {
   const searchInput = document.getElementById("search-input");
   const suggestionsBox = document.getElementById("search-suggestions");
@@ -25,30 +26,46 @@ async function searchProducts() {
       const res = await fetch(
         `${BASE_URL}/productsClient/search?q=${encodeURIComponent(keyword)}`,
       );
-      const products = await res.json();
+      const result = await res.json();
+
+      // 🟢 BÓC TÁCH CHUẨN: Lấy mảng từ thuộc tính .data theo cấu trúc mới của Controller
+      const products = result.data || (Array.isArray(result) ? result : []);
+
       if (products && products.length > 0) {
         suggestionsBox.innerHTML = products
-          .map(
-            (sp) => `
-                    <a href="/src/pages/product-detail.html?id=${sp.masp}" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-2">
-                        <img src="${BASE_URL.replace("/api", "")}/uploads/products/${sp.hinhanh}" alt="${sp.tensp}" style="width: 40px; height: 40px; object-fit: contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
-                        <div class="overflow-hidden">
-                            <div class="fw-bold text-truncate" style="font-size: 0.9rem;">${sp.tensp}</div>
-                            <div class="text-primary small fw-bold">${new Intl.NumberFormat("vi-VN").format(sp.giaban)}đ</div>
-                        </div>
-                    </a>
-                `,
-          )
+          .map((sp) => {
+            // Chuẩn hóa đường dẫn ảnh an toàn
+            const imgPath =
+              sp.hinhanh && sp.hinhanh !== "NULL" && sp.hinhanh !== ""
+                ? `${BASE_URL.replace("/api", "")}/uploads/products/${sp.hinhanh}`
+                : DEFAULT_IMAGE;
+
+            return `
+              <a href="/src/pages/product-detail.html?id=${sp.masp}" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-2">
+                  <img src="${imgPath}" alt="${sp.tensp}" style="width: 45px; height: 45px; object-fit: contain; border-radius: 8px;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}';">
+                  <div class="overflow-hidden flex-grow-1">
+                      <div class="fw-bold text-dark text-truncate" style="font-size: 0.9rem; margin-bottom: 2px;">${sp.tensp}</div>
+                      <div class="d-flex align-items-center justify-content-between">
+                          <span class="text-primary small fw-bold">${new Intl.NumberFormat("vi-VN").format(sp.giaban)}đ</span>
+                          <span class="badge bg-light text-secondary border" style="font-size: 0.7rem; font-weight: 500;">${sp.tendanhmuc || "Sản phẩm"}</span>
+                      </div>
+                  </div>
+              </a>
+            `;
+          })
           .join("");
         suggestionsBox.classList.remove("d-none");
       } else {
-        suggestionsBox.classList.add("d-none");
+        // Nếu API chạy đúng nhưng không tìm thấy kết quả nào tương thích
+        suggestionsBox.innerHTML = `<div class="list-group-item text-center text-muted small py-3">Không tìm thấy sản phẩm hoặc danh mục phù hợp.</div>`;
+        suggestionsBox.classList.remove("d-none");
       }
     } catch (err) {
       console.error("Lỗi tìm kiếm:", err);
     }
   });
 
+  // Sự kiện click ra ngoài để đóng hộp gợi ý nhanh
   document.addEventListener("click", (e) => {
     if (!searchInput.contains(e.target) && !suggestionsBox.contains(e.target)) {
       suggestionsBox.classList.add("d-none");
@@ -107,10 +124,6 @@ async function loadProducts(maDM = "all", page = 1) {
                             <div class="card-body">
                                 <small class="text-primary fw-bold">${sp.tendanhmuc || "Công nghệ"}</small>
                                 <h6 class="fw-bold text-truncate mt-1 mb-2">${sp.tensp}</h6>
-                                <div class="mb-2">
-                                    <small class="text-warning"><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i></small>
-                                    <small class="text-muted">(156)</small>
-                                </div>
                                 <div class="price-text mb-2" style="color: #6366f1; font-size: 1.25rem; font-weight: 700;">
                                     ${new Intl.NumberFormat("vi-VN").format(sp.giaban)}đ
                                 </div>
