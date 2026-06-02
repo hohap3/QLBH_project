@@ -59,11 +59,9 @@ function getProductImageUrl(hinhanh) {
   ) {
     return DEFAULT_IMAGE;
   }
-  // Nếu DB lưu full URL trực tiếp từ Cloudinary hoặc Server bên ngoài
   if (hinhanh.startsWith("http://") || hinhanh.startsWith("https://")) {
     return hinhanh;
   }
-  // Trường hợp fallback nếu DB chỉ lưu tên file cục bộ (Nối chuỗi từ server Render)
   const rootUrl = BASE_URL.replace("/api", "");
   return `${rootUrl}/uploads/products/${hinhanh}`;
 }
@@ -122,10 +120,7 @@ function renderCartPage() {
       baseSubTotal += itemTotal;
 
       const rawImg = item.hinhanh || item.hinhAnh || item.HinhAnh;
-
-      // 🟢 ĐỔI LOGIC: Gọi hàm chuẩn hóa tự động xử lý link Cloudinary tuyệt đối
       const imgPath = getProductImageUrl(rawImg);
-
       const maSP = item.MaSP || item.masp;
 
       return `
@@ -160,9 +155,7 @@ function renderCartPage() {
     .join("");
 
   tableBody.innerHTML = htmlRows;
-
   renderDiscountSection();
-
   calculateDiscount();
 }
 
@@ -291,7 +284,8 @@ function updateSummary(subTotal) {
   updateCartBadgeCount();
 }
 
-window.changeQty = function (maSP, delta) {
+// 🟢 CẬP NHẬT: Kiểm tra số lượng tồn kho (SoLuongTon) từ API chi tiết sản phẩm
+window.changeQty = async function (maSP, delta) {
   const cartKey = getCartKey();
   let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
   const itemIndex = cart.findIndex((item) => (item.MaSP || item.masp) === maSP);
@@ -299,9 +293,10 @@ window.changeQty = function (maSP, delta) {
   if (itemIndex > -1) {
     let currentQty =
       parseInt(cart[itemIndex].SoLuong || cart[itemIndex].soluong) || 1;
-    currentQty += delta;
+    let targetQty = currentQty + delta;
 
-    if (currentQty <= 0) {
+    // 1. Trường hợp giảm số lượng xuống 0 -> Hỏi xóa sản phẩm
+    if (targetQty <= 0) {
       Swal.fire({
         title: "Xóa sản phẩm?",
         text: "Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?",
@@ -327,11 +322,47 @@ window.changeQty = function (maSP, delta) {
           });
         }
       });
-    } else {
-      cart[itemIndex].SoLuong = currentQty;
-      localStorage.setItem(cartKey, JSON.stringify(cart));
-      renderCartPage();
+      return;
     }
+
+    // 2. Trường hợp tăng số lượng -> Kiểm tra tồn kho thực tế từ API Backend
+    if (delta > 0) {
+      try {
+        // Gọi API chi tiết sản phẩm để lấy số lượng tồn thực tế từ DB
+        const response = await axios.get(`${BASE_URL}/products/${maSP}`);
+        const productData = response.data.data || response.data;
+
+        // Bóc tách trường số lượng tồn (hỗ trợ cả chữ hoa/thường tùy Postgres/SQL Server)
+        const stockQty =
+          parseInt(
+            productData.soluongton ||
+              productData.SoLuongTon ||
+              productData.soluong ||
+              productData.SoLuong,
+          ) || 0;
+
+        if (targetQty > stockQty) {
+          Swal.fire({
+            icon: "warning",
+            title: "Rất tiếc, không đủ hàng!",
+            text: `Sản phẩm này chỉ còn tối đa ${stockQty} sản phẩm trong kho.`,
+            confirmButtonColor: "#6366f1",
+          });
+          return; // Chặn hành động tăng số lượng
+        }
+      } catch (error) {
+        console.error(
+          "Không thể kiểm tra số lượng tồn kho của sản phẩm:",
+          error,
+        );
+        // Fallback: Nếu API lỗi, vẫn cho phép tăng nhưng log cảnh báo để tránh block trải nghiệm khách hàng
+      }
+    }
+
+    // 3. Nếu các điều kiện hợp lệ, tiến hành lưu lại số lượng mới
+    cart[itemIndex].SoLuong = targetQty;
+    localStorage.setItem(cartKey, JSON.stringify(cart));
+    renderCartPage();
   }
 };
 
@@ -415,6 +446,5 @@ function handleCheckoutRedirect() {
     "hpstore_checkout_discount",
     JSON.stringify(checkoutDiscountInfo),
   );
-
   window.location.href = "/src/pages/checkout.html";
 }
