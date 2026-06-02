@@ -5,25 +5,34 @@ import { BASE_URL } from "/src/JS/common/header";
 
 let editModal;
 let addModal;
-let viewModal; // 🔥 Khai báo biến quản lý Modal Xem chi tiết
+let viewModal;
+
+// 🔥 Khai báo các biến trạng thái phân trang và tìm kiếm (State)
+let currentPage = 1;
+const limit = 10;
+let currentSearch = "";
 
 export async function initProductManager() {
   // 1. Khởi tạo Modals
   const editModalEl = document.getElementById("editProductModal");
   const addModalEl = document.getElementById("addProductModal");
-  const viewModalEl = document.getElementById("viewProductModal"); // 🔥 DOM của Modal xem chi tiết
+  const viewModalEl = document.getElementById("viewProductModal");
 
   if (editModalEl) editModal = new Modal(editModalEl);
   if (addModalEl) addModal = new Modal(addModalEl);
-  if (viewModalEl) viewModal = new Modal(viewModalEl); // 🔥 Khởi tạo thực thể Bootstrap Modal
+  if (viewModalEl) viewModal = new Modal(viewModalEl);
 
-  // Dom Elements
+  // DOM Elements bổ sung hoặc giữ nguyên
   const tableBody = document.getElementById("productTableBody");
   const totalCount = document.getElementById("totalProducts");
   const searchInput = document.getElementById("searchProduct");
   const btnAddProduct = document.getElementById("btnAddProduct");
 
-  // Khai báo DOM Elements phục vụ tính năng Excel
+  // 🔥 DOM Container phục vụ việc hiển thị các nút phân trang (Cần thêm thẻ này ở HTML của bạn nếu chưa có)
+  // Ví dụ ở HTML: <nav><ul id="paginationContainer" class="pagination justify-content-end"></ul></nav>
+  const paginationContainer = document.getElementById("paginationContainer");
+
+  // Excel Elements
   const btnImportExcel = document.getElementById("btnImportExcel");
   const excelFileInput = document.getElementById("excelFileInput");
 
@@ -33,11 +42,10 @@ export async function initProductManager() {
 
   // --- CÁC HÀM BỔ TRỢ (HELPER FUNCTIONS) ---
 
-  // 🟢 HÀM VALIDATE DỮ LIỆU SẢN PHẨM
+  // Ràng buộc dữ liệu đầu vào (Validate Frontend)
   const validateProductData = (tenSP, giaNhap, giaBan) => {
     const trimmedTen = tenSP ? tenSP.trim() : "";
 
-    // 1. Kiểm tra tên trống hoặc chỉ có dấu cách
     if (!trimmedTen) {
       Swal.fire(
         "Lỗi nhập liệu",
@@ -47,7 +55,6 @@ export async function initProductManager() {
       return false;
     }
 
-    // 2. Kiểm tra tên sản phẩm bắt buộc phải có dấu cách phân tách từ
     if (!trimmedTen.includes(" ")) {
       Swal.fire(
         "Lỗi nhập liệu",
@@ -57,7 +64,6 @@ export async function initProductManager() {
       return false;
     }
 
-    // 3. Kiểm tra định dạng và hạn mức tối thiểu của giá nhập
     const numGiaNhap = Number(giaNhap);
     if (isNaN(numGiaNhap) || numGiaNhap < 10000) {
       Swal.fire(
@@ -68,7 +74,6 @@ export async function initProductManager() {
       return false;
     }
 
-    // 4. Kiểm tra định dạng và hạn mức tối thiểu của giá bán
     const numGiaBan = Number(giaBan);
     if (isNaN(numGiaBan) || numGiaBan < 10000) {
       Swal.fire(
@@ -79,7 +84,6 @@ export async function initProductManager() {
       return false;
     }
 
-    // 5. Kiểm tra logic nghiệp vụ: Giá bán phải lớn hơn Giá nhập
     if (numGiaBan <= numGiaNhap) {
       Swal.fire(
         "Lỗi chiến lược giá",
@@ -118,7 +122,6 @@ export async function initProductManager() {
         document.getElementById("editMaDanhMuc").innerHTML = dmOptions;
       if (document.getElementById("addMaDanhMuc"))
         document.getElementById("addMaDanhMuc").innerHTML = dmOptions;
-
       if (document.getElementById("addMaNCC"))
         document.getElementById("addMaNCC").innerHTML = nccOptions;
       if (document.getElementById("editMaNCC"))
@@ -144,6 +147,11 @@ export async function initProductManager() {
 
   // Render bảng sản phẩm
   const renderProducts = (products) => {
+    if (!products || products.length === 0) {
+      tableBody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">Không tìm thấy sản phẩm nào phù hợp.</td></tr>`;
+      return;
+    }
+
     tableBody.innerHTML = products
       .map((sp) => {
         const isOutOfStock = sp.soluongton <= 0;
@@ -165,7 +173,7 @@ export async function initProductManager() {
                         </div>
                     </div>
                 </td>
-                <td class="text-muted">${sp.TenDanhMuc || "Chưa phân loại"}</td>
+                <td class="text-muted">${sp.tendanhmuc || "Chưa phân loại"}</td>
                 <td class="fw-bold">${new Intl.NumberFormat("vi-VN").format(sp.giaban)}đ</td>
                 <td><span class="fw-bold text-${themeClass}">${sp.soluongton} sp</span></td>
                 <td>
@@ -181,19 +189,84 @@ export async function initProductManager() {
             </tr>`;
       })
       .join("");
-    totalCount.innerText = products.length;
   };
 
+  // 🔥 Render thanh phân trang động dựa theo tổng số trang trả về từ Backend
+  const renderPagination = (totalPages, currentPage) => {
+    if (!paginationContainer) return;
+    if (totalPages <= 1) {
+      paginationContainer.innerHTML = "";
+      return;
+    }
+
+    let html = `
+      <li class="page-item ${currentPage === 1 ? "disabled" : ""}">
+        <button class="page-link" data-page="${currentPage - 1}">&laquo;</button>
+      </li>
+    `;
+
+    for (let i = 1; i <= totalPages; i++) {
+      html += `
+        <li class="page-item ${i === currentPage ? "active" : ""}">
+          <button class="page-link" data-page="${i}">${i}</button>
+        </li>
+      `;
+    }
+
+    html += `
+      <li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
+        <button class="page-link" data-page="${currentPage + 1}">&raquo;</button>
+      </li>
+    `;
+
+    paginationContainer.innerHTML = html;
+
+    // Lắng nghe sự kiện click chuyển trang
+    paginationContainer.querySelectorAll(".page-link").forEach((btn) => {
+      btn.onclick = (e) => {
+        const targetPage = parseInt(e.target.getAttribute("data-page"));
+        if (targetPage && targetPage !== currentPage) {
+          currentPage = targetPage;
+          loadData();
+        }
+      };
+    });
+  };
+
+  // 🔥 Hàm tải dữ liệu đồng bộ cấu trúc phân trang từ Server API
   const loadData = async () => {
     try {
-      const res = await axios.get(`${BASE_URL}/products`);
-      renderProducts(res.data);
+      const res = await axios.get(`${BASE_URL}/products`, {
+        params: {
+          page: currentPage,
+          limit: limit,
+          search: currentSearch,
+        },
+      });
+
+      // Bóc tách cấu trúc mới của API trả về
+      const { products, totalItems, totalPages } = res.data;
+
+      renderProducts(products);
+      renderPagination(totalPages, currentPage);
+      totalCount.innerText = totalItems;
     } catch (err) {
       console.error("Lỗi tải danh sách sản phẩm:", err);
     }
   };
 
-  // --- XỬ LÝ SỰ KIỆN (EVENT HANDLERS) ---
+  // --- LẮNG NGHE SỰ KIỆN HỆ THỐNG ---
+
+  // 🔥 Xử lý tìm kiếm Real-time trực tiếp từ Database PostgreSQL bằng chống nhiễu (Debounce) nhẹ
+  let searchTimeout;
+  searchInput.oninput = (e) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+      currentSearch = e.target.value;
+      currentPage = 1; // Khởi động lại về trang 1 khi lọc từ khóa mới
+      loadData();
+    }, 400); // Đợi 400ms sau khi dừng gõ phím mới tạo Request để giảm tải server
+  };
 
   // Xử lý sự kiện Import Excel
   if (btnImportExcel && excelFileInput) {
@@ -233,14 +306,11 @@ export async function initProductManager() {
           `${BASE_URL}/products/import-excel`,
           formData,
           {
-            headers: {
-              "Content-Type": "multipart/form-data",
-            },
+            headers: { "Content-Type": "multipart/form-data" },
           },
         );
 
         Swal.close();
-
         Swal.fire({
           icon: "success",
           title: "Thành công!",
@@ -262,7 +332,7 @@ export async function initProductManager() {
     };
   }
 
-  // Mở modal thêm sản phẩm thủ công
+  // Mở modal thêm sản phẩm
   if (btnAddProduct) {
     btnAddProduct.onclick = () => {
       addForm.reset();
@@ -281,9 +351,7 @@ export async function initProductManager() {
       const giaNhap = document.getElementById("addGiaNhap").value;
       const giaBan = document.getElementById("addGiaBan").value;
 
-      if (!validateProductData(tenSP, giaNhap, giaBan)) {
-        return;
-      }
+      if (!validateProductData(tenSP, giaNhap, giaBan)) return;
 
       const formData = new FormData(addForm);
 
@@ -302,25 +370,24 @@ export async function initProductManager() {
     };
   }
 
-  // Xử lý Sửa, Xóa & XEM CHI TIẾT trên bảng dữ liệu
+  // Xử lý Sửa, Xóa & Xem chi tiết dữ liệu
   tableBody.addEventListener("click", async (e) => {
     const target = e.target.closest("button");
     if (!target) return;
     const id = target.getAttribute("data-id");
 
-    // 🔥 1. XỬ LÝ SỰ KIỆN XEM CHI TIẾT SẢN PHẨM
+    // 1. XEM CHI TIẾT
     if (target.classList.contains("btn-view")) {
       try {
         const res = await axios.get(`${BASE_URL}/products/${id}`);
         const sp = res.data;
         if (sp) {
-          // Gán dữ liệu thuần túy (Text) vào Modal Xem chi tiết
           document.getElementById("viewMaSP").innerText = sp.masp;
           document.getElementById("viewTenSP").innerText = sp.tensp;
           document.getElementById("viewDanhMuc").innerText =
-            sp.TenDanhMuc || "Chưa phân loại";
+            sp.tendanhmuc || "Chưa phân loại";
           document.getElementById("viewNhaCungCap").innerText =
-            sp.TenNCC || "Chưa xác định";
+            sp.tenncc || "Chưa xác định";
           document.getElementById("viewGiaNhap").innerText =
             new Intl.NumberFormat("vi-VN").format(sp.gianhap) + "đ";
           document.getElementById("viewGiaBan").innerText =
@@ -332,12 +399,10 @@ export async function initProductManager() {
           document.getElementById("viewMoTa").innerText =
             sp.mota || "(Không có mô tả sản phẩm)";
 
-          // Xử lý hiển thị ảnh
           document.getElementById("viewImagePreview").src = sp.hinhanh
             ? `https://qlbh-project.onrender.com/uploads/products/${sp.hinhanh}`
             : "/assets/images/default-product.png";
 
-          // Hiển thị modal xem chi tiết
           viewModal.show();
         }
       } catch (err) {
@@ -346,28 +411,36 @@ export async function initProductManager() {
       }
     }
 
-    // 2. XỬ LÝ SỰ KIỆN XÓA
+    // 2. 🔥 XÓA SẢN PHẨM (Hiển thị thông báo chi tiết trả về từ Backend)
     if (target.classList.contains("btn-delete")) {
       const result = await Swal.fire({
         title: "Xác nhận xóa?",
         text: "Dữ liệu sẽ không thể khôi phục!",
         icon: "warning",
         showCancelButton: true,
+        confirmButtonColor: "#dc3545",
+        cancelButtonColor: "#6c757d",
         confirmButtonText: "Xóa ngay",
+        cancelButtonText: "Hủy",
       });
 
       if (result.isConfirmed) {
         try {
           await axios.delete(`${BASE_URL}/products/delete/${id}`);
-          Swal.fire("Đã xóa!", "", "success");
+          Swal.fire("Đã xóa!", "Sản phẩm đã được gỡ khỏi hệ thống.", "success");
           loadData();
         } catch (err) {
-          Swal.fire("Lỗi", "Không thể xóa sản phẩm", "error");
+          console.error("Lỗi khi xóa:", err);
+          // 🔥 Bóc tách câu thông báo nghiệp vụ chi tiết từ Server phản hồi (Chặn xóa do dính đơn hàng)
+          const errorMessage =
+            err.response?.data?.message ||
+            "Không thể thực hiện lệnh xóa sản phẩm này.";
+          Swal.fire("Không thể xóa!", errorMessage, "error");
         }
       }
     }
 
-    // 3. ĐỔ DỮ LIỆU VÀO MODAL SỬA
+    // 3. ĐỔ DỮ LIỆU SỬA
     if (target.classList.contains("btn-edit")) {
       try {
         const res = await axios.get(`${BASE_URL}/products/${id}`);
@@ -406,9 +479,7 @@ export async function initProductManager() {
       const giaNhap = document.getElementById("editGiaNhap").value;
       const giaBan = document.getElementById("editGiaBan").value;
 
-      if (!validateProductData(tenSP, giaNhap, giaBan)) {
-        return;
-      }
+      if (!validateProductData(tenSP, giaNhap, giaBan)) return;
 
       const formData = new FormData(editForm);
       const fileInput = document.getElementById("editFileHinhAnh");
@@ -442,18 +513,7 @@ export async function initProductManager() {
     };
   }
 
-  // Xử lý tìm kiếm
-  searchInput.oninput = (e) => {
-    const val = e.target.value.toLowerCase();
-    const rows = tableBody.querySelectorAll("tr");
-    rows.forEach((row) => {
-      row.style.display = row.innerText.toLowerCase().includes(val)
-        ? ""
-        : "none";
-    });
-  };
-
-  // --- KHỞI CHẠY ---
+  // --- KHỞI CHẠY LẦN ĐẦU ---
   setupImagePreview("editFileHinhAnh", "editImagePreview");
   setupImagePreview("addFileHinhAnh", "addImgPreview");
   await loadDropdowns();
