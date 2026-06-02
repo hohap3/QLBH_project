@@ -6,9 +6,9 @@ class ProfileModel {
     try {
       // ĐÃ SỬA: Chuyển sang cú pháp Postgres ($1) và đồng bộ chữ thường
       const query = `
-        SELECT 
+         SELECT 
           nd.mand, nd.tendangnhap, nd.ngaytao, nd.trangthai,
-          kh.makh, kh.hoten, kh.sdt, kh.email, kh.diachi, kh.diemtichluy
+          kh.makh, nd.hoten, nd.sdt, nd.email, kh.diachi, kh.diemtichluy
         FROM nguoidung nd
         LEFT JOIN khachhang kh ON nd.mand = kh.mand
         WHERE nd.mand = $1
