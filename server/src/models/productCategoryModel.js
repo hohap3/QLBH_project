@@ -14,6 +14,15 @@ const productCategoryModel = {
     }
   },
 
+  countAllCategories: async () => {
+    try {
+      const result = await pool.query("SELECT COUNT(*) as total FROM danhmuc");
+      return parseInt(result.rows[0].total) || 0;
+    } catch (error) {
+      throw error;
+    }
+  },
+
   // 2. Lấy 1 danh mục theo ID (Dùng cho chức năng Sửa)
   getCategoryById: async (maDM) => {
     try {

@@ -4,11 +4,13 @@ import { Modal } from "bootstrap";
 import { BASE_URL } from "/src/JS/common/header";
 
 let categoryModal;
+let currentPage = 1; // Lưu trữ trang hiện tại
+const LIMIT = 8; // Số danh mục cố định trên mỗi trang
 
 export async function initCategoryManager() {
   // --- DOM Elements ---
-  // Đổi ID từ Table sang Grid
   const categoryGrid = document.getElementById("categoryGrid");
+  const categoryPagination = document.getElementById("categoryPagination"); // Thanh phân trang Bootstrap UI
   const categoryForm = document.getElementById("categoryForm");
   const modalEl = document.getElementById("categoryModal");
   const modalTitle = document.getElementById("modalTitle");
@@ -21,11 +23,19 @@ export async function initCategoryManager() {
 
   // --- Helper Functions ---
 
-  const loadCategories = async () => {
+  const loadCategories = async (page = 1) => {
     try {
-      const res = await axios.get(`${BASE_URL}/categories`);
-      renderGrid(res.data); // Chuyển sang dùng hàm render Grid
-      if (totalCount) totalCount.innerText = res.data.length;
+      currentPage = page; // Ghi nhận vị trí trang hiện tại
+      const res = await axios.get(
+        `${BASE_URL}/categories?page=${page}&limit=${LIMIT}`,
+      );
+
+      const { data, pagination } = res.data;
+
+      renderGrid(data);
+      renderPagination(pagination.totalPages, pagination.page);
+
+      if (totalCount) totalCount.innerText = pagination.total;
     } catch (err) {
       console.error("Lỗi tải danh mục:", err);
       Swal.fire("Lỗi", "Không thể kết nối đến máy chủ", "error");
@@ -76,6 +86,54 @@ export async function initCategoryManager() {
       .join("");
   };
 
+  // Hàm vẽ các nút chuyển trang (Phân trang)
+  const renderPagination = (totalPages, activePage) => {
+    if (!categoryPagination) return;
+    if (totalPages <= 1) {
+      categoryPagination.innerHTML = ""; // Không cần hiện thanh phân trang nếu chỉ có 1 trang
+      return;
+    }
+
+    let html = "";
+
+    // Nút "Trang trước"
+    html += `
+      <li class="page-item ${activePage === 1 ? "disabled" : ""}">
+        <a class="page-link" href="#" data-page="${activePage - 1}">&laquo;</a>
+      </li>
+    `;
+
+    // Vòng lặp in số trang
+    for (let i = 1; i <= totalPages; i++) {
+      html += `
+        <li class="page-item ${activePage === i ? "active" : ""}">
+          <a class="page-link" href="#" data-page="${i}">${i}</a>
+        </li>
+      `;
+    }
+
+    // Nút "Trang sau"
+    html += `
+      <li class="page-item ${activePage === totalPages ? "disabled" : ""}">
+        <a class="page-link" href="#" data-page="${activePage + 1}">&raquo;</a>
+      </li>
+    `;
+
+    categoryPagination.innerHTML = html;
+
+    // Gắn sự kiện click đổi trang cho các nút vừa tạo
+    const links = categoryPagination.querySelectorAll(".page-link");
+    links.forEach((link) => {
+      link.onclick = (e) => {
+        e.preventDefault();
+        const targetPage = parseInt(e.target.getAttribute("data-page"));
+        if (targetPage && targetPage !== activePage) {
+          loadCategories(targetPage);
+        }
+      };
+    });
+  };
+
   const resetForm = () => {
     categoryForm.reset();
     const maInput = document.getElementById("maDanhMuc");
@@ -95,7 +153,7 @@ export async function initCategoryManager() {
     };
   }
 
-  // Fix Tìm kiếm cho Card Grid
+  // Tìm kiếm cục bộ trong phạm vi trang hiện tại
   if (searchInput) {
     searchInput.oninput = (e) => {
       const val = e.target.value.toLowerCase();
@@ -107,7 +165,7 @@ export async function initCategoryManager() {
     };
   }
 
-  // Xử lý Submit
+  // Xử lý Submit (Thêm / Sửa)
   categoryForm.onsubmit = async (e) => {
     e.preventDefault();
     const maInput = document.getElementById("maDanhMuc");
@@ -138,19 +196,21 @@ export async function initCategoryManager() {
       }
       Swal.fire("Thành công", "Dữ liệu đã được lưu", "success");
       categoryModal.hide();
-      loadCategories();
+
+      // Load lại trang hiện tại sau khi chỉnh sửa hoặc thêm mới
+      loadCategories(isEdit ? currentPage : 1);
     } catch (err) {
       Swal.fire("Lỗi", err.response?.data?.message || "Lỗi xử lý", "error");
     }
   };
 
-  // Fix Sự kiện Click (Sửa/Xóa) cho Card Grid
+  // Xử lý Sự kiện Click (Sửa/Xóa) cho Card Grid
   categoryGrid.onclick = async (e) => {
     const btnEdit = e.target.closest(".btn-edit");
     const btnDelete = e.target.closest(".btn-delete");
 
     if (btnDelete) {
-      e.preventDefault(); // Tránh bị nhảy link '#'
+      e.preventDefault();
       const id = btnDelete.getAttribute("data-id");
       const result = await Swal.fire({
         title: "Xác nhận xóa?",
@@ -165,7 +225,9 @@ export async function initCategoryManager() {
         try {
           await axios.delete(`${BASE_URL}/categories/delete/${id}`);
           Swal.fire("Đã xóa", "", "success");
-          loadCategories();
+
+          // Load lại dữ liệu tại trang hiện tại
+          loadCategories(currentPage);
         } catch (err) {
           Swal.fire("Lỗi", "Không thể xóa danh mục này", "error");
         }
@@ -195,5 +257,6 @@ export async function initCategoryManager() {
     }
   };
 
-  loadCategories();
+  // Lần đầu chạy cấu hình hiển thị trang số 1
+  loadCategories(1);
 }
