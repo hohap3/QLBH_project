@@ -164,8 +164,7 @@ export async function initProductManager() {
                     <div class="d-flex align-items-center">
                         <div class="rounded-3 me-3 d-flex align-items-center justify-content-center bg-light" 
                              style="width: 45px; height: 45px; overflow: hidden; border: 1px solid #eee;">
-                             <img src="${sp.hinhanh ? `https://qlbh-project.onrender.com/uploads/products/${sp.hinhanh}` : "/assets/images/default-product.png"}" 
-                                style="width: 100%; height: 100%; object-fit: cover;">
+                            <img src="${sp.hinhanh ? sp.hinhanh : "/assets/images/default-product.png"}" style="width: 100%; height: 100%; object-fit: cover;">
                         </div>
                         <div>
                             <div class="fw-bold mb-0">${sp.tensp}</div>
@@ -400,7 +399,7 @@ export async function initProductManager() {
             sp.mota || "(Không có mô tả sản phẩm)";
 
           document.getElementById("viewImagePreview").src = sp.hinhanh
-            ? `https://qlbh-project.onrender.com/uploads/products/${sp.hinhanh}`
+            ? sp.hinhanh
             : "/assets/images/default-product.png";
 
           viewModal.show();
@@ -458,7 +457,7 @@ export async function initProductManager() {
 
           document.getElementById("editHinhAnhCu").value = sp.hinhanh || "";
           document.getElementById("editImagePreview").src = sp.hinhanh
-            ? `https://qlbh-project.onrender.com/uploads/products/${sp.hinhanh}`
+            ? sp.hinhanh
             : "/assets/images/default-product.png";
 
           editModal.show();
@@ -484,17 +483,21 @@ export async function initProductManager() {
       const formData = new FormData(editForm);
       const fileInput = document.getElementById("editFileHinhAnh");
 
+      // Xóa sạch các key ảnh cũ để chuẩn hóa cấu trúc dữ liệu gửi đi
       formData.delete("HinhAnhFile");
       formData.delete("editFileHinhAnh");
       formData.delete("HinhAnh");
 
-      if (!fileInput.files[0]) {
+      if (fileInput.files[0]) {
+        // 🌟 NẾU CÓ CHỌN FILE MỚI: Gửi lên bằng key "HinhAnh" để Multer xử lý
+        formData.append("HinhAnh", fileInput.files[0]);
+      } else {
+        // 🌟 NẾU KHÔNG ĐỔI ẢNH: Gửi link URL cũ qua một key text thường là "HinhAnhCu"
+        // Tránh gửi vào key "HinhAnh" làm Multer bị lỗi ép kiểu file
         formData.append(
-          "HinhAnh",
+          "HinhAnhCu",
           document.getElementById("editHinhAnhCu").value,
         );
-      } else {
-        formData.append("HinhAnh", fileInput.files[0]);
       }
 
       try {

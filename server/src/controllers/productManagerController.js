@@ -87,6 +87,7 @@ const productManagerController = {
   },
 
   // Cập nhật thông tin sản phẩm
+  // Cập nhật thông tin sản phẩm (productManagerController.js)
   editProduct: async (req, res) => {
     try {
       const { id } = req.params;
@@ -100,14 +101,18 @@ const productManagerController = {
         DonViTinh: req.body.DonViTinh || null,
         MaDanhMuc: req.body.MaDanhMuc,
         MaNCC: req.body.MaNCC,
-        HinhAnh: req.file ? req.file.path : req.body.HinhAnh,
+
+        HinhAnh: req.file ? req.file.path : req.body.HinhAnhCu || null,
       };
 
       await productModel.updateProduct(id, updateData);
       res.status(200).json({ message: "Cập nhật sản phẩm thành công" });
     } catch (error) {
       console.error("Lỗi cập nhật SP:", error.message);
-      res.status(500).json({ message: "Lỗi hệ thống", error: error.message });
+      res.status(500).json({
+        message: "Lỗi hệ thống khi cập nhật sản phẩm",
+        error: error.message,
+      });
     }
   },
 
