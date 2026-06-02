@@ -1,22 +1,41 @@
-// src/controllers/productManagerController.js
 const productModel = require("../models/productManagerModel");
 const XLSX = require("xlsx");
 
 const productManagerController = {
-  // Lấy danh sách sản phẩm
+  // Lấy danh sách sản phẩm có Phân trang 10 và tìm kiếm
   getProducts: async (req, res) => {
     try {
-      const products = await productModel.getAllProducts();
-      res.status(200).json(products);
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const search = req.query.search || "";
+
+      const offset = (page - 1) * limit;
+
+      const { products, totalItems } = await productModel.getAllProducts(
+        limit,
+        offset,
+        search,
+      );
+      const totalPages = Math.ceil(totalItems / limit);
+
+      res.status(200).json({
+        success: true,
+        products: products,
+        totalItems: totalItems,
+        totalPages: totalPages,
+        currentPage: page,
+        limit: limit,
+      });
     } catch (error) {
       res.status(500).json({
-        message: "Lỗi khi lấy danh sách sản phẩm",
+        success: false,
+        message: "Lỗi hệ thống khi lấy danh sách sản phẩm",
         error: error.message,
       });
     }
   },
 
-  // Lấy thông tin một sản phẩm
+  // Lấy thông tin chi tiết một sản phẩm
   getProductById: async (req, res) => {
     try {
       const { id } = req.params;
@@ -35,7 +54,7 @@ const productManagerController = {
     }
   },
 
-  // Thêm mới sản phẩm
+  // Thêm mới sản phẩm thủ công
   addProduct: async (req, res) => {
     try {
       const productData = {
@@ -67,7 +86,7 @@ const productManagerController = {
     }
   },
 
-  // Cập nhật sản phẩm
+  // Cập nhật thông tin sản phẩm
   editProduct: async (req, res) => {
     try {
       const { id } = req.params;
@@ -92,16 +111,27 @@ const productManagerController = {
     }
   },
 
-  // Xóa sản phẩm
+  // 🔥 Xóa sản phẩm (Có kiểm tra lỗi ràng buộc ngoại)
   removeProduct: async (req, res) => {
     try {
       const { id } = req.params;
       await productModel.deleteProduct(id);
       res.status(200).json({ message: "Xóa sản phẩm thành công" });
     } catch (error) {
-      res
-        .status(500)
-        .json({ message: "Lỗi khi xóa sản phẩm", error: error.message });
+      console.error("Lỗi xóa SP:", error.message);
+
+      // Nếu là lỗi do dính ràng buộc dữ liệu từ Model hoặc từ DB ném về
+      if (error.code === "23503" || error.message.includes("đơn hàng")) {
+        return res.status(400).json({
+          message:
+            "Không thể xóa! Sản phẩm này đã phát sinh giao dịch và có trong dữ liệu đơn hàng.",
+        });
+      }
+
+      res.status(500).json({
+        message: "Lỗi hệ thống không thể xóa sản phẩm",
+        error: error.message,
+      });
     }
   },
 

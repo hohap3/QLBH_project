@@ -1,19 +1,46 @@
-// src/models/productManagerModel.js
 const { poolPromise } = require("../config/database");
 
 const productManagerModel = {
-  // Lấy tất cả sản phẩm (Kèm tên danh mục và nhà cung cấp)
-  getAllProducts: async () => {
+  // Lấy sản phẩm kết hợp Phân trang (LIMIT/OFFSET) và Tìm kiếm dữ liệu từ Database
+  getAllProducts: async (limit = 10, offset = 0, search = "") => {
     try {
       const pool = await poolPromise;
-      const query = `
-                SELECT sp.*, dm.tendanhmuc AS "TenDanhMuc", ncc.tenncc AS "TenNCC"
-                FROM sanpham sp
-                JOIN danhmuc dm ON sp.madanhmuc = dm.madanhmuc
-                JOIN nhacungcap ncc ON sp.mancc = ncc.mancc
-            `;
-      const result = await pool.query(query);
-      return result.rows; // Trả về danh sách mảng đối tượng
+      let queryArgs = [];
+
+      let whereClause = "";
+      if (search && search.trim() !== "") {
+        whereClause = `WHERE sp.masp ILIKE $1 OR sp.tensp ILIKE $1 OR dm.tendanhmuc ILIKE $1`;
+        queryArgs.push(`%${search.trim()}%`);
+      }
+
+      const countQuery = `
+        SELECT COUNT(*)::int AS count 
+        FROM sanpham sp
+        LEFT JOIN danhmuc dm ON sp.madanhmuc = dm.madanhmuc
+        ${whereClause}
+      `;
+      const countResult = await pool.query(countQuery, queryArgs);
+      const totalItems = countResult.rows[0].count;
+
+      const dataParamIndex1 = queryArgs.length + 1;
+      const dataParamIndex2 = queryArgs.length + 2;
+      queryArgs.push(limit, offset);
+
+      const dataQuery = `
+        SELECT sp.*, dm.tendanhmuc AS "tendanhmuc", ncc.tenncc AS "tenncc"
+        FROM sanpham sp
+        LEFT JOIN danhmuc dm ON sp.madanhmuc = dm.madanhmuc
+        LEFT JOIN nhacungcap ncc ON sp.mancc = ncc.mancc
+        ${whereClause}
+        ORDER BY sp.masp DESC
+        LIMIT $${dataParamIndex1} OFFSET $${dataParamIndex2}
+      `;
+      const dataResult = await pool.query(dataQuery, queryArgs);
+
+      return {
+        products: dataResult.rows,
+        totalItems: totalItems,
+      };
     } catch (error) {
       throw error;
     }
@@ -24,12 +51,12 @@ const productManagerModel = {
     try {
       const pool = await poolPromise;
       const query = `
-                SELECT sp.*, dm.tendanhmuc AS "TenDanhMuc", ncc.tenncc AS "TenNCC"
-                FROM sanpham sp
-                JOIN danhmuc dm ON sp.madanhmuc = dm.madanhmuc
-                JOIN nhacungcap ncc ON sp.mancc = ncc.mancc
-                WHERE sp.masp = $1
-            `;
+        SELECT sp.*, dm.tendanhmuc AS "tendanhmuc", ncc.tenncc AS "tenncc"
+        FROM sanpham sp
+        LEFT JOIN danhmuc dm ON sp.madanhmuc = dm.madanhmuc
+        LEFT JOIN nhacungcap ncc ON sp.mancc = ncc.mancc
+        WHERE sp.masp = $1
+      `;
       const result = await pool.query(query, [maSP]);
       return result.rows[0];
     } catch (error) {
@@ -42,9 +69,9 @@ const productManagerModel = {
     try {
       const pool = await poolPromise;
       const query = `
-                INSERT INTO sanpham (masp, tensp, gianhap, giaban, soluongton, mota, donvitinh, madanhmuc, mancc, hinhanh)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-            `;
+        INSERT INTO sanpham (masp, tensp, gianhap, giaban, soluongton, mota, donvitinh, madanhmuc, mancc, hinhanh)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `;
       const values = [
         data.MaSP,
         data.TenSP,
@@ -69,12 +96,12 @@ const productManagerModel = {
     try {
       const pool = await poolPromise;
       const query = `
-                UPDATE sanpham 
-                SET tensp = $1, gianhap = $2, giaban = $3, 
-                    soluongton = $4, mota = $5, donvitinh = $6, 
-                    madanhmuc = $7, mancc = $8, hinhanh = $9
-                WHERE masp = $10
-            `;
+        UPDATE sanpham 
+        SET tensp = $1, gianhap = $2, giaban = $3, 
+            soluongton = $4, mota = $5, donvitinh = $6, 
+            madanhmuc = $7, mancc = $8, hinhanh = $9
+        WHERE masp = $10
+      `;
       const values = [
         data.TenSP,
         parseFloat(data.GiaNhap) || 0,
@@ -94,10 +121,30 @@ const productManagerModel = {
     }
   },
 
-  // Xóa sản phẩm
+  // 🔥 Xóa sản phẩm có kiểm tra ràng buộc dữ liệu đơn hàng
   deleteProduct: async (maSP) => {
     try {
       const pool = await poolPromise;
+
+      // 1. Kiểm tra xem sản phẩm có nằm trong chi tiết đơn hàng nào không
+      const checkOrderQuery = `
+        SELECT COUNT(*)::int AS count 
+        FROM chitiet_donhang 
+        WHERE masp = $1
+      `;
+      const checkResult = await pool.query(checkOrderQuery, [maSP]);
+      const constraintCount = checkResult.rows[0].count;
+
+      // 2. Nếu có tồn tại trong đơn hàng, chặn lại và ném lỗi nghiệp vụ
+      if (constraintCount > 0) {
+        const error = new Error(
+          "Sản phẩm đã có trong đơn hàng bán ra. Không thể xóa dữ liệu lịch sử!",
+        );
+        error.code = "23503"; // Giả lập mã lỗi Foreign Key Constraint của PostgreSQL
+        throw error;
+      }
+
+      // 3. Nếu an toàn, tiến hành xóa khỏi hệ thống
       const query = "DELETE FROM sanpham WHERE masp = $1";
       await pool.query(query, [maSP]);
       return true;
@@ -106,14 +153,13 @@ const productManagerModel = {
     }
   },
 
-  // Đồng bộ hàng loạt sản phẩm từ file Excel (Thêm mới hoặc Cập nhật)
+  // Đồng bộ hàng loạt sản phẩm từ file Excel
   bulkCreateOrUpdateProducts: async (productsList) => {
     try {
       const pool = await poolPromise;
       let successCount = 0;
 
       for (const item of productsList) {
-        // Đọc linh hoạt từ file Excel (hỗ trợ cả cột chữ hoa lẫn chữ thường)
         const maSP = item.MaSP || item.masp;
         const tenSP = item.TenSP || item.tensp;
         const maDanhMuc = item.MaDanhMuc || item.madanhmuc;
@@ -121,7 +167,6 @@ const productManagerModel = {
 
         if (!maSP || !tenSP || !maDanhMuc || !maNCC) continue;
 
-        // Kiểm tra trùng mã bằng câu lệnh đếm trực tiếp của Postgres
         const checkQuery =
           "SELECT COUNT(*)::int AS count FROM sanpham WHERE masp = $1";
         const checkExist = await pool.query(checkQuery, [maSP]);
@@ -135,14 +180,13 @@ const productManagerModel = {
         const hinhAnh = item.HinhAnh || item.hinhanh || null;
 
         if (isExist) {
-          // Trùng mã -> Thực hiện UPDATE
           const updateQuery = `
-                        UPDATE sanpham 
-                        SET tensp = $1, gianhap = $2, giaban = $3, 
-                            soluongton = $4, mota = $5, donvitinh = $6, 
-                            madanhmuc = $7, mancc = $8, hinhanh = COALESCE($9, hinhanh)
-                        WHERE masp = $10
-                    `;
+            UPDATE sanpham 
+            SET tensp = $1, gianhap = $2, giaban = $3, 
+                soluongton = $4, mota = $5, donvitinh = $6, 
+                madanhmuc = $7, mancc = $8, hinhanh = COALESCE($9, hinhanh)
+            WHERE masp = $10
+          `;
           await pool.query(updateQuery, [
             tenSP,
             giaNhap,
@@ -156,11 +200,10 @@ const productManagerModel = {
             maSP,
           ]);
         } else {
-          // Chưa tồn tại -> Thực hiện INSERT
           const insertQuery = `
-                        INSERT INTO sanpham (masp, tensp, gianhap, giaban, soluongton, mota, donvitinh, madanhmuc, mancc, hinhanh)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                    `;
+            INSERT INTO sanpham (masp, tensp, gianhap, giaban, soluongton, mota, donvitinh, madanhmuc, mancc, hinhanh)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          `;
           await pool.query(insertQuery, [
             maSP,
             tenSP,
