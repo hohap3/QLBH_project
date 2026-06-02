@@ -67,7 +67,7 @@ const productManagerController = {
         DonViTinh: req.body.DonViTinh || null,
         MaDanhMuc: req.body.MaDanhMuc,
         MaNCC: req.body.MaNCC,
-        HinhAnh: req.file ? req.file.filename : req.body.HinhAnh || null,
+        HinhAnh: req.file ? req.file.path : req.body.HinhAnh || null,
       };
 
       if (productData.GiaBan < 0 || productData.SoLuongTon < 0) {
@@ -100,7 +100,7 @@ const productManagerController = {
         DonViTinh: req.body.DonViTinh || null,
         MaDanhMuc: req.body.MaDanhMuc,
         MaNCC: req.body.MaNCC,
-        HinhAnh: req.file ? req.file.filename : req.body.HinhAnh,
+        HinhAnh: req.file ? req.file.path : req.body.HinhAnh,
       };
 
       await productModel.updateProduct(id, updateData);
