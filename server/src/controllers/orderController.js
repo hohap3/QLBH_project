@@ -32,49 +32,56 @@ const orderController = {
   getOrderById: async (req, res) => {
     try {
       const { id } = req.params;
+
+      // Gọi Model lấy dữ liệu từ Database
       const rows = await orderModel.getDetails(id);
 
+      // 🟢 KIỂM TRA BẢO VỆ 1: Nếu database không trả về hàng nào (rows undefined hoặc rỗng)
       if (!rows || rows.length === 0) {
-        return res
-          .status(404)
-          .json({ success: false, message: "Không tìm thấy đơn hàng!" });
+        return res.status(204).json([]); // Trả về mảng rỗng thay vì nổ lỗi 500
       }
 
       // 1. Lấy thông tin chung của đơn hàng từ dòng đầu tiên
       const firstRow = rows[0];
 
-      // 2. Chuyển đổi cấu trúc phẳng từ DB thành cấu trúc lồng nhau (Khớp hoàn toàn với Frontend chữ Hoa)
+      // 2. Chuyển đổi cấu trúc phẳng từ DB thành cấu trúc Object lồng nhau
+      // 🟢 KIỂM TRA BẢO VỆ 2: Sử dụng toán tử ?. hoặc || để tránh lỗi "Cannot read properties of undefined"
       const formattedOrder = {
         MaDonHang: firstRow.madonhang,
         NgayDat: firstRow.ngaydat,
         TrangThai: firstRow.trangthai,
-        GhiChu: firstRow.ghichu,
-        TongTien: firstRow.tongtien,
+        GhiChu: firstRow.ghichu || "Không có",
+        TongTien: Number(firstRow.tongtien || 0),
         KhachHang: {
-          HoTen: firstRow.hotenkhachhang,
-          SDT: firstRow.sdtkhachhang,
-          Email: firstRow.emailkhachhang,
-          DiaChi: firstRow.diachikhachhang,
-          TenDangNhap: firstRow.tendangnhap,
+          HoTen: firstRow.hotenkhachhang || "Khách vãng lai",
+          SDT: firstRow.sdtkhachhang || "---",
+          Email: firstRow.emailkhachhang || "---",
+          DiaChi: firstRow.diachikhachhang || "---",
+          TenDangNhap: firstRow.tendangnhap || "Không có",
         },
         // 3. Gom tất cả các dòng sản phẩm thuộc đơn hàng này vào mảng Items
-        Items: rows.map((row) => ({
-          MaSP: row.masp,
-          SoLuong: row.soluong,
-          GiaBan: row.giaban,
-          GiamGia: row.giamgia,
-        })),
+        Items: rows
+          .filter((row) => row.masp !== null) // Chỉ lấy các dòng có mã sản phẩm hợp lệ
+          .map((row) => ({
+            MaSP: row.masp,
+            SoLuong: Number(row.soluong || 0),
+            GiaBan: Number(row.giaban || 0),
+            GiamGia: Number(row.giamgia || 0),
+          })),
       };
 
+      // Trả về JSON sạch đẹp cấu trúc chữ Hoa cho Frontend
       return res.status(200).json(formattedOrder);
     } catch (error) {
-      console.error("Lỗi Controller lấy chi tiết đơn hàng:", error);
-      return res
-        .status(500)
-        .json({
-          success: false,
-          message: "Lỗi hệ thống khi lấy chi tiết đơn hàng",
-        });
+      // 🟢 QUAN TRỌNG: In lỗi chi tiết ra Terminal của Render/VsCode để debug xem thực tế lỗi ở dòng nào
+      console.error("❌ LỖI CHI TIẾT TẠI CONTROLLER:", error.message);
+      console.error(error.stack);
+
+      return res.status(500).json({
+        success: false,
+        message: "Lỗi hệ thống khi lấy chi tiết đơn hàng",
+        error_details: error.message, // Đẩy tạm message gốc ra để bạn nhìn cho nhanh
+      });
     }
   },
 
