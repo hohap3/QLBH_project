@@ -3,8 +3,12 @@ import Swal from "sweetalert2";
 import { BASE_URL } from "/src/JS/common/header";
 import * as bootstrap from "bootstrap";
 
-// Mảng chứa dữ liệu gốc từ API để phục vụ việc lọc và xuất file Excel
-let warehouseList = [];
+// Mảng chứa dữ liệu của TRANG HIỆN TẠI để phục vụ việc lọc và xuất file Excel tại chỗ
+let currentTableData = [];
+
+// 🟢 BỔ SUNG: Biến quản lý trạng thái phân trang cục bộ
+let currentPage = 1;
+let totalPages = 1;
 
 export async function initWarehouseManager() {
   // Tự động tải thư viện SheetJS phục vụ xuất Excel nếu chưa được nạp vào trang
@@ -43,26 +47,42 @@ export async function initWarehouseManager() {
     ?.addEventListener("click", exportToExcel);
 
   await loadProductsToSelect();
-  await fetchWarehouseLogs();
+
+  // 🟢 CẬP NHẬT: Kích hoạt mặc định lấy dữ liệu ở Trang 1 khi khởi tạo
+  await fetchWarehouseLogs(1);
 }
 
-// 1. Tải toàn bộ danh sách lịch sử kho từ API
-async function fetchWarehouseLogs() {
+// 1. Tải danh sách lịch sử kho từ API (Hỗ trợ tham số phân trang page)
+async function fetchWarehouseLogs(page = 1) {
   try {
-    const response = await axios.get(`${BASE_URL}/warehouse/transactions`);
+    const response = await axios.get(
+      `${BASE_URL}/warehouse/transactions?page=${page}`,
+    );
+
     if (response.data.success) {
-      warehouseList = response.data.data;
-      renderTable(warehouseList);
+      // 🟢 CẬP NHẬT: Đọc cấu trúc metadata phân trang mới từ Controller trả về
+      const {
+        data,
+        currentPage: resPage,
+        totalPages: resTotalPages,
+      } = response.data;
+
+      currentPage = resPage;
+      totalPages = resTotalPages;
+      currentTableData = data; // 10 bản ghi giao dịch kho của trang này
+
+      renderTable(currentTableData);
+      renderPagination(); // Vẽ các nút chuyển trang ra màn hình
     }
   } catch (error) {
     console.error("Lỗi lấy dữ liệu kho:", error);
     document.getElementById("warehouseDataBody").innerHTML = `
-            <tr><td colspan="7" class="text-center text-danger">Không thể tải dữ liệu lịch sử kho.</td></tr>
-        `;
+        <tr><td colspan="7" class="text-center text-danger">Không thể tải dữ liệu lịch sử kho.</td></tr>
+    `;
   }
 }
 
-// 2. Render danh sách ra bảng HTML
+// 2. Render danh sách ra bảng HTML (Giữ nguyên cấu trúc giao diện của bạn)
 function renderTable(data) {
   const tbody = document.getElementById("warehouseDataBody");
   if (!tbody) return;
@@ -99,7 +119,71 @@ function renderTable(data) {
     .join("");
 }
 
-// 3. Xử lý bộ lọc
+// 🟢 BỔ SUNG: Hàm render các nút bấm phân trang bằng CSS Bootstrap 5
+function renderPagination() {
+  const paginationContainer = document.getElementById(
+    "warehousePaginationContainer",
+  );
+  if (!paginationContainer) return;
+
+  // Nếu tổng số trang nhỏ hơn hoặc bằng 1 thì ẩn thanh phân trang đi
+  if (totalPages <= 1) {
+    paginationContainer.innerHTML = "";
+    return;
+  }
+
+  let html = `<nav><ul class="pagination pagination-sm mb-0">`;
+
+  // Nút Quay lại (Previous)
+  html += `
+    <li class="page-item ${currentPage === 1 ? "disabled" : ""}">
+      <button class="page-link" data-page="${currentPage - 1}" aria-label="Previous">
+        <span aria-hidden="true">&laquo;</span>
+      </button>
+    </li>
+  `;
+
+  // Các nút số trang
+  for (let i = 1; i <= totalPages; i++) {
+    html += `
+      <li class="page-item ${currentPage === i ? "active" : ""}">
+        <button class="page-link" data-page="${i}">${i}</button>
+      </li>
+    `;
+  }
+
+  // Nút Tiếp theo (Next)
+  html += `
+    <li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
+      <button class="page-link" data-page="${currentPage + 1}" aria-label="Next">
+        <span aria-hidden="true">&raquo;</span>
+      </button>
+    </li>
+  `;
+
+  html += `</ul></nav>`;
+  paginationContainer.innerHTML = html;
+
+  // Gắn sự kiện click lắng nghe chuyển trang cho các nút bấm
+  paginationContainer.querySelectorAll(".page-link").forEach((button) => {
+    button.addEventListener("click", (e) => {
+      const targetPage = parseInt(
+        e.currentTarget.getAttribute("data-page"),
+        10,
+      );
+      if (
+        targetPage &&
+        targetPage !== currentPage &&
+        targetPage >= 1 &&
+        targetPage <= totalPages
+      ) {
+        fetchWarehouseLogs(targetPage);
+      }
+    });
+  });
+}
+
+// 3. Xử lý bộ lọc (Lọc cục bộ dựa trên dữ liệu 10 dòng của trang hiện tại)
 function applyFilters() {
   const searchVal = document
     .getElementById("searchWarehouse")
@@ -107,7 +191,7 @@ function applyFilters() {
     .toLowerCase();
   const filterLoai = document.getElementById("filterLoaiGD").value;
 
-  const filtered = warehouseList.filter((item) => {
+  const filtered = currentTableData.filter((item) => {
     const matchesSearch =
       (item.magd && item.magd.toLowerCase().includes(searchVal)) ||
       (item.tensp && item.tensp.toLowerCase().includes(searchVal)) ||
@@ -125,7 +209,7 @@ function applyFilters() {
 function resetFilters() {
   document.getElementById("searchWarehouse").value = "";
   document.getElementById("filterLoaiGD").value = "";
-  renderTable(warehouseList);
+  renderTable(currentTableData);
 }
 
 // 4. Lấy danh sách sản phẩm đổ vào thẻ Select trong Modal tạo phiếu kho
@@ -134,8 +218,28 @@ async function loadProductsToSelect() {
   if (!select) return;
   try {
     const response = await axios.get(`${BASE_URL}/products`);
-    const products = response.data.data || response.data;
 
+    // 🟢 SỬA TẠI ĐÂY: Kiểm tra và trích xuất mảng an toàn tuyệt đối
+    let products = [];
+
+    if (response.data && Array.isArray(response.data.data)) {
+      // Trường hợp API trả về cấu trúc: { success: true, data: [...] } hoặc có phân trang { data: [...] }
+      products = response.data.data;
+    } else if (Array.isArray(response.data)) {
+      // Trường hợp API trả về thẳng một mảng: [ ... ]
+      products = response.data;
+    } else if (response.data && typeof response.data === "object") {
+      // Đề phòng trường hợp mảng nằm ở một attribute khác hoặc phải ép kiểu
+      products = response.data.products || [];
+    }
+
+    // Nếu cuối cùng vẫn không tìm thấy mảng hoặc mảng rỗng
+    if (products.length === 0) {
+      select.innerHTML = `<option value="">-- Không có sản phẩm nào --</option>`;
+      return;
+    }
+
+    // Tiến hành render khi đã chắc chắn products là một Mảng (Array)
     select.innerHTML = products
       .map((p) => {
         const maSP = p.masp || p.MaSP;
@@ -147,6 +251,7 @@ async function loadProductsToSelect() {
       .join("");
   } catch (err) {
     console.error("Không tải được sản phẩm vào ô chọn", err);
+    select.innerHTML = `<option value="">-- Lỗi tải danh sách sản phẩm --</option>`;
   }
 }
 
@@ -158,11 +263,8 @@ async function handleCreateTransaction(e) {
   const loaiGDElement = document.querySelector(
     'input[name="radioLoaiGD"]:checked',
   );
-
-  // Lấy chuỗi thô từ input để kiểm tra độ dài trước
   const soLuongRaw = document.getElementById("numSoLuong").value.trim();
 
-  // 1. Kiểm tra không chọn Loại giao dịch
   if (!loaiGDElement) {
     Swal.fire(
       "Thông báo",
@@ -172,7 +274,6 @@ async function handleCreateTransaction(e) {
     return;
   }
 
-  // 2. Chặn trường hợp cố tình nhập chuỗi quá dài gây tràn số (Giống trong hình ảnh)
   if (soLuongRaw.length > 5) {
     Swal.fire({
       icon: "warning",
@@ -183,10 +284,8 @@ async function handleCreateTransaction(e) {
     return;
   }
 
-  // Chuyển đổi an toàn sang kiểu số nguyên (Integer)
   const soLuong = parseInt(soLuongRaw, 10);
 
-  // 3. Kiểm tra số lượng phải là số hợp lệ và lớn hơn 0
   if (isNaN(soLuong) || soLuong <= 0) {
     Swal.fire({
       icon: "warning",
@@ -197,7 +296,6 @@ async function handleCreateTransaction(e) {
     return;
   }
 
-  // 4. Kiểm tra hạn mức tối đa 10.000
   if (soLuong > 10000) {
     Swal.fire({
       icon: "warning",
@@ -208,20 +306,18 @@ async function handleCreateTransaction(e) {
     return;
   }
 
-  // --- GỬI API KHI DỮ LIỆU ĐÃ HOÀN TOÀN HỢP LỆ ---
   try {
     const response = await axios.post(`${BASE_URL}/warehouse/transaction`, {
       maGD,
       maSP,
       loaiGD: parseInt(loaiGDElement.value, 10),
-      soLuong: soLuong, // Đảm bảo số truyền lên sạch và nằm trong khoảng 1-10000
+      soLuong: soLuong,
     });
 
     if (response.data.success) {
       Swal.fire("Thành công", response.data.message, "success");
       document.getElementById("formWarehouseTransaction").reset();
 
-      // Đóng modal an toàn thông qua Bootstrap Instance
       const modalEl = document.getElementById("modalTransaction");
       if (modalEl) {
         const modal =
@@ -229,8 +325,8 @@ async function handleCreateTransaction(e) {
         modal.hide();
       }
 
-      // Tải lại bảng dữ liệu mới để cập nhật đúng số lượng thực tế
-      await fetchWarehouseLogs();
+      // 🟢 CẬP NHẬT: Tải lại đúng vị trí trang hiện tại để cập nhật bảng dữ liệu thực tế
+      await fetchWarehouseLogs(currentPage);
     }
   } catch (error) {
     Swal.fire(
@@ -241,9 +337,7 @@ async function handleCreateTransaction(e) {
   }
 }
 
-// ==========================================
-// 🚀 6. LOGIC XUẤT BÁO CÁO FILE EXCEL
-// ==========================================
+// 6. LOGIC XUẤT BÁO CÁO FILE EXCEL (Xuất dữ liệu hiển thị hiện tại của trang đang xem)
 function exportToExcel() {
   if (!window.XLSX) {
     Swal.fire(
@@ -254,12 +348,13 @@ function exportToExcel() {
     return;
   }
 
-  if (warehouseList.length === 0) {
+  if (currentTableData.length === 0) {
     Swal.fire("Cảnh báo", "Không có dữ liệu kho để xuất báo cáo!", "warning");
     return;
   }
 
-  const excelData = warehouseList.map((item, index) => ({
+  // 🟢 CẬP NHẬT: Đọc dữ liệu từ mảng currentTableData của trang này để ghi nhận ra Excel
+  const excelData = currentTableData.map((item, index) => ({
     STT: index + 1,
     "Mã Giao Dịch": item.magd,
     "Mã Sản Phẩm": item.masp,
@@ -274,12 +369,10 @@ function exportToExcel() {
       : "---",
   }));
 
-  // Tạo một Workbook mới
   const worksheet = XLSX.utils.json_to_sheet(excelData);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Báo cáo Kho HP STORE");
 
-  // Tự động căn chỉnh chiều rộng của các cột dữ liệu tránh bị khuất chữ
   const max_len = excelData.reduce(
     (w, r) => Math.max(w, r["Tên Sản Phẩm"] ? r["Tên Sản Phẩm"].length : 15),
     15,
@@ -298,7 +391,9 @@ function exportToExcel() {
     { wch: 25 }, // Thời gian
   ];
 
-  // Tiến hành tải file về máy khách hàng
   const today = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(workbook, `BaoCao_KhoHang_HPSTORE_${today}.xlsx`);
+  XLSX.writeFile(
+    workbook,
+    `BaoCao_KhoHang_HPSTORE_Trang${currentPage}_${today}.xlsx`,
+  );
 }
