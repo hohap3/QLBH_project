@@ -108,7 +108,7 @@ const Order = {
   getOrderDetailsForCancel: async (madonhang) => {
     try {
       const pool = await poolPromise;
-      const query = `SELECT masp, soluong FROM chitietdonhang WHERE madonhang = $1`;
+      const query = `SELECT masp, soluong FROM chitiet_donhang WHERE madonhang = $1`;
       const result = await pool.query(query, [madonhang]);
       return result.rows;
     } catch (error) {
@@ -123,11 +123,9 @@ const Order = {
     try {
       await client.query("BEGIN");
 
-      // Cập nhật đơn hàng
       const updateOrderQuery = `UPDATE donhang SET trangthai = 'Đã hủy' WHERE madonhang = $1`;
       await client.query(updateOrderQuery, [madonhang]);
 
-      // Hoàn kho từng sản phẩm
       if (productsList && productsList.length > 0) {
         for (const item of productsList) {
           const restoreStockQuery = `UPDATE sanpham SET soluong = soluong + $1 WHERE masp = $2`;
