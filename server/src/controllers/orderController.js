@@ -1,5 +1,5 @@
 // Khớp đúng chính tả file model: orderModel
-const Order = require("../models/orderModel");
+const Order = require("../models/oderModel");
 
 const orderController = {
   // 🟢 CẬP NHẬT: API lấy danh sách đơn hàng kèm theo phân trang (10 đơn/trang)
