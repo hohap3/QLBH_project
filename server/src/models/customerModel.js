@@ -1,12 +1,14 @@
-// src/models/customerModel.js
 const { poolPromise } = require("../config/database");
 
 const Customer = {
-  // 1. Lấy tất cả khách hàng (Kèm trạng thái tài khoản người dùng và số lượng đơn hàng)
-  getAll: async () => {
+  // 1. 🟢 CẬP NHẬT: Lấy danh sách tất cả khách hàng có hỗ trợ phân trang
+  getAll: async (page = 1, limit = 10) => {
     try {
       const pool = await poolPromise;
-      const query = `
+      const offset = (page - 1) * limit;
+
+      // Truy vấn 1: Lấy đúng 10 khách hàng của trang hiện tại kèm thông tin đơn hàng
+      const dataQuery = `
         SELECT 
           kh.makh, kh.hoten, kh.sdt, kh.email, kh.diachi, kh.ngaytao, kh.diemtichluy,
           nd.trangthai, 
@@ -19,15 +21,26 @@ const Customer = {
           kh.makh, kh.hoten, kh.sdt, kh.email, 
           kh.diachi, kh.ngaytao, kh.diemtichluy, nd.trangthai
         ORDER BY kh.ngaytao DESC
+        LIMIT $1 OFFSET $2
       `;
-      const result = await pool.query(query);
-      return result.rows;
+      const dataResult = await pool.query(dataQuery, [limit, offset]);
+
+      // Truy vấn 2: Tính tổng số lượng khách hàng đang có trong hệ thống
+      const countQuery = "SELECT COUNT(*) FROM khachhang";
+      const countResult = await pool.query(countQuery);
+      const totalRecords = parseInt(countResult.rows[0].count, 10);
+
+      return {
+        customers: dataResult.rows,
+        totalRecords: totalRecords,
+        totalPages: Math.ceil(totalRecords / limit),
+      };
     } catch (error) {
       throw error;
     }
   },
 
-  // 2. Lấy chi tiết 1 khách hàng
+  // 2. Lấy chi tiết 1 khách hàng (Giữ nguyên)
   getById: async (maKH) => {
     try {
       const pool = await poolPromise;
@@ -39,7 +52,7 @@ const Customer = {
     }
   },
 
-  // 3. Lấy lịch sử hóa đơn mua hàng của khách hàng
+  // 3. Lấy lịch sử hóa đơn mua hàng của khách hàng (Giữ nguyên)
   getOrderHistory: async (maKH) => {
     try {
       const pool = await poolPromise;
@@ -56,7 +69,7 @@ const Customer = {
     }
   },
 
-  // 4. Thêm mới khách hàng
+  // 4. Thêm mới khách hàng (Giữ nguyên)
   create: async (data) => {
     try {
       const pool = await poolPromise;
@@ -79,7 +92,7 @@ const Customer = {
     }
   },
 
-  // 5. Cập nhật thông tin khách hàng & Điểm tích lũy
+  // 5. Cập nhật thông tin khách hàng & Điểm tích lũy (Giữ nguyên)
   update: async (maKH, data) => {
     try {
       const pool = await poolPromise;
@@ -106,7 +119,7 @@ const Customer = {
     }
   },
 
-  // 6. Khóa / Mở khóa trạng thái tài khoản (Soft Delete thông qua bảng nguoidung)
+  // 6. Khóa / Mở khóa trạng thái tài khoản (Giữ nguyên)
   toggleStatus: async (maKH, trangThai) => {
     try {
       const pool = await poolPromise;
