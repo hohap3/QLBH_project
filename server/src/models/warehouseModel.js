@@ -1,23 +1,38 @@
 const { pool } = require("../config/database");
 
 class WarehouseModel {
-  // 1. Lấy toàn bộ danh sách lịch sử giao dịch kho kèm thông tin sản phẩm
-  static async getAllTransactions() {
+  // 1. 🟢 CẬP NHẬT: Lấy danh sách lịch sử giao dịch kho có hỗ trợ phân trang
+  static async getAllTransactions(page = 1, limit = 10) {
     try {
-      const query = `
+      // Tính toán vị trí bắt đầu lấy dữ liệu
+      const offset = (page - 1) * limit;
+
+      // Truy vấn 1: Lấy đúng 10 dòng giao dịch của trang hiện tại
+      const dataQuery = `
         SELECT gdk.*, sp.tensp, sp.donvitinh 
         FROM giaodichkho gdk
         JOIN sanpham sp ON gdk.masp = sp.masp
         ORDER BY gdk.ngaygd DESC
+        LIMIT $1 OFFSET $2
       `;
-      const result = await pool.query(query);
-      return result.rows;
+      const dataResult = await pool.query(dataQuery, [limit, offset]);
+
+      // Truy vấn 2: Đếm tổng số lượng giao dịch kho đang có
+      const countQuery = "SELECT COUNT(*) FROM giaodichkho";
+      const countResult = await pool.query(countQuery);
+      const totalRecords = parseInt(countResult.rows[0].count, 10);
+
+      return {
+        transactions: dataResult.rows,
+        totalRecords: totalRecords,
+        totalPages: Math.ceil(totalRecords / limit),
+      };
     } catch (error) {
       throw error;
     }
   }
 
-  // 2. Lấy lịch sử giao dịch của riêng một sản phẩm cụ thể
+  // 2. Lấy lịch sử giao dịch của riêng một sản phẩm cụ thể (Giữ nguyên)
   static async getTransactionsByProduct(maSP) {
     try {
       const query = `
@@ -34,14 +49,13 @@ class WarehouseModel {
     }
   }
 
-  // 3. Xử lý tạo giao dịch kho bằng Transaction trong PostgreSQL
+  // 3. Xử lý tạo giao dịch kho bằng Transaction trong PostgreSQL (Giữ nguyên)
   static async createTransaction({ maGD, maSP, loaiGD, soLuong }) {
     const client = await pool.connect();
 
     try {
       await client.query("BEGIN");
 
-      // Bước A: Khóa dòng dữ liệu để lấy tồn tại thời điểm hiện tại thực tế
       const productQuery = `SELECT soluongton FROM sanpham WHERE masp = $1 FOR UPDATE`;
       const productRes = await client.query(productQuery, [maSP]);
 
@@ -52,7 +66,6 @@ class WarehouseModel {
       const tonTruoc = productRes.rows[0].soluongton || 0;
       let tonSau = tonTruoc;
 
-      // Bước B: Kiểm tra tính toán biến động kho
       if (loaiGD === 1) {
         tonSau = tonTruoc + soLuong;
       } else if (loaiGD === 2) {
@@ -66,7 +79,6 @@ class WarehouseModel {
         throw new Error("Loại giao dịch không hợp lệ (1: Nhập, 2: Xuất)!");
       }
 
-      // Bước C: Ghi lịch sử biến động kho
       const insertGDQuery = `
         INSERT INTO giaodichkho (magd, masp, loaigd, soluong, tontruoc, tonsau, ngaygd)
         VALUES ($1, $2, $3, $4, $5, $6, NOW())
@@ -80,7 +92,6 @@ class WarehouseModel {
         tonSau,
       ]);
 
-      // Bước D: Đồng bộ cập nhật lại số lượng tồn mới cho bảng sản phẩm
       const updateStockQuery = `
         UPDATE sanpham 
         SET soluongton = $1 
@@ -101,9 +112,9 @@ class WarehouseModel {
       };
     } catch (error) {
       await client.query("ROLLBACK");
-      throw error; // Trả lỗi ra ngoài để Controller xử lý thông báo bằng SweetAlert2
+      throw error;
     } finally {
-      client.release(); // Trả lại client vào pool quản lý
+      client.release();
     }
   }
 }

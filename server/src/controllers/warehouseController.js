@@ -2,13 +2,24 @@ const WarehouseModel = require("../models/warehouseModel");
 
 class WarehouseController {
   // [GET] /api/warehouse/transactions
+  // 🟢 CẬP NHẬT: API tiếp nhận tham số phân trang ?page=x
   static async getAllTransactions(req, res) {
     try {
-      const data = await WarehouseModel.getAllTransactions();
+      const page = parseInt(req.query.page, 10) || 1;
+      const limit = 10; // Giới hạn hiển thị đúng 10 giao dịch kho trên mỗi trang
+
+      const paginationResult = await WarehouseModel.getAllTransactions(
+        page,
+        limit,
+      );
+
       res.status(200).json({
         success: true,
-        message: "Lấy lịch sử giao dịch kho thành công!",
-        data: data,
+        currentPage: page,
+        limitPerPage: limit,
+        totalRecords: paginationResult.totalRecords,
+        totalPages: paginationResult.totalPages,
+        data: paginationResult.transactions, // Mảng chứa 10 dòng giao dịch kho
       });
     } catch (error) {
       res.status(500).json({
@@ -19,7 +30,7 @@ class WarehouseController {
     }
   }
 
-  // [GET] /api/warehouse/transactions/:maSP
+  // [GET] /api/warehouse/transactions/:maSP (Giữ nguyên)
   static async getTransactionsByProduct(req, res) {
     try {
       const { maSP } = req.params;
@@ -38,12 +49,11 @@ class WarehouseController {
     }
   }
 
-  // [POST] /api/warehouse/transaction
+  // [POST] /api/warehouse/transaction (Giữ nguyên)
   static async createTransaction(req, res) {
     try {
       const { maGD, maSP, loaiGD, soLuong } = req.body;
 
-      // 🟢 FIX LỖI LOGIC: Kiểm tra sự hiện diện của các trường dữ liệu bắt buộc
       if (
         !maGD ||
         !maSP ||
@@ -61,7 +71,6 @@ class WarehouseController {
       const parsedSoLuong = parseInt(soLuong, 10);
       const parsedLoaiGD = parseInt(loaiGD, 10);
 
-      // 🟢 BỔ SUNG VALIDATE CHẶN SỐ LƯỢNG KHO (1 - 10,000)
       if (isNaN(parsedSoLuong) || parsedSoLuong <= 0) {
         return res.status(400).json({
           success: false,
@@ -84,7 +93,6 @@ class WarehouseController {
         });
       }
 
-      // Thực hiện nghiệp vụ lưu vào DB
       const result = await WarehouseModel.createTransaction({
         maGD: maGD.trim(),
         maSP,
@@ -101,7 +109,6 @@ class WarehouseController {
         data: result,
       });
     } catch (error) {
-      // 🟢 BẮT LỖI TRÙNG MÃ GIAO DỊCH (Unique Violation của Postgres mã lỗi 23505)
       if (error.code === "23505") {
         return res.status(400).json({
           success: false,
