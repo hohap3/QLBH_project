@@ -2,18 +2,40 @@
 const { poolPromise } = require("../config/database");
 
 class EmployeeModel {
-  // 1. Lấy toàn bộ danh sách nhân viên
-  static async getAllEmployees() {
+  // 1. Lấy danh sách nhân viên có phân trang (Mặc định 10 nhân viên/trang)
+  static async getAllEmployees(page = 1, limit = 10) {
     try {
       const pool = await poolPromise;
+
+      // Tính toán số lượng bản ghi cần bỏ qua (Offset)
+      const offset = (page - 1) * limit;
+
       const query = `
         SELECT mand, tendangnhap, hoten, email, sdt, ngaytao, trangthai, mavaitro 
         FROM nguoidung 
         WHERE mavaitro = 'Employee'
         ORDER BY ngaytao DESC
+        LIMIT $1 OFFSET $2
+      `;
+
+      const result = await pool.query(query, [limit, offset]);
+      return result.rows;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // 1b. Đếm tổng số lượng nhân viên để Frontend tính tổng số trang
+  static async countEmployees() {
+    try {
+      const pool = await poolPromise;
+      const query = `
+        SELECT COUNT(*) as total 
+        FROM nguoidung 
+        WHERE mavaitro = 'Employee'
       `;
       const result = await pool.query(query);
-      return result.rows; // 🟢 Postgres sử dụng .rows thay vì .recordset
+      return parseInt(result.rows[0].total, 10);
     } catch (error) {
       throw error;
     }
@@ -90,7 +112,6 @@ class EmployeeModel {
         SET trangthai = $1 
         WHERE mand = $2 AND mavaitro = 'Employee'
       `;
-      // Đảm bảo ép kiểu về Boolean chuẩn cho Postgres
       const result = await pool.query(query, [status ? true : false, id]);
       return result.rowCount > 0;
     } catch (error) {

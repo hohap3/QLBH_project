@@ -3,11 +3,32 @@ const EmployeeModel = require("../models/employeeModel");
 const bcrypt = require("bcrypt");
 
 class EmployeeController {
-  // [GET] /api/employees
+  // [GET] /api/employees?page=1&limit=10
   async getAll(req, res) {
     try {
-      const employees = await EmployeeModel.getAllEmployees();
-      return res.status(200).json({ success: true, data: employees });
+      // Lấy page và limit từ query string, ép kiểu về số nguyên dương
+      const page = parseInt(req.query.page, 10) || 1;
+      const limit = parseInt(req.query.limit, 10) || 10;
+
+      // Thực thi chạy song song cả 2 tác vụ lấy data và đếm tổng để tối ưu hiệu năng
+      const [employees, totalItems] = await Promise.all([
+        EmployeeModel.getAllEmployees(page, limit),
+        EmployeeModel.countEmployees(),
+      ]);
+
+      // Tính toán tổng số trang
+      const totalPages = Math.ceil(totalItems / limit);
+
+      return res.status(200).json({
+        success: true,
+        data: employees,
+        pagination: {
+          totalItems,
+          totalPages,
+          currentPage: page,
+          limit,
+        },
+      });
     } catch (error) {
       return res.status(500).json({
         success: false,
@@ -50,10 +71,8 @@ class EmployeeController {
         });
       }
 
-      // Sinh mã nhân viên: NV + chuỗi thời gian rút gọn
       const MaND = "NV" + Date.now().toString().slice(-8);
 
-      // Mã hóa mật khẩu bảo mật trước khi lưu
       const salt = await bcrypt.genSalt(10);
       const MatKhauHash = await bcrypt.hash(MatKhau, salt);
 
@@ -72,7 +91,6 @@ class EmployeeController {
         data: newEmployee,
       });
     } catch (error) {
-      // 🟢 FIX CHÍNH POSTGRES: Kiểm tra mã lỗi 23505 (Unique Violation) thay vì kiểm tra chuỗi text
       if (error.code === "23505") {
         return res.status(400).json({
           success: false,
@@ -93,7 +111,6 @@ class EmployeeController {
     try {
       const { HoTen, Email, SDT } = req.body;
 
-      // Kiểm tra nhân viên tồn tại trước khi cập nhật
       const employee = await EmployeeModel.getEmployeeById(req.params.id);
       if (!employee) {
         return res.status(404).json({
@@ -108,7 +125,6 @@ class EmployeeController {
         message: "Cập nhật thông tin nhân viên thành công.",
       });
     } catch (error) {
-      // 🟢 FIX CHÍNH POSTGRES: Ràng buộc trùng lặp khi cập nhật dữ liệu tài khoản khác
       if (error.code === "23505") {
         return res.status(400).json({
           success: false,
