@@ -1,12 +1,16 @@
-// src/models/orderModel.js
 const { poolPromise } = require("../config/database");
 
 const Order = {
-  // 1. Lấy danh sách đơn hàng hiển thị ra bảng
-  getAll: async () => {
+  // 🟢 CẬP NHẬT: Hỗ trợ phân trang bằng LIMIT và OFFSET
+  getWithPagination: async (page = 1, limit = 10) => {
     try {
       const pool = await poolPromise;
-      const query = `
+
+      // Tính toán vị trí bắt đầu lấy dữ liệu
+      const offset = (page - 1) * limit;
+
+      // Truy vấn 1: Lấy danh sách 10 đơn hàng của trang hiện tại kèm thông tin khách hàng
+      const dataQuery = `
         SELECT 
           dh.madonhang,
           kh.hoten AS tenkhachhang,
@@ -18,9 +22,20 @@ const Order = {
         FROM donhang dh
         LEFT JOIN khachhang kh ON dh.makh = kh.makh
         ORDER BY dh.ngaydat DESC
+        LIMIT $1 OFFSET $2
       `;
-      const result = await pool.query(query);
-      return result.rows; // 🟢 Sử dụng .rows của Postgres
+      const dataResult = await pool.query(dataQuery, [limit, offset]);
+
+      // Truy vấn 2: Đếm tổng số đơn hàng hiện có để tính toán phân trang ở Front-end
+      const countQuery = "SELECT COUNT(*) FROM donhang";
+      const countResult = await pool.query(countQuery);
+      const totalRecords = parseInt(countResult.rows[0].count, 10);
+
+      return {
+        orders: dataResult.rows,
+        totalRecords: totalRecords,
+        totalPages: Math.ceil(totalRecords / limit),
+      };
     } catch (error) {
       throw error;
     }

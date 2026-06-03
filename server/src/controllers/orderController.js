@@ -1,12 +1,25 @@
-// src/controllers/orderController.js
-const Order = require("../models/oderModel"); // Khớp lại chính tả tên file mẫu (orderModel)
+// Khớp đúng chính tả file model: orderModel
+const Order = require("../models/orderModel");
 
 const orderController = {
-  // Lấy toàn bộ đơn hàng
+  // 🟢 CẬP NHẬT: API lấy danh sách đơn hàng kèm theo phân trang (10 đơn/trang)
   getOrders: async (req, res) => {
     try {
-      const data = await Order.getAll();
-      res.status(200).json(data);
+      // Đọc số trang từ URL (Ví dụ: /api/orders?page=2). Mặc định là trang 1 nếu trống.
+      const page = parseInt(req.query.page, 10) || 1;
+      const limit = 10; // Cấu hình cứng hiển thị đúng 10 đơn hàng mỗi trang
+
+      const paginationResult = await Order.getWithPagination(page, limit);
+
+      // Phản hồi kết quả chuẩn hóa về cho Client
+      res.status(200).json({
+        success: true,
+        currentPage: page,
+        limitPerPage: limit,
+        totalRecords: paginationResult.totalRecords,
+        totalPages: paginationResult.totalPages,
+        data: paginationResult.orders,
+      });
     } catch (err) {
       res.status(500).json({
         message: "Lỗi khi lấy danh sách đơn hàng",
@@ -23,8 +36,6 @@ const orderController = {
         return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
       }
 
-      // 🟢 FIX QUAN TRỌNG: Đọc dữ liệu từ 'details' bằng các key chữ thường (Postgres)
-      // giữ nguyên định dạng cấu trúc JSON chữ hoa-thường ở ngoài để không làm gãy Front-end
       const orderInfo = {
         MaDonHang: details[0].madonhang,
         NgayDat: details[0].ngaydat,
@@ -32,7 +43,6 @@ const orderController = {
         TongTien: details[0].tongtien,
         GhiChu: details[0].ghichu,
 
-        // Nhóm thông tin khách hàng & tài khoản liên kết
         KhachHang: {
           HoTen: details[0].hotenkhachhang,
           SDT: details[0].sdtkhachhang,
@@ -41,7 +51,6 @@ const orderController = {
           TenDangNhap: details[0].tendangnhap,
         },
 
-        // Danh sách các mặt hàng nằm trong đơn này
         Items: details.map((item) => ({
           MaSP: item.masp,
           SoLuong: item.soluong,
@@ -65,7 +74,6 @@ const orderController = {
     try {
       const result = await Order.updateStatus(id, TrangThai);
 
-      // 🟢 FIX POSTGRES: Thay thế rowsAffected[0] bằng rowCount
       if (result.rowCount === 0) {
         return res.status(404).json({ message: "Đơn hàng không tồn tại" });
       }
