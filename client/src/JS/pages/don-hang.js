@@ -16,18 +16,41 @@ export async function initOrderManager() {
   const filterSelect = document.querySelector(".filter-select");
   const btnExport = document.querySelector(".btn-export");
 
-  let allOrders = [];
+  // 🟢 BỔ SUNG: Container chứa các nút phân trang trong file HTML của bạn
+  // (Nếu chưa có, bạn hãy thêm <div id="paginationContainer" class="d-flex justify-content-center mt-3"></div> dưới thẻ <table>)
+  const paginationContainer = document.getElementById("paginationContainer");
+
+  // 🟢 CẬP NHẬT: Quản lý trạng thái phân trang cục bộ
+  let currentPage = 1;
+  let totalPages = 1;
+  let currentTableData = []; // Dữ liệu của trang hiện tại dùng để render/filter
 
   /**
-   * 1. Tải danh sách đơn hàng từ API
+   * 1. Tải danh sách đơn hàng từ API (Hỗ trợ tham số page)
    */
-  const fetchOrders = async () => {
+  const fetchOrders = async (page = 1) => {
     try {
-      const response = await axios.get(`${BASE_URL}/orders`);
-      allOrders = response.data;
+      // Gọi API kèm theo query page
+      const response = await axios.get(`${BASE_URL}/orders?page=${page}`);
 
-      renderTable(allOrders);
-      orderCountSpan.innerText = allOrders.length;
+      // Đọc cấu trúc JSON bọc metadata mới từ Controller
+      const {
+        data,
+        currentPage: resPage,
+        totalPages: resTotalPages,
+        totalRecords,
+      } = response.data;
+
+      currentPage = resPage;
+      totalPages = resTotalPages;
+      currentTableData = data; // Bản ghi của trang này
+
+      renderTable(currentTableData);
+      renderPagination(); // Vẽ các nút chuyển trang
+
+      if (orderCountSpan) {
+        orderCountSpan.innerText = totalRecords; // Hiển thị tổng số đơn hàng hệ thống
+      }
     } catch (error) {
       console.error("Lỗi tải đơn hàng:", error);
       Swal.fire({
@@ -40,7 +63,7 @@ export async function initOrderManager() {
   };
 
   /**
-   * 2. Hàm render bảng dữ liệu
+   * 2. Hàm render bảng dữ liệu (Giữ nguyên logic của bạn)
    */
   const renderTable = (orders) => {
     if (!orders || orders.length === 0) {
@@ -50,7 +73,6 @@ export async function initOrderManager() {
 
     orderTableBody.innerHTML = orders
       .map((order) => {
-        // 🟢 SỬA TẠI ĐÂY: Thay thế hoàn toàn bằng hệ thống màu sắc chuẩn Bootstrap 5 + chống vỡ dòng
         let statusBadge = "";
         switch (order.trangthai) {
           case "Chờ xác nhận":
@@ -77,7 +99,6 @@ export async function initOrderManager() {
 
         const formattedTotal =
           new Intl.NumberFormat("vi-VN").format(order.tongtien) + "đ";
-
         const orderDate = order.ngaydat
           ? new Date(order.ngaydat).toISOString().split("T")[0]
           : "---";
@@ -105,13 +126,74 @@ export async function initOrderManager() {
   };
 
   /**
-   * 3. Xử lý Lọc (Filter) và Tìm kiếm
+   * 🟢 BỔ SUNG: Hàm render các nút bấm phân trang (Sử dụng CSS của Bootstrap 5)
+   */
+  const renderPagination = () => {
+    if (!paginationContainer) return;
+    if (totalPages <= 1) {
+      paginationContainer.innerHTML = "";
+      return;
+    }
+
+    let html = `<nav><ul class="pagination pagination-sm mb-0">`;
+
+    // Nút Quay lại (Previous)
+    html += `
+      <li class="page-item ${currentPage === 1 ? "disabled" : ""}">
+        <button class="page-link" data-page="${currentPage - 1}" aria-label="Previous">
+          <span aria-hidden="true">&laquo;</span>
+        </button>
+      </li>
+    `;
+
+    // Các nút số trang
+    for (let i = 1; i <= totalPages; i++) {
+      html += `
+        <li class="page-item ${currentPage === i ? "active" : ""}">
+          <button class="page-link" data-page="${i}">${i}</button>
+        </li>
+      `;
+    }
+
+    // Nút Tiếp theo (Next)
+    html += `
+      <li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
+        <button class="page-link" data-page="${currentPage + 1}" aria-label="Next">
+          <span aria-hidden="true">&raquo;</span>
+        </button>
+      </li>
+    `;
+
+    html += `</ul></nav>`;
+    paginationContainer.innerHTML = html;
+
+    // Lắng nghe sự kiện click trên cụm nút phân trang
+    paginationContainer.querySelectorAll(".page-link").forEach((button) => {
+      button.addEventListener("click", (e) => {
+        const targetPage = parseInt(
+          e.currentTarget.getAttribute("data-page"),
+          10,
+        );
+        if (
+          targetPage &&
+          targetPage !== currentPage &&
+          targetPage >= 1 &&
+          targetPage <= totalPages
+        ) {
+          fetchOrders(targetPage);
+        }
+      });
+    });
+  };
+
+  /**
+   * 3. Xử lý Lọc (Filter) và Tìm kiếm cục bộ trên trang hiện tại
    */
   const filterData = () => {
     const searchTerm = searchInput.value.toLowerCase();
     const statusTerm = filterSelect.value;
 
-    const filtered = allOrders.filter((order) => {
+    const filtered = currentTableData.filter((order) => {
       const matchSearch =
         order.madonhang.toLowerCase().includes(searchTerm) ||
         (order.tenkhachhang &&
@@ -129,6 +211,9 @@ export async function initOrderManager() {
   searchInput.addEventListener("input", filterData);
   filterSelect.addEventListener("change", filterData);
 
+  /**
+   * Xử lý cập nhật trạng thái đơn hàng
+   */
   const handleUpdateStatus = async (maDonHang, trangThaiMoi) => {
     let actionText = "";
     let confirmColor = "#0d6efd";
@@ -193,7 +278,8 @@ export async function initOrderManager() {
       );
       if (currentModal) currentModal.hide();
 
-      fetchOrders();
+      // 🟢 CẬP NHẬT: Tải lại đúng trang hiện tại thay vì reset về trang 1
+      fetchOrders(currentPage);
     } catch (error) {
       console.error("Lỗi cập nhật trạng thái:", error);
       Swal.fire({
@@ -210,16 +296,14 @@ export async function initOrderManager() {
   window.handleUpdateStatus = handleUpdateStatus;
 
   /**
-   * 4. Xem chi tiết đơn hàng
+   * 4. Xem chi tiết đơn hàng (Giữ nguyên logic khớp chữ Hoa)
    */
   window.viewOrderDetails = async (maDonHang) => {
     Swal.fire({
       title: "Đang tải...",
       text: `Đang lấy thông tin đơn hàng ${maDonHang}`,
       allowOutsideClick: false,
-      didOpen: () => {
-        Swal.showLoading();
-      },
+      didOpen: () => Swal.showLoading(),
     });
 
     try {
@@ -227,8 +311,6 @@ export async function initOrderManager() {
       const order = response.data;
       Swal.close();
 
-      // 🟢 FIX 2: Ở tầng Controller mình đã giữ cấu trúc Object bọc ngoài là chữ hoa (MaDonHang, NgayDat,...)
-      // Tuy nhiên ở đây bạn viết nhầm order.ngaydat (chữ thường) khiến hàm Date sập tiếp. Sửa thành order.NgayDat!
       document.getElementById("modalMaDonHang").innerText = order.MaDonHang;
       document.getElementById("modalNgayDat").innerText = order.NgayDat
         ? new Date(order.NgayDat).toISOString().split("T")[0]
@@ -239,7 +321,6 @@ export async function initOrderManager() {
       document.getElementById("modalTongTien").innerText =
         new Intl.NumberFormat("vi-VN").format(order.TongTien) + "đ";
 
-      // Đổ thông tin khách hàng (Dữ liệu bọc ngoài theo cấu trúc Controller phản hồi)
       document.getElementById("modalKhachHang").innerText =
         order.KhachHang.HoTen || "Khách vãng lai";
       document.getElementById("modalSDT").innerText =
@@ -251,7 +332,6 @@ export async function initOrderManager() {
       document.getElementById("modalTenDangNhap").innerText =
         order.KhachHang.TenDangNhap || "Không có tài khoản";
 
-      // Đổ danh sách sản phẩm
       const modalProductItems = document.getElementById("modalProductItems");
       if (
         !order.Items ||
@@ -261,7 +341,6 @@ export async function initOrderManager() {
         modalProductItems.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-muted">Đơn hàng không có sản phẩm nào</td></tr>`;
       } else {
         modalProductItems.innerHTML = order.Items.map((item) => {
-          // 🟢 FIX 3: Map đúng thuộc tính chữ Hoa của mảng Items từ Controller định nghĩa (MaSP, GiaBan, SoLuong, GiamGia)
           const price = Number(item.GiaBan || 0);
           const quantity = Number(item.SoLuong || 0);
           const discount = Number(item.GiamGia || 0);
@@ -279,12 +358,9 @@ export async function initOrderManager() {
         }).join("");
       }
 
-      // 5. Điều hướng nút bấm hành động dựa trên trạng thái
       const modalActionButtons = document.getElementById("modalActionButtons");
 
-      switch (
-        order.TrangThai // 🟢 FIX 4: Sửa sang order.TrangThai đồng bộ
-      ) {
+      switch (order.TrangThai) {
         case "Chờ xác nhận":
           modalActionButtons.innerHTML = `
                         <button class="btn btn-warning text-dark me-2 px-3 fw-bold" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đang xử lý')">
@@ -344,6 +420,9 @@ export async function initOrderManager() {
     }
   };
 
+  /**
+   * Xuất file Excel dựa trên dữ liệu hiển thị (Bao gồm dữ liệu thô chữ thường)
+   */
   const exportToExcel = async (data) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Danh sách đơn hàng");
@@ -372,7 +451,6 @@ export async function initOrderManager() {
     headerRow.alignment = { vertical: "middle", horizontal: "center" };
 
     data.forEach((order) => {
-      // 🟢 FIX 5: Xuất file Excel đọc từ mảng danh sách (Dữ liệu thô từ hàm getAll của Model viết thường hoàn toàn)
       worksheet.addRow({
         MaDonHang: order.madonhang,
         TenKhachHang: order.tenkhachhang || "Khách vãng lai",
@@ -405,17 +483,17 @@ export async function initOrderManager() {
   };
 
   /**
-   * 5. Xuất báo cáo
+   * 5. Xuất báo cáo (Xuất dữ liệu của trang hiện tại đang xem)
    */
   btnExport.onclick = async () => {
-    if (allOrders.length === 0) {
+    if (currentTableData.length === 0) {
       Swal.fire("Thông báo", "Không có dữ liệu để xuất báo cáo!", "info");
       return;
     }
 
     const result = await Swal.fire({
       title: "Xác nhận xuất báo cáo?",
-      text: `Tải xuống file Excel chứa ${allOrders.length} đơn hàng.`,
+      text: `Tải xuống file Excel chứa ${currentTableData.length} đơn hàng trên trang này.`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#00b050",
@@ -431,7 +509,7 @@ export async function initOrderManager() {
       });
 
       try {
-        await exportToExcel(allOrders);
+        await exportToExcel(currentTableData);
         Swal.fire(
           "Thành công!",
           "File đã được lưu vào máy tính của bạn.",
@@ -444,5 +522,6 @@ export async function initOrderManager() {
     }
   };
 
-  fetchOrders();
+  // 🟢 Kích hoạt mặc định lấy dữ liệu ở Trang 1 khi tải trang
+  fetchOrders(1);
 }
