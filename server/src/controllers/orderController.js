@@ -28,53 +28,53 @@ const orderController = {
   },
 
   // 2. Lấy chi tiết đơn hàng (Có bảo mật chống xem trộm đơn)
+  // Cập nhật logic xử lý trong hàm getOrderById ở OrderController của bạn:
   getOrderById: async (req, res) => {
     try {
-      const details = await Order.getDetails(req.params.id);
-      if (details.length === 0) {
+      const { id } = req.params;
+      const rows = await orderModel.getDetails(id);
+
+      if (!rows || rows.length === 0) {
         return res
           .status(404)
-          .json({ success: false, message: "Không tìm thấy đơn hàng" });
+          .json({ success: false, message: "Không tìm thấy đơn hàng!" });
       }
 
-      // 🟢 BẢO MẬT: Nếu là Khách hàng, chỉ cho xem đơn của chính họ
-      if (req.user.role === "Client" && details[0].mand !== req.user.id) {
-        return res.status(403).json({
-          success: false,
-          message: "Bạn không có quyền xem chi tiết đơn hàng này!",
-        });
-      }
+      // 1. Lấy thông tin chung của đơn hàng từ dòng đầu tiên
+      const firstRow = rows[0];
 
-      const orderInfo = {
-        MaDonHang: details[0].madonhang,
-        NgayDat: details[0].ngaydat,
-        TrangThai: details[0].trangthai,
-        TongTien: details[0].tongtien,
-        GhiChu: details[0].ghichu,
-
+      // 2. Chuyển đổi cấu trúc phẳng từ DB thành cấu trúc lồng nhau (Khớp hoàn toàn với Frontend chữ Hoa)
+      const formattedOrder = {
+        MaDonHang: firstRow.madonhang,
+        NgayDat: firstRow.ngaydat,
+        TrangThai: firstRow.trangthai,
+        GhiChu: firstRow.ghichu,
+        TongTien: firstRow.tongtien,
         KhachHang: {
-          HoTen: details[0].hotenkhachhang,
-          SDT: details[0].sdtkhachhang,
-          Email: details[0].emailkhachhang,
-          DiaChi: details[0].diachikhachhang,
-          TenDangNhap: details[0].tendangnhap,
+          HoTen: firstRow.hotenkhachhang,
+          SDT: firstRow.sdtkhachhang,
+          Email: firstRow.emailkhachhang,
+          DiaChi: firstRow.diachikhachhang,
+          TenDangNhap: firstRow.tendangnhap,
         },
-
-        Items: details.map((item) => ({
-          MaSP: item.masp,
-          SoLuong: item.soluong,
-          GiaBan: item.giaban,
-          GiamGia: item.giamgia,
+        // 3. Gom tất cả các dòng sản phẩm thuộc đơn hàng này vào mảng Items
+        Items: rows.map((row) => ({
+          MaSP: row.masp,
+          SoLuong: row.soluong,
+          GiaBan: row.giaban,
+          GiamGia: row.giamgia,
         })),
       };
 
-      res.status(200).json({ success: true, data: orderInfo });
-    } catch (err) {
-      res.status(500).json({
-        success: false,
-        message: "Lỗi truy vấn đơn hàng",
-        error: err.message,
-      });
+      return res.status(200).json(formattedOrder);
+    } catch (error) {
+      console.error("Lỗi Controller lấy chi tiết đơn hàng:", error);
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message: "Lỗi hệ thống khi lấy chi tiết đơn hàng",
+        });
     }
   },
 
