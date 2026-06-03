@@ -5,6 +5,8 @@ import { BASE_URL } from "/src/JS/common/header";
 
 let employeeModal;
 let currentEditId = null; // null: thêm mới, ngược lại: lưu mã ID đang sửa
+let currentPage = 1; // 🟢 Quản lý trang hiện tại
+const limitPerPage = 10; // 🟢 Số lượng nhân viên hiển thị mỗi trang
 
 document.addEventListener("DOMContentLoaded", () => {
   initEmployeeManager();
@@ -19,18 +21,49 @@ export async function initEmployeeManager() {
   const searchInput = document.getElementById("searchEmployee");
   const filterStatus = document.getElementById("filterStatus");
   const totalCount = document.getElementById("totalEmployees");
-
   const usernameWrapper = document.getElementById("usernameWrapper");
+
+  // 🟢 Khởi tạo container chứa thanh điều hướng phân trang trong HTML nếu chưa có
+  let paginationContainer = document.getElementById("employeePagination");
+  if (!paginationContainer) {
+    paginationContainer = document.createElement("nav");
+    paginationContainer.id = "employeePagination";
+    paginationContainer.className = "d-flex justify-content-center mt-3";
+    tableBody.closest(".table-responsive")?.after(paginationContainer);
+  }
 
   if (modalEl) employeeModal = new Modal(modalEl);
 
-  // 1. Hàm Tải danh sách từ API backend
+  // 1. Hàm Tải danh sách từ API backend (Đã cập nhật phân trang & bộ lọc)
   const loadEmployees = async () => {
     try {
-      const res = await axios.get(`${BASE_URL}/employees`);
+      // 🟢 Đồng bộ tham số tìm kiếm trực tiếp xuống API để phân trang chính xác dữ liệu thực
+      const searchVal = searchInput ? searchInput.value.trim() : "";
+      const statusVal = filterStatus ? filterStatus.value : "";
+
+      const res = await axios.get(`${BASE_URL}/employees`, {
+        params: {
+          page: currentPage,
+          limit: limitPerPage,
+          search: searchVal, // Gửi kèm nếu API backend hỗ trợ tìm kiếm query
+          status: statusVal, // Gửi kèm nếu API backend hỗ trợ lọc query
+        },
+      });
+
       if (res.data.success) {
         renderTable(res.data.data);
-        if (totalCount) totalCount.innerText = res.data.data.length;
+
+        // Cập nhật tổng số lượng hiển thị trên badge thông báo
+        const paginationInfo = res.data.pagination || {};
+        if (totalCount)
+          totalCount.innerText =
+            paginationInfo.totalItems || res.data.data.length;
+
+        // 🟢 Khởi chạy hàm vẽ thanh phân trang Bootstrap
+        renderPagination(
+          paginationInfo.totalPages || 1,
+          paginationInfo.currentPage || 1,
+        );
       }
     } catch (err) {
       console.error("Lỗi lấy danh sách nhân viên:", err);
@@ -87,12 +120,64 @@ export async function initEmployeeManager() {
       .join("");
   };
 
+  // 🟢 2b. Hàm vẽ giao diện thanh Phân trang Bootstrap sinh động
+  const renderPagination = (totalPages, activePage) => {
+    if (totalPages <= 1) {
+      paginationContainer.innerHTML = ""; // Không cần hiện phân trang nếu chỉ có 1 trang
+      return;
+    }
+
+    let html = `<ul class="pagination pagination-sm m-0">`;
+
+    // Nút Trang trước (Previous)
+    html += `
+      <li class="page-item ${activePage === 1 ? "disabled" : ""}">
+        <a class="page-link" href="#" data-page="${activePage - 1}"><i class="fa-solid fa-angle-left"></i></a>
+      </li>
+    `;
+
+    // Vòng lặp in số trang
+    for (let i = 1; i <= totalPages; i++) {
+      html += `
+        <li class="page-item ${activePage === i ? "active" : ""}">
+          <a class="page-link" href="#" data-page="${i}">${i}</a>
+        </li>
+      `;
+    }
+
+    // Nút Trang sau (Next)
+    html += `
+      <li class="page-item ${activePage === totalPages ? "disabled" : ""}">
+        <a class="page-link" href="#" data-page="${activePage + 1}"><i class="fa-solid fa-angle-right"></i></a>
+      </li>
+    `;
+
+    html += `</ul>`;
+    paginationContainer.innerHTML = html;
+
+    // Bắt sự kiện Click vào các nút chuyển trang
+    paginationContainer.querySelectorAll(".page-link").forEach((link) => {
+      link.onclick = (e) => {
+        e.preventDefault();
+        const targetPage = parseInt(link.getAttribute("data-page"), 10);
+        if (
+          targetPage &&
+          targetPage !== activePage &&
+          targetPage >= 1 &&
+          targetPage <= totalPages
+        ) {
+          currentPage = targetPage;
+          loadEmployees();
+        }
+      };
+    });
+  };
+
   // 3. Hàm reset form về trạng thái ban đầu
   const resetForm = () => {
     employeeForm.reset();
     currentEditId = null;
     modalTitle.innerText = "Thêm Nhân Viên Mới";
-
     usernameWrapper.style.display = "block";
     document.getElementById("tenDangNhap").required = true;
   };
@@ -104,36 +189,23 @@ export async function initEmployeeManager() {
     };
   }
 
-  // 4. Tìm kiếm & Lọc trạng thái trực tiếp trên giao diện
+  // 4. Xử lý Lọc dữ liệu & Tìm kiếm trực tiếp bằng cách Trigger tải lại từ trang 1
   const handleFilter = () => {
-    const searchVal = searchInput.value.toLowerCase().trim();
-    const statusVal = filterStatus.value;
-    const rows = tableBody.querySelectorAll("tr");
-
-    rows.forEach((row) => {
-      const rowText = row.innerText.toLowerCase();
-      let statusMatch = false;
-
-      if (statusVal === "") {
-        statusMatch = true;
-      } else if (statusVal === "1") {
-        statusMatch = rowText.includes("đang làm việc");
-      } else if (statusVal === "0") {
-        statusMatch = rowText.includes("đang bị khóa");
-      }
-
-      if (rowText.includes(searchVal) && statusMatch) {
-        row.style.display = "";
-      } else {
-        row.style.display = "none";
-      }
-    });
+    currentPage = 1; // Khởi động lại về trang đầu khi thay đổi bộ lọc tìm kiếm
+    loadEmployees();
   };
 
-  if (searchInput) searchInput.oninput = handleFilter;
+  if (searchInput) {
+    // Sử dụng kĩ thuật debounce nhỏ hoặc lọc trực tiếp khi gõ chữ
+    let typingTimer;
+    searchInput.oninput = () => {
+      clearTimeout(typingTimer);
+      typingTimer = setTimeout(handleFilter, 400); // Đợi ngưng gõ 400ms mới gọi API nhằm tránh quá tải server
+    };
+  }
   if (filterStatus) filterStatus.onchange = handleFilter;
 
-  // 5. Xử lý sự kiện Submit Form (Thêm / Sửa kèm Validation đã tối ưu)
+  // 5. Xử lý sự kiện Submit Form (Thêm / Sửa kèm Validation)
   employeeForm.onsubmit = async (e) => {
     e.preventDefault();
 
@@ -152,8 +224,6 @@ export async function initEmployeeManager() {
     }
 
     // --- 🟢 KIỂM TRA RÀNG BUỘC (VALIDATION) ---
-
-    // Điều kiện 1: Kiểm tra rỗng
     if (!currentEditId) {
       if (!tenDangNhap || !hoTen || !sdt || !email) {
         Swal.fire(
@@ -163,8 +233,6 @@ export async function initEmployeeManager() {
         );
         return;
       }
-
-      // Tên đăng nhập không được bắt đầu bằng số
       const usernameRegex = /^[^0-9]/;
       if (!usernameRegex.test(tenDangNhap)) {
         Swal.fire(
@@ -188,7 +256,6 @@ export async function initEmployeeManager() {
       }
     }
 
-    // Điều kiện 2: Họ tên chỉ chứa chữ cái tiếng Việt (Sử dụng flag /u cho Unicode chuẩn toàn cầu)
     const nameRegex = /^[\p{L}\s]+$/u;
     if (!nameRegex.test(hoTen)) {
       Swal.fire(
@@ -202,7 +269,6 @@ export async function initEmployeeManager() {
       return;
     }
 
-    // Điều kiện 3: Số điện thoại chuẩn 10 chữ số
     const phoneRegex = /^[0-9]{10}$/;
     if (!phoneRegex.test(sdt)) {
       Swal.fire(
@@ -216,7 +282,6 @@ export async function initEmployeeManager() {
       return;
     }
 
-    // Điều kiện 4: Định dạng Email chuẩn quốc tế
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) {
       Swal.fire(
@@ -230,13 +295,7 @@ export async function initEmployeeManager() {
       return;
     }
 
-    // --- 🟢 KẾT THÚC KIỂM TRA VALIDATION ---
-
-    const baseData = {
-      HoTen: hoTen,
-      SDT: sdt,
-      Email: email,
-    };
+    const baseData = { HoTen: hoTen, SDT: sdt, Email: email };
 
     try {
       if (currentEditId) {
@@ -251,9 +310,10 @@ export async function initEmployeeManager() {
         await axios.post(`${BASE_URL}/employees`, createData);
         Swal.fire(
           "Thành công",
-          "Đã tạo tài khoản nhân viên mới thành công!",
+          "Đã tạo tài khoản nhân viên với mật khẩu mặc định 123456",
           "success",
         );
+        currentPage = 1; // Đẩy về trang 1 để thấy nhân viên mới nhất vừa thêm
       }
       employeeModal.hide();
       loadEmployees();
@@ -270,13 +330,13 @@ export async function initEmployeeManager() {
     }
   };
 
-  // 6. Xử lý click sự kiện trên bảng (Đã sửa lỗi chống bọt sự kiện lặp lại)
+  // 6. Xử lý click sự kiện trên bảng (Sửa & Khóa/Mở)
   tableBody.onclick = async (e) => {
     const btnEdit = e.target.closest(".btn-edit");
     const btnToggle = e.target.closest(".btn-toggle-status");
 
     if (btnEdit) {
-      e.stopPropagation(); // 🟢 Sửa lỗi kích hoạt kép hành động
+      e.stopPropagation();
       const id = btnEdit.getAttribute("data-id");
       try {
         const res = await axios.get(`${BASE_URL}/employees/${id}`);
@@ -297,11 +357,11 @@ export async function initEmployeeManager() {
       } catch (err) {
         Swal.fire("Lỗi", "Không thể lấy thông tin chi tiết nhân viên", "error");
       }
-      return; // Ngắt luồng xử lý
+      return;
     }
 
     if (btnToggle) {
-      e.stopPropagation(); // 🟢 Sửa lỗi kích hoạt kép hành động
+      e.stopPropagation();
       const id = btnToggle.getAttribute("data-id");
       const isCurrentActive =
         btnToggle.getAttribute("data-status") === "true" ||

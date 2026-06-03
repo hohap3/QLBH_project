@@ -6,17 +6,19 @@ class EmployeeController {
   // [GET] /api/employees?page=1&limit=10
   async getAll(req, res) {
     try {
-      // Lấy page và limit từ query string, ép kiểu về số nguyên dương
       const page = parseInt(req.query.page, 10) || 1;
       const limit = parseInt(req.query.limit, 10) || 10;
 
-      // Thực thi chạy song song cả 2 tác vụ lấy data và đếm tổng để tối ưu hiệu năng
+      // 🟢 BỔ SUNG: Lấy từ khóa tìm kiếm và bộ lọc trạng thái từ URL query gửi lên
+      const search = req.query.search || "";
+      const status = req.query.status !== undefined ? req.query.status : "";
+
+      // Truyền bộ lọc vào cả hàm lấy dữ liệu và hàm đếm tổng số lượng
       const [employees, totalItems] = await Promise.all([
-        EmployeeModel.getAllEmployees(page, limit),
-        EmployeeModel.countEmployees(),
+        EmployeeModel.getAllEmployees(page, limit, search, status),
+        EmployeeModel.countEmployees(search, status),
       ]);
 
-      // Tính toán tổng số trang
       const totalPages = Math.ceil(totalItems / limit);
 
       return res.status(200).json({
