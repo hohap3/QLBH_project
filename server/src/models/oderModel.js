@@ -15,7 +15,7 @@ const Order = {
           dh.ngaydat,
           dh.tongtien,
           dh.trangthai,
-          (SELECT COUNT(*)::INT FROM chitietdonhang ct WHERE ct.madonhang = dh.madonhang) AS soluongsanpham
+          (SELECT COUNT(*)::INT FROM chitiet_donhang ct WHERE ct.madonhang = dh.madonhang) AS soluongsanpham
         FROM donhang dh
         LEFT JOIN khachhang kh ON dh.makh = kh.makh
         ORDER BY dh.ngaydat DESC
@@ -62,7 +62,7 @@ const Order = {
         FROM donhang dh
         LEFT JOIN khachhang kh ON dh.makh = kh.makh
         LEFT JOIN nguoidung nd ON kh.mand = nd.mand 
-        LEFT JOIN chitietdonhang ct ON dh.madonhang = ct.madonhang
+        LEFT JOIN chitiet_donhang ct ON dh.madonhang = ct.madonhang
         WHERE dh.madonhang = $1
       `;
       const result = await pool.query(query, [maDonHang]);

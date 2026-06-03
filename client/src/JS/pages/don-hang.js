@@ -30,8 +30,12 @@ export async function initOrderManager() {
    */
   const fetchOrders = async (page = 1) => {
     try {
+      const userData = JSON.parse(localStorage.getItem("hpstore_user"));
+      const token = userData?.token;
       // Gọi API kèm theo query page
-      const response = await axios.get(`${BASE_URL}/orders?page=${page}`);
+      const response = await axios.get(`${BASE_URL}/orders?page=${page}`, {
+        headers: { Authorization: `Bearer ${token}` }, // <-- Thêm dòng này
+      });
 
       // Đọc cấu trúc JSON bọc metadata mới từ Controller
       const {
@@ -262,9 +266,13 @@ export async function initOrderManager() {
     });
 
     try {
-      await axios.put(`${BASE_URL}/orders/status/${maDonHang}`, {
-        TrangThai: trangThaiMoi,
-      });
+      const userData = JSON.parse(localStorage.getItem("hpstore_user"));
+      const token = userData?.token;
+      await axios.put(
+        `${BASE_URL}/orders/status/${maDonHang}`,
+        { TrangThai: trangThaiMoi },
+        { headers: { Authorization: `Bearer ${token}` } }, // <-- Thêm cấu hình Header vào tham số thứ 3
+      );
 
       await Swal.fire({
         icon: "success",
@@ -307,7 +315,11 @@ export async function initOrderManager() {
     });
 
     try {
-      const response = await axios.get(`${BASE_URL}/orders/${maDonHang}`);
+      const userData = JSON.parse(localStorage.getItem("hpstore_user"));
+      const token = userData?.token;
+      const response = await axios.get(`${BASE_URL}/orders/${maDonHang}`, {
+        headers: { Authorization: `Bearer ${token}` }, // <-- Thêm Header ở đây
+      });
       const order = response.data;
       Swal.close();
 
