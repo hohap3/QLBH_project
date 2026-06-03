@@ -1,17 +1,15 @@
-// Khớp đúng chính tả file model: orderModel
+// 🟢 SỬA CHÍNH TẢ: Từ oderModel thành orderModel
 const Order = require("../models/oderModel");
 
 const orderController = {
-  // 🟢 CẬP NHẬT: API lấy danh sách đơn hàng kèm theo phân trang (10 đơn/trang)
+  // 1. API lấy danh sách đơn hàng kèm theo phân trang (Admin/Staff)
   getOrders: async (req, res) => {
     try {
-      // Đọc số trang từ URL (Ví dụ: /api/orders?page=2). Mặc định là trang 1 nếu trống.
       const page = parseInt(req.query.page, 10) || 1;
-      const limit = 10; // Cấu hình cứng hiển thị đúng 10 đơn hàng mỗi trang
+      const limit = 10;
 
       const paginationResult = await Order.getWithPagination(page, limit);
 
-      // Phản hồi kết quả chuẩn hóa về cho Client
       res.status(200).json({
         success: true,
         currentPage: page,
@@ -22,18 +20,29 @@ const orderController = {
       });
     } catch (err) {
       res.status(500).json({
+        success: false,
         message: "Lỗi khi lấy danh sách đơn hàng",
         error: err.message,
       });
     }
   },
 
-  // Lấy chi tiết đơn hàng
+  // 2. Lấy chi tiết đơn hàng (Có bảo mật chống xem trộm đơn)
   getOrderById: async (req, res) => {
     try {
       const details = await Order.getDetails(req.params.id);
       if (details.length === 0) {
-        return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+        return res
+          .status(404)
+          .json({ success: false, message: "Không tìm thấy đơn hàng" });
+      }
+
+      // 🟢 BẢO MẬT: Nếu là Khách hàng, chỉ cho xem đơn của chính họ
+      if (req.user.role === "Customer" && details[0].mand !== req.user.id) {
+        return res.status(403).json({
+          success: false,
+          message: "Bạn không có quyền xem chi tiết đơn hàng này!",
+        });
       }
 
       const orderInfo = {
@@ -59,15 +68,17 @@ const orderController = {
         })),
       };
 
-      res.status(200).json(orderInfo);
+      res.status(200).json({ success: true, data: orderInfo });
     } catch (err) {
-      res
-        .status(500)
-        .json({ message: "Lỗi truy vấn đơn hàng", error: err.message });
+      res.status(500).json({
+        success: false,
+        message: "Lỗi truy vấn đơn hàng",
+        error: err.message,
+      });
     }
   },
 
-  // Cập nhật trạng thái đơn hàng
+  // 3. Cập nhật trạng thái đơn hàng (Admin/Staff)
   updateOrderStatus: async (req, res) => {
     const { id } = req.params;
     const { TrangThai } = req.body;
@@ -75,11 +86,65 @@ const orderController = {
       const result = await Order.updateStatus(id, TrangThai);
 
       if (result.rowCount === 0) {
-        return res.status(404).json({ message: "Đơn hàng không tồn tại" });
+        return res
+          .status(404)
+          .json({ success: false, message: "Đơn hàng không tồn tại" });
       }
-      res.status(200).json({ message: "Cập nhật trạng thái thành công" });
+      res
+        .status(200)
+        .json({ success: true, message: "Cập nhật trạng thái thành công" });
     } catch (err) {
-      res.status(500).json({ message: "Lỗi cập nhật", error: err.message });
+      res
+        .status(500)
+        .json({ success: false, message: "Lỗi cập nhật", error: err.message });
+    }
+  },
+
+  // 4. 🟢 BỔ SUNG: API Hủy đơn hàng giữa chừng + Hoàn trả kho hàng
+  cancelOrder: async (req, res) => {
+    try {
+      const { madonhang } = req.params;
+      const currentUserId = req.user.id;
+
+      // Check đơn tồn tại
+      const order = await Order.getOrderByCode(madonhang);
+      if (!order) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Đơn hàng không tồn tại." });
+      }
+
+      // Nếu là khách hàng, kiểm tra xem đơn này có phải do họ đặt không
+      if (req.user.role === "Customer" && order.mand !== currentUserId) {
+        return res.status(403).json({
+          success: false,
+          message: "Bạn không có quyền hủy đơn hàng của người khác.",
+        });
+      }
+
+      // Check trạng thái hợp lệ
+      if (order.trangthai !== "Chờ xác nhận") {
+        return res.status(400).json({
+          success: false,
+          message: `Không thể hủy! Đơn hàng hiện đang ở trạng thái [${order.trangthai}].`,
+        });
+      }
+
+      // Lấy chi tiết sản phẩm và chạy transaction hủy đơn hoàn kho
+      const orderDetails = await Order.getOrderDetailsForCancel(madonhang);
+      await Order.processCancelAndRestoreStock(madonhang, orderDetails);
+
+      return res.status(200).json({
+        success: true,
+        message:
+          "Hủy đơn hàng thành công, số lượng sản phẩm đã được hoàn lại vào kho.",
+      });
+    } catch (err) {
+      res.status(500).json({
+        success: false,
+        message: "Lỗi hệ thống khi thực hiện hủy đơn hàng",
+        error: err.message,
+      });
     }
   },
 };

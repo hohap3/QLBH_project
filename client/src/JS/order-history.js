@@ -24,12 +24,11 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("sidebar-user-name").innerText = userData.name;
   }
 
-  // Khởi động tiến trình gọi API
   loadOrderHistoryFromServer(userData.token);
   setupFilterEvents();
 });
 
-// Hiệu ứng Skeleton Loading giúp giao diện mượt mà hơn
+// Hiệu ứng Skeleton Loading
 function showSkeletonLoading() {
   const listContainer = document.getElementById("order-history-list");
   listContainer.innerHTML = Array(2)
@@ -56,23 +55,20 @@ function showSkeletonLoading() {
     .join("");
 }
 
-// Hàm chính lấy danh sách hóa đơn từ Server
+// Hàm lấy danh sách hóa đơn từ Server
 async function loadOrderHistoryFromServer(token) {
-  showSkeletonLoading(); // Kích hoạt loading ngay khi gọi hàm
-
+  showSkeletonLoading();
   try {
     const response = await axios.get(`${BASE_URL}/orderHistory/history`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
     const result = response.data;
-
     if (!result.success) {
       throw new Error(result.message || "Lỗi kết nối API máy chủ.");
     }
 
     globalOrdersArray = result.data || [];
-
     updateSidebarCounters(globalOrdersArray);
     renderOrdersToUI(globalOrdersArray);
   } catch (error) {
@@ -109,7 +105,6 @@ function setupFilterEvents() {
   const filterItems = document.querySelectorAll(
     "#status-filter-group .filter-link-item",
   );
-
   filterItems.forEach((item) => {
     item.addEventListener("click", (e) => {
       e.preventDefault();
@@ -117,7 +112,6 @@ function setupFilterEvents() {
       item.classList.add("active");
 
       const selectedStatus = item.getAttribute("data-status");
-
       if (selectedStatus === "Tất cả") {
         renderOrdersToUI(globalOrdersArray);
       } else {
@@ -132,7 +126,7 @@ function setupFilterEvents() {
   });
 }
 
-// Hàm duyệt mảng dữ liệu và tạo cấu trúc HTML
+// 🟢 HÀM RENDER ĐÃ CẬP NHẬT ĐƯỜNG DẪN HÌNH ẢNH CLOUDINARY
 function renderOrdersToUI(ordersList) {
   const listContainer = document.getElementById("order-history-list");
   const textTotal = document.getElementById("total-display-text");
@@ -162,13 +156,18 @@ function renderOrdersToUI(ordersList) {
       });
 
       let statusBadgeHTML = "";
-
-      // 🟢 ĐÃ THAY ĐỔI: Khởi tạo chuỗi rỗng mặc định cho khu vực nút hành động
       let actionButtonsHTML = "";
 
       switch (order.trangthai) {
         case "Chờ xác nhận":
           statusBadgeHTML = `<span class="badge-status status-pending" style="background-color: #fff3cd; color: #856404; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-clock-rotate-left"></i> Chờ xác nhận</span>`;
+
+          // 🟢 BỔ SUNG: Hiện nút Hủy đơn hàng khi đơn đang chờ xác nhận
+          actionButtonsHTML = `
+      <button class="btn btn-outline-danger px-3" style="border-radius: 8px;" onclick="cancelOrder('${order.madonhang}')">
+          <i class="fa-solid fa-trash-can me-1"></i> Hủy đơn
+      </button>
+    `;
           break;
         case "Đang xử lý":
           statusBadgeHTML = `<span class="badge-status status-processing" style="background-color: #e1f5fe; color: #0288d1; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý</span>`;
@@ -178,12 +177,11 @@ function renderOrdersToUI(ordersList) {
           break;
         case "Thành công":
           statusBadgeHTML = `<span class="badge-status status-success" style="background-color: #e8f5e9; color: #1b5e20; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-circle-check"></i> Thành công</span>`;
-          // Chỉ giữ lại nút Xuất hóa đơn cho đơn hàng thành công
           actionButtonsHTML = `
-            <button class="btn btn-success px-3 text-white" style="border-radius: 8px;" onclick="viewInvoice('${order.madonhang}')">
-                <i class="fa-solid fa-file-invoice me-1"></i> Xuất hóa đơn
-            </button>
-          `;
+      <button class="btn btn-success px-3 text-white" style="border-radius: 8px;" onclick="viewInvoice('${order.madonhang}')">
+          <i class="fa-solid fa-file-invoice me-1"></i> Xuất hóa đơn
+      </button>
+    `;
           break;
         case "Đã hủy":
           statusBadgeHTML = `<span class="badge-status status-canceled" style="background-color: #ffebee; color: #c62828; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-circle-xmark"></i> Đã hủy bỏ</span>`;
@@ -194,13 +192,27 @@ function renderOrdersToUI(ordersList) {
 
       const productsHTML = (order.sanpham || [])
         .map((item) => {
+          // 🟢 CHECK HÌNH ẢNH HỢP LỆ
           const hasValidImg =
             item.hinhanh &&
             item.hinhanh.trim() !== "" &&
-            item.hinhanh !== "NULL";
-          const pathImg = hasValidImg
-            ? `https://qlbh-project.onrender.com/uploads/products/${item.hinhanh}`
-            : DEFAULT_IMAGE;
+            item.hinhanh !== "NULL" &&
+            item.hinhanh !== "null";
+
+          let pathImg = DEFAULT_IMAGE;
+
+          if (hasValidImg) {
+            // Nếu chuỗi hình ảnh đã là một URL đầy đủ (đường dẫn từ Cloudinary bắt đầu bằng http hoặc https)
+            if (
+              item.hinhanh.startsWith("http://") ||
+              item.hinhanh.startsWith("https://")
+            ) {
+              pathImg = item.hinhanh;
+            } else {
+              // Trường hợp backend chỉ lưu tên file cũ hoặc fallback về folder upload nội bộ
+              pathImg = `https://qlbh-project.onrender.com/uploads/products/${item.hinhanh}`;
+            }
+          }
 
           const priceFormatted = (Number(item.giaban) || 0).toLocaleString(
             "vi-VN",
@@ -272,7 +284,57 @@ function renderOrdersToUI(ordersList) {
     .join("");
 }
 
-// HÀM XỬ LÝ BẬT POPUP XEM HÓA ĐƠN ĐIỆN TỬ
+// HÀM XỬ LÝ HỦY ĐƠN HÀNG TỪ PHÍA KHÁCH HÀNG
+window.cancelOrder = async function (maDonHang) {
+  const userData = JSON.parse(localStorage.getItem("hpstore_user"));
+
+  const confirmResult = await Swal.fire({
+    title: "Xác nhận hủy đơn?",
+    text: `Bạn có chắc chắn muốn hủy đơn hàng ${maDonHang} không? Hành động này không thể hoàn tác!`,
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonColor: "#dc3545",
+    cancelButtonColor: "#6c757d",
+    confirmButtonText: "Đồng ý hủy",
+    cancelButtonText: "Suy nghĩ lại",
+  });
+
+  if (confirmResult.isConfirmed) {
+    try {
+      // Gọi API cập nhật trạng thái đơn sang "Đã hủy"
+      const response = await axios.patch(
+        `${BASE_URL}/orderHistory/cancel/${maDonHang}`,
+        {}, // Body trống hoặc gửi kèm lý do hủy nếu cần
+        { headers: { Authorization: `Bearer ${userData.token}` } },
+      );
+
+      if (response.data.success) {
+        await Swal.fire(
+          "Đã hủy!",
+          "Đơn hàng của bạn đã được hủy thành công.",
+          "success",
+        );
+        // Tải lại danh sách đơn hàng mới nhất từ server
+        loadOrderHistoryFromServer(userData.token);
+      } else {
+        Swal.fire(
+          "Thất bại",
+          response.data.message || "Không thể hủy đơn.",
+          "error",
+        );
+      }
+    } catch (err) {
+      console.error("Lỗi hủy đơn:", err);
+      Swal.fire(
+        "Lỗi hệ thống",
+        err.response?.data?.message || "Không thể thực hiện yêu cầu lúc này.",
+        "error",
+      );
+    }
+  }
+};
+
+// Hàm hiển thị Popup xem hóa đơn điện tử
 window.viewInvoice = function (maDonHang) {
   const order = globalOrdersArray.find((o) => o.madonhang === maDonHang);
   if (!order) return;

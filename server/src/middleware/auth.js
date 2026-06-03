@@ -16,6 +16,13 @@ const verifyToken = (req, res, next) => {
 
     // Lưu thông tin user đã giải mã vào request
     req.user = decoded;
+    const userId = decoded.id || decoded.mand || decoded.maND;
+    req.user.id = userId;
+    req.user.mand = userId;
+    req.user.maND = userId;
+
+    // 🟢 CẢI TIẾN ĐỒNG BỘ ROLE: Ép về thuộc tính .role chung để dùng cho authorizeRoles
+    req.user.role = decoded.role || decoded.mavaitro;
 
     // Tạo cơ chế fallback: Đảm bảo dù controller dùng req.user.maND hay req.user.mand cũng không bị gãy
     req.user.maND = decoded.maND || decoded.mand;
