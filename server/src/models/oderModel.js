@@ -128,7 +128,7 @@ const Order = {
 
       if (productsList && productsList.length > 0) {
         for (const item of productsList) {
-          const restoreStockQuery = `UPDATE sanpham SET soluong = soluong + $1 WHERE masp = $2`;
+          const restoreStockQuery = `UPDATE sanpham SET soluongton = soluongton + $1 WHERE masp = $2`;
           await client.query(restoreStockQuery, [item.soluong, item.masp]);
         }
       }
