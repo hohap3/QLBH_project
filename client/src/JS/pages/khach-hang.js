@@ -12,6 +12,11 @@ export async function initCustomerManager() {
   const totalCountSpan = document.getElementById("totalCount");
   const searchInput = document.getElementById("searchKH");
 
+  // 🟢 BỔ SUNG: Biến quản lý trạng thái phân trang cục bộ và dữ liệu trang hiện tại
+  let currentPage = 1;
+  let totalPages = 1;
+  let currentTableData = [];
+
   const avatarColors = [
     "#7c3aed",
     "#db2777",
@@ -22,15 +27,37 @@ export async function initCustomerManager() {
   ];
 
   /**
-   * 1. Tải danh sách khách hàng từ API
+   * 1. Tải danh sách khách hàng từ API (Hỗ trợ tham số phân trang page)
    */
-  const fetchCustomers = async () => {
+  const fetchCustomers = async (page = 1) => {
     try {
-      const response = await axios.get(`${BASE_URL}/customers`);
-      const customers = response.data;
+      const response = await axios.get(`${BASE_URL}/customers?page=${page}`);
 
-      renderTable(customers);
-      totalCountSpan.innerText = customers.length;
+      if (response.data && response.data.success) {
+        // 🟢 CẬP NHẬT: Đọc cấu trúc metadata phân trang từ Controller trả về
+        const {
+          data,
+          currentPage: resPage,
+          totalPages: resTotalPages,
+          totalRecords,
+        } = response.data;
+
+        currentPage = resPage;
+        totalPages = resTotalPages;
+        currentTableData = data; // 10 bản ghi khách hàng của trang này
+
+        renderTable(currentTableData);
+        renderPagination(); // Vẽ thanh chuyển trang ra màn hình
+
+        if (totalCountSpan) {
+          totalCountSpan.innerText = totalRecords; // Hiển thị tổng số khách hàng toàn hệ thống
+        }
+      } else {
+        // Dự phòng nếu API cũ chưa thay đổi cấu trúc bọc
+        const data = response.data.data || response.data;
+        currentTableData = Array.isArray(data) ? data : [];
+        renderTable(currentTableData);
+      }
     } catch (error) {
       console.error("Lỗi fetch:", error);
       Swal.fire("Lỗi", "Không thể tải danh sách khách hàng", "error");
@@ -38,7 +65,7 @@ export async function initCustomerManager() {
   };
 
   /**
-   * 2. Render dữ liệu ra bảng HTML
+   * 2. Render dữ liệu ra bảng HTML (Giữ nguyên giao diện chuẩn của bạn)
    */
   const renderTable = (customers) => {
     if (!customers || customers.length === 0) {
@@ -103,16 +130,87 @@ export async function initCustomerManager() {
   };
 
   /**
-   * 3. Tìm kiếm khách hàng trực tiếp trên UI
+   * 🟢 BỔ SUNG: Hàm render thanh điều hướng phân trang bằng CSS Bootstrap
+   */
+  const renderPagination = () => {
+    const paginationContainer = document.getElementById(
+      "customerPaginationContainer",
+    );
+    if (!paginationContainer) return;
+
+    if (totalPages <= 1) {
+      paginationContainer.innerHTML = "";
+      return;
+    }
+
+    let html = `<nav><ul class="pagination pagination-sm mb-0">`;
+
+    // Nút Trước (Previous)
+    html += `
+      <li class="page-item ${currentPage === 1 ? "disabled" : ""}">
+        <button class="page-link" data-page="${currentPage - 1}" aria-label="Previous">
+          <span aria-hidden="true">&laquo;</span>
+        </button>
+      </li>
+    `;
+
+    // Các số trang
+    for (let i = 1; i <= totalPages; i++) {
+      html += `
+        <li class="page-item ${currentPage === i ? "active" : ""}">
+          <button class="page-link" data-page="${i}">${i}</button>
+        </li>
+      `;
+    }
+
+    // Nút Kế tiếp (Next)
+    html += `
+      <li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
+        <button class="page-link" data-page="${currentPage + 1}" aria-label="Next">
+          <span aria-hidden="true">&raquo;</span>
+        </button>
+      </li>
+    `;
+
+    html += `</ul></nav>`;
+    paginationContainer.innerHTML = html;
+
+    // Gắn sự kiện click đổi trang cho các nút
+    paginationContainer.querySelectorAll(".page-link").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const targetPage = parseInt(
+          e.currentTarget.getAttribute("data-page"),
+          10,
+        );
+        if (
+          targetPage &&
+          targetPage !== currentPage &&
+          targetPage >= 1 &&
+          targetPage <= totalPages
+        ) {
+          fetchCustomers(targetPage);
+        }
+      });
+    });
+  };
+
+  /**
+   * 3. Tìm kiếm khách hàng (Lọc thời gian thực trên 10 dòng của trang hiện hành)
    */
   searchInput.addEventListener("input", (e) => {
-    const keyword = e.target.value.toLowerCase();
-    const rows = tableBody.querySelectorAll("tr");
+    const keyword = e.target.value.toLowerCase().trim();
 
-    rows.forEach((row) => {
-      const content = row.innerText.toLowerCase();
-      row.style.display = content.includes(keyword) ? "" : "none";
+    // Lọc trực tiếp trên mảng dữ liệu gốc của trang để tránh làm hỏng cấu trúc DOM
+    const filtered = currentTableData.filter((kh) => {
+      return (
+        (kh.hoten && kh.hoten.toLowerCase().includes(keyword)) ||
+        (kh.makh && kh.makh.toLowerCase().includes(keyword)) ||
+        (kh.sdt && kh.sdt.includes(keyword)) ||
+        (kh.email && kh.email.toLowerCase().includes(keyword))
+      );
     });
+
+    renderTable(filtered);
   });
 
   /**
@@ -145,7 +243,8 @@ export async function initCustomerManager() {
           `Đã ${actionText} tài khoản khách hàng.`,
           "success",
         );
-        fetchCustomers();
+        // Tải lại dữ liệu đúng tại trang đang đứng để giữ vị trí view ổn định
+        fetchCustomers(currentPage);
       } catch (error) {
         Swal.fire(
           "Lỗi",
@@ -157,7 +256,7 @@ export async function initCustomerManager() {
   };
 
   /**
-   * 5. ✅ NGHIỆP VỤ MỚI: Chỉ điều chỉnh điểm tích lũy cá nhân
+   * 5. Nghiệp vụ: Điều chỉnh điểm tích lũy cá nhân
    */
   window.adjustPoints = async (maKH) => {
     try {
@@ -173,7 +272,7 @@ export async function initCustomerManager() {
         showCancelButton: true,
         confirmButtonText: "Cập nhật điểm",
         cancelButtonText: "Hủy",
-        confirmButtonColor: "#eab308", // Màu vàng xu
+        confirmButtonColor: "#eab308",
         inputValidator: (value) => {
           if (!value || parseInt(value) < 0) {
             return "Điểm tích lũy không được để trống và phải lớn hơn hoặc bằng 0!";
@@ -182,13 +281,13 @@ export async function initCustomerManager() {
       });
 
       if (newPoints !== undefined) {
-        // Tận dụng lại API update nhưng chỉ truyền lên trường cần sửa
+        // Đọc an toàn các trường dữ liệu trả về từ Postgres (viết thường)
         await axios.put(`${BASE_URL}/customers/update/${maKH}`, {
-          HoTen: kh.HoTen, // Giữ nguyên thông tin cũ
-          SDT: kh.SDT,
-          Email: kh.Email,
-          DiaChi: kh.DiaChi,
-          DiemTichLuy: parseInt(newPoints), // Chỉ thay đổi giá trị này
+          HoTen: kh.hoten || kh.HoTen,
+          SDT: kh.sdt || kh.SDT,
+          Email: kh.email || kh.Email,
+          DiaChi: kh.diachi || kh.DiaChi,
+          DiemTichLuy: parseInt(newPoints),
         });
 
         Swal.fire(
@@ -196,7 +295,7 @@ export async function initCustomerManager() {
           "Đã cập nhật lại điểm tích lũy cho khách hàng!",
           "success",
         );
-        fetchCustomers();
+        fetchCustomers(currentPage);
       }
     } catch (error) {
       Swal.fire("Lỗi", "Không thể điều chỉnh điểm tích lũy", "error");
@@ -275,5 +374,6 @@ export async function initCustomerManager() {
     }
   };
 
-  fetchCustomers();
+  // 🟢 Kích hoạt tải trang 1 lần đầu khởi tạo ứng dụng
+  fetchCustomers(1);
 }
