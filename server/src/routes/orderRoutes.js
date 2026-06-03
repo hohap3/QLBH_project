@@ -20,7 +20,7 @@ router.get(
 router.get(
   "/:id",
   verifyToken,
-  authorizeRoles("Manager", "Employee", "Customer"),
+  authorizeRoles("Manager", "Employee", "Client"),
   orderController.getOrderById,
 );
 

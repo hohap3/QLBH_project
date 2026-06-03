@@ -303,7 +303,7 @@ window.cancelOrder = async function (maDonHang) {
     try {
       // Gọi API cập nhật trạng thái đơn sang "Đã hủy"
       const response = await axios.patch(
-        `${BASE_URL}/orderHistory/cancel/${maDonHang}`,
+        `${BASE_URL}/orders/cancel/${maDonHang}`,
         {}, // Body trống hoặc gửi kèm lý do hủy nếu cần
         { headers: { Authorization: `Bearer ${userData.token}` } },
       );
