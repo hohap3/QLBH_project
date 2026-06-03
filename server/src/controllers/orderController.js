@@ -1,4 +1,3 @@
-// 🟢 SỬA CHÍNH TẢ: Từ oderModel thành orderModel
 const Order = require("../models/oderModel");
 
 const orderController = {
@@ -34,7 +33,7 @@ const orderController = {
       const { id } = req.params;
 
       // Gọi Model lấy dữ liệu từ Database
-      const rows = await orderModel.getDetails(id);
+      const rows = await Order.getDetails(id);
 
       // 🟢 KIỂM TRA BẢO VỆ 1: Nếu database không trả về hàng nào (rows undefined hoặc rỗng)
       if (!rows || rows.length === 0) {
