@@ -37,7 +37,7 @@ router.put(
 router.patch(
   "/cancel/:madonhang",
   verifyToken,
-  authorizeRoles("Manager", "Employee", "Customer"),
+  authorizeRoles("Manager", "Employee", "Client"),
   orderController.cancelOrder,
 );
 

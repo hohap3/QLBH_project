@@ -38,7 +38,7 @@ const orderController = {
       }
 
       // 🟢 BẢO MẬT: Nếu là Khách hàng, chỉ cho xem đơn của chính họ
-      if (req.user.role === "Customer" && details[0].mand !== req.user.id) {
+      if (req.user.role === "Client" && details[0].mand !== req.user.id) {
         return res.status(403).json({
           success: false,
           message: "Bạn không có quyền xem chi tiết đơn hàng này!",
@@ -115,7 +115,7 @@ const orderController = {
       }
 
       // Nếu là khách hàng, kiểm tra xem đơn này có phải do họ đặt không
-      if (req.user.role === "Customer" && order.mand !== currentUserId) {
+      if (req.user.role === "Client" && order.mand !== currentUserId) {
         return res.status(403).json({
           success: false,
           message: "Bạn không có quyền hủy đơn hàng của người khác.",
