@@ -21,7 +21,6 @@ export async function initEmployeeManager() {
   const totalCount = document.getElementById("totalEmployees");
 
   const usernameWrapper = document.getElementById("usernameWrapper");
-  // Đã loại bỏ biến passwordWrapper do không còn dùng ô nhập mật khẩu nữa
 
   if (modalEl) employeeModal = new Modal(modalEl);
 
@@ -41,7 +40,7 @@ export async function initEmployeeManager() {
 
   // 2. Hàm Render bảng dữ liệu nhân viên
   const renderTable = (data) => {
-    if (data.length === 0) {
+    if (!data || data.length === 0) {
       tableBody.innerHTML = `<tr><td colspan="7" class="text-center py-4 text-muted">Chưa có nhân viên nào trong hệ thống</td></tr>`;
       return;
     }
@@ -134,73 +133,150 @@ export async function initEmployeeManager() {
   if (searchInput) searchInput.oninput = handleFilter;
   if (filterStatus) filterStatus.onchange = handleFilter;
 
-  // 5. Xử lý sự kiện Submit Form (Thêm / Sửa)
+  // 5. Xử lý sự kiện Submit Form (Thêm / Sửa kèm Validation đã tối ưu)
   employeeForm.onsubmit = async (e) => {
     e.preventDefault();
 
-    const hoTen = document.getElementById("hoTen").value.trim();
-    const sdt = document.getElementById("sdt").value.trim();
-    const email = document.getElementById("email").value.trim();
+    const inputHoTen = document.getElementById("hoTen");
+    const inputSdt = document.getElementById("sdt");
+    const inputEmail = document.getElementById("email");
+    const inputTenDangNhap = document.getElementById("tenDangNhap");
+
+    const hoTen = inputHoTen.value.trim();
+    const sdt = inputSdt.value.trim();
+    const email = inputEmail.value.trim();
+    let tenDangNhap = "";
+
+    if (!currentEditId) {
+      tenDangNhap = inputTenDangNhap.value.trim();
+    }
+
+    // --- 🟢 KIỂM TRA RÀNG BUỘC (VALIDATION) ---
+
+    // Điều kiện 1: Kiểm tra rỗng
+    if (!currentEditId) {
+      if (!tenDangNhap || !hoTen || !sdt || !email) {
+        Swal.fire(
+          "Cảnh báo",
+          "Vui lòng nhập đầy đủ tất cả các trường dữ liệu!",
+          "warning",
+        );
+        return;
+      }
+
+      // Tên đăng nhập không được bắt đầu bằng số
+      const usernameRegex = /^[^0-9]/;
+      if (!usernameRegex.test(tenDangNhap)) {
+        Swal.fire(
+          "Định dạng sai",
+          "Tên đăng nhập không được phép bắt đầu bằng ký tự số!",
+          "warning",
+        ).then(() => {
+          inputTenDangNhap.focus();
+          inputTenDangNhap.select();
+        });
+        return;
+      }
+    } else {
+      if (!hoTen || !sdt || !email) {
+        Swal.fire(
+          "Cảnh báo",
+          "Họ tên, Số điện thoại và Email không được để trống!",
+          "warning",
+        );
+        return;
+      }
+    }
+
+    // Điều kiện 2: Họ tên chỉ chứa chữ cái tiếng Việt (Sử dụng flag /u cho Unicode chuẩn toàn cầu)
+    const nameRegex = /^[\p{L}\s]+$/u;
+    if (!nameRegex.test(hoTen)) {
+      Swal.fire(
+        "Định dạng sai",
+        "Họ tên chỉ được điền chữ cái, không chứa số hay ký tự đặc biệt!",
+        "warning",
+      ).then(() => {
+        inputHoTen.focus();
+        inputHoTen.select();
+      });
+      return;
+    }
+
+    // Điều kiện 3: Số điện thoại chuẩn 10 chữ số
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(sdt)) {
+      Swal.fire(
+        "Định dạng sai",
+        "Số điện thoại bắt buộc phải bao gồm đúng 10 chữ số!",
+        "warning",
+      ).then(() => {
+        inputSdt.focus();
+        inputSdt.select();
+      });
+      return;
+    }
+
+    // Điều kiện 4: Định dạng Email chuẩn quốc tế
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      Swal.fire(
+        "Định dạng sai",
+        "Email không đúng định dạng chuẩn (Ví dụ: abc@gmail.com)!",
+        "warning",
+      ).then(() => {
+        inputEmail.focus();
+        inputEmail.select();
+      });
+      return;
+    }
+
+    // --- 🟢 KẾT THÚC KIỂM TRA VALIDATION ---
 
     const baseData = {
-      HoTen: hoTen || null,
-      SDT: sdt || null,
-      Email: email || null,
+      HoTen: hoTen,
+      SDT: sdt,
+      Email: email,
     };
 
     try {
       if (currentEditId) {
-        // Cập nhật thông tin nhân viên
         await axios.put(`${BASE_URL}/employees/${currentEditId}`, baseData);
         Swal.fire("Thành công", "Đã cập nhật thông tin nhân viên", "success");
       } else {
-        // Thêm mới nhân viên
-        const TenDangNhap = document.getElementById("tenDangNhap").value.trim();
-
-        // ĐÃ SỬA: Không đọc từ DOM nữa mà truyền thẳng chuỗi cứng '123456' làm mật khẩu mặc định
         const createData = {
           ...baseData,
-          TenDangNhap,
+          TenDangNhap: tenDangNhap,
           MatKhau: "123456",
         };
-
         await axios.post(`${BASE_URL}/employees`, createData);
-        Swal.fire("Thành công", "Đã tạo tài khoản nhân viên mới", "success");
+        Swal.fire(
+          "Thành công",
+          "Đã tạo tài khoản nhân viên mới thành công!",
+          "success",
+        );
       }
       employeeModal.hide();
       loadEmployees();
     } catch (err) {
       console.error("Chi tiết lỗi Axios:", err);
       let errorMsg = "Không thể kết nối đến máy chủ hệ thống.";
-
       if (err.response) {
-        console.log("Dữ liệu lỗi từ Server:", err.response.data);
         errorMsg =
           err.response.data.message ||
           err.response.data.error ||
-          err.response.data.msg ||
-          `Lỗi Server (${err.response.status}): ${err.response.statusText}`;
-      } else if (err.request) {
-        errorMsg =
-          "Hệ thống không nhận được phản hồi từ server. Vui lòng kiểm tra lại Node.js backend!";
+          "Lỗi xử lý nghiệp vụ từ Server.";
       }
-
-      Swal.fire({
-        icon: "error",
-        title: "Thất bại",
-        text: errorMsg,
-        footer:
-          '<small class="text-muted">Mẹo: Nhấn F12, xem tab Console/Network để biết chi tiết câu lệnh lỗi.</small>',
-      });
+      Swal.fire({ icon: "error", title: "Thất bại", text: errorMsg });
     }
   };
 
-  // 6. Xử lý click sự kiện trên bảng (Sửa & Khóa/Mở tài khoản)
+  // 6. Xử lý click sự kiện trên bảng (Đã sửa lỗi chống bọt sự kiện lặp lại)
   tableBody.onclick = async (e) => {
     const btnEdit = e.target.closest(".btn-edit");
     const btnToggle = e.target.closest(".btn-toggle-status");
 
     if (btnEdit) {
+      e.stopPropagation(); // 🟢 Sửa lỗi kích hoạt kép hành động
       const id = btnEdit.getAttribute("data-id");
       try {
         const res = await axios.get(`${BASE_URL}/employees/${id}`);
@@ -210,9 +286,7 @@ export async function initEmployeeManager() {
 
           modalTitle.innerText = `Chỉnh Sửa Nhân Viên: ${nv.mand}`;
           usernameWrapper.style.display = "none";
-
           document.getElementById("tenDangNhap").required = false;
-          // ĐÃ XÓA: dòng set required cho matKhau để tránh lỗi null value
 
           document.getElementById("hoTen").value = nv.hoten || "";
           document.getElementById("sdt").value = nv.sdt || "";
@@ -223,9 +297,11 @@ export async function initEmployeeManager() {
       } catch (err) {
         Swal.fire("Lỗi", "Không thể lấy thông tin chi tiết nhân viên", "error");
       }
+      return; // Ngắt luồng xử lý
     }
 
     if (btnToggle) {
+      e.stopPropagation(); // 🟢 Sửa lỗi kích hoạt kép hành động
       const id = btnToggle.getAttribute("data-id");
       const isCurrentActive =
         btnToggle.getAttribute("data-status") === "true" ||
