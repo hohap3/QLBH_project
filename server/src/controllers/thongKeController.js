@@ -23,13 +23,14 @@ const ThongKeController = {
       const stats = await ThongKeModel.getQuickStats();
       res.status(200).json({
         success: true,
-        data: stats,
+        data: stats, // Gửi cấu trúc kèm thông số tăng trưởng mới xuống Front-end
       });
     } catch (error) {
       console.error("CHI TIẾT LỖI OVERVIEW:", error.message);
       res.status(500).json({
         success: false,
-        message: "Lỗi hệ thống khi lấy số liệu tổng quan",
+        message:
+          "Lỗi hệ thống khi lấy số liệu tổng quan kèm so sánh tăng trưởng",
       });
     }
   },

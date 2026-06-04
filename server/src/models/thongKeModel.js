@@ -25,19 +25,67 @@ const ThongKeModel = {
   getQuickStats: async () => {
     try {
       const pool = await poolPromise;
+
+      // Tính toán mốc thời gian động trực tiếp bằng PostgreSQL Engine
       const query = `
-                SELECT 
-                    COALESCE((SELECT SUM(tongtien) FROM donhang WHERE trangthai != 'Đã hủy'), 0)::float as doanhthu,
-                    (SELECT COUNT(madonhang) FROM donhang)::int as tongdonhang,
-                    (SELECT COUNT(makh) FROM khachhang)::int as tongkhachhang
-            `;
+        WITH mốc_thời_gian AS (
+          SELECT 
+            DATE_TRUNC('month', CURRENT_DATE) AS dau_thang_nay,
+            DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month' - INTERVAL '1 second' AS cuoi_thang_nay,
+            DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') AS dau_thang_truoc,
+            DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 second' AS cuoi_thang_truoc
+        )
+        SELECT 
+          -- 1. Thống kê Doanh Thu (Loại trừ đơn hàng 'Đã hủy')
+          COALESCE(SUM(dh.tongtien) FILTER (WHERE dh.ngaydat BETWEEN t.dau_thang_nay AND t.cuoi_thang_nay AND dh.trangthai != 'Đã hủy'), 0)::float AS doanhthu_nay,
+          COALESCE(SUM(dh.tongtien) FILTER (WHERE dh.ngaydat BETWEEN t.dau_thang_truoc AND t.cuoi_thang_truoc AND dh.trangthai != 'Đã hủy'), 0)::float AS doanhthu_truoc,
+
+          -- 2. Thống kê Số Đơn Hàng
+          COUNT(dh.madonhang) FILTER (WHERE dh.ngaydat BETWEEN t.dau_thang_nay AND t.cuoi_thang_nay)::int AS donhang_nay,
+          COUNT(dh.madonhang) FILTER (WHERE dh.ngaydat BETWEEN t.dau_thang_truoc AND t.cuoi_thang_truoc)::int AS donhang_truoc,
+
+          -- 3. Thống kê Khách Hàng (Subquery cô lập để tránh trùng lặp bản ghi chéo)
+          (SELECT COUNT(makh)::int FROM khachhang WHERE ngaytao BETWEEN t.dau_thang_nay AND t.cuoi_thang_nay) AS khachhang_nay,
+          (SELECT COUNT(makh)::int FROM khachhang WHERE ngaytao BETWEEN t.dau_thang_truoc AND t.cuoi_thang_truoc) AS khachhang_truoc
+        FROM mốc_thời_gian t
+        LEFT JOIN donhang dh ON true
+        GROUP BY t.dau_thang_nay, t.cuoi_thang_nay, t.dau_thang_truoc, t.cuoi_thang_truoc;
+      `;
+
       const result = await pool.query(query);
-      const row = result.rows[0];
+
+      // Fallback object nếu cơ sở dữ liệu trống hoàn toàn
+      const row = result.rows[0] || {
+        doanhthu_nay: 0,
+        doanhthu_truoc: 0,
+        donhang_nay: 0,
+        donhang_truoc: 0,
+        khachhang_nay: 0,
+        khachhang_truoc: 0,
+      };
+
+      // Hàm nội bộ xử lý tỷ lệ phần trăm an toàn (Tránh lỗi toán học chia cho số 0)
+      const tinhPhanTram = (nay, truoc) => {
+        if (!truoc || truoc === 0) return nay > 0 ? 100 : 0;
+        return parseFloat((((nay - truoc) / truoc) * 100).toFixed(1));
+      };
 
       return {
-        DoanhThu: row.doanhthu,
-        TongDonHang: row.tongdonhang,
-        TongKhachHang: row.tongkhachhang,
+        DoanhThu: {
+          ThangNay: row.doanhthu_nay,
+          ThangTruoc: row.doanhthu_truoc,
+          PhanTram: tinhPhanTram(row.doanhthu_nay, row.doanhthu_truoc),
+        },
+        TongDonHang: {
+          ThangNay: row.donhang_nay,
+          ThangTruoc: row.donhang_truoc,
+          PhanTram: tinhPhanTram(row.donhang_nay, row.donhang_truoc),
+        },
+        TongKhachHang: {
+          ThangNay: row.khachhang_nay,
+          ThangTruoc: row.khachhang_truoc,
+          PhanTram: tinhPhanTram(row.khachhang_nay, row.khachhang_truoc),
+        },
       };
     } catch (error) {
       throw error;
