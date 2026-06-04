@@ -2,10 +2,24 @@ const { poolPromise } = require("../config/database");
 
 const Order = {
   // 1. Lấy danh sách đơn hàng kèm theo phân trang bằng LIMIT và OFFSET
-  getWithPagination: async (page = 1, limit = 10) => {
+  getWithPagination: async (page = 1, limit = 10, trangThaiFilter = null) => {
     try {
       const pool = await poolPromise;
       const offset = (page - 1) * limit;
+
+      // Khởi tạo các biến xây dựng câu lệnh SQL động
+      let whereClause = "";
+      const dataParams = [limit, offset];
+
+      // Nếu có chọn trạng thái cụ thể (khác "Tất cả")
+      if (
+        trangThaiFilter !== null &&
+        trangThaiFilter !== undefined &&
+        trangThaiFilter !== ""
+      ) {
+        whereClause = "WHERE dh.trangthai = $3";
+        dataParams.push(trangThaiFilter);
+      }
 
       const dataQuery = `
         SELECT 
@@ -18,13 +32,24 @@ const Order = {
           (SELECT COUNT(*)::INT FROM chitiet_donhang ct WHERE ct.madonhang = dh.madonhang) AS soluongsanpham
         FROM donhang dh
         LEFT JOIN khachhang kh ON dh.makh = kh.makh
+        ${whereClause}
         ORDER BY dh.ngaydat DESC
         LIMIT $1 OFFSET $2
       `;
-      const dataResult = await pool.query(dataQuery, [limit, offset]);
+      const dataResult = await pool.query(dataQuery, dataParams);
 
-      const countQuery = "SELECT COUNT(*) FROM donhang";
-      const countResult = await pool.query(countQuery);
+      // Đếm tổng số bản ghi (Cần áp dụng let để tránh lỗi gán hằng số)
+      let countQuery = "SELECT COUNT(*) FROM donhang dh";
+      const countParams = [];
+
+      if (whereClause) {
+        countQuery += ` ${whereClause}`;
+        countParams.push(trangThaiFilter);
+        // Thay thế $3 của truy vấn dữ liệu thành $1 của truy vấn đếm số lượng
+        countQuery = countQuery.replace("$3", "$1");
+      }
+
+      const countResult = await pool.query(countQuery, countParams);
       const totalRecords = parseInt(countResult.rows[0].count, 10);
 
       return {

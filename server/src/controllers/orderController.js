@@ -5,9 +5,15 @@ const orderController = {
   getOrders: async (req, res) => {
     try {
       const page = parseInt(req.query.page, 10) || 1;
+      const trangThai = req.query.trangThai || ""; // 🟢 Bổ sung nhận diện query trạng thái từ FE
       const limit = 10;
 
-      const paginationResult = await Order.getWithPagination(page, limit);
+      // Truyền thêm tham số bộ lọc vào Model để tính toán phân trang chính xác
+      const paginationResult = await Order.getWithPagination(
+        page,
+        limit,
+        trangThai,
+      );
 
       res.status(200).json({
         success: true,
