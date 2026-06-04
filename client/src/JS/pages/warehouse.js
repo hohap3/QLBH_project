@@ -131,7 +131,8 @@ function renderTable(data) {
                     <small class="text-muted">Mã: ${item.masp}</small>
                 </td>
                 <td class="align-middle"><span class="badge ${badgeClass}" style="white-space: nowrap;">${badgeText}</span></td>
-                <td class="text-end fw-bold align-middle ${isNhap ? "text-success" : "text-danger"}">${prefix}${item.soluong} ${item.donvitinh || "Cái"}</td>
+                <td class="text-end fw-bold align-middle ${isNhap ? "text-success" : "text-danger"}">${prefix}${item.soluong}</td>
+                <td class="text-end text-muted align-middle">${item.donvitinh}</td>
                 <td class="text-end text-muted align-middle">${item.tontruoc}</td>
                 <td class="text-end fw-bold text-dark align-middle">${item.tonsau}</td>
                 <td class="align-middle text-muted">${item.ngaygd ? new Date(item.ngaygd).toLocaleString("vi-VN") : "---"}</td>
