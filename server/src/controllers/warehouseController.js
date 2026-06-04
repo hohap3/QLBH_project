@@ -63,15 +63,10 @@ class WarehouseController {
   // [POST] /api/warehouse/transaction (Giữ nguyên)
   static async createTransaction(req, res) {
     try {
-      const { maGD, maSP, loaiGD, soLuong } = req.body;
+      let { maSP, loaiGD, soLuong } = req.body; // 🟢 Bỏ bốc tách maGD từ req.body
 
-      if (!maGD || maGD.trim() === "") {
-        const randomHex = crypto.randomBytes(9).toString("hex").toUpperCase();
-        maGD = `GD${randomHex}`; // Tạo chuỗi 20 ký tự ngẫu nhiên
-      }
-
+      // 1. Kiểm tra các trường dữ liệu bắt buộc (Đã lược bỏ maGD)
       if (
-        !maGD ||
         !maSP ||
         loaiGD === undefined ||
         soLuong === undefined ||
@@ -80,9 +75,14 @@ class WarehouseController {
         return res.status(400).json({
           success: false,
           message:
-            "Vui lòng điền đầy đủ thông tin: Mã giao dịch, Mã sản phẩm, Loại và Số lượng!",
+            "Vui lòng điền đầy đủ thông tin: Mã sản phẩm, Loại và Số lượng!",
         });
       }
+
+      // 2. 🟢 TỰ ĐỘNG SINH MÃ GIAO DỊCH NGẪU NHIÊN CHUẨN VARCHAR(20)
+      // Sinh 9 bytes ngẫu nhiên = 18 ký tự Hex + 2 ký tự "GD" = Đúng 20 ký tự
+      const randomHex = crypto.randomBytes(9).toString("hex").toUpperCase();
+      const maGD = `GD${randomHex}`;
 
       const parsedSoLuong = parseInt(soLuong, 10);
       const parsedLoaiGD = parseInt(loaiGD, 10);
@@ -109,8 +109,9 @@ class WarehouseController {
         });
       }
 
+      // 3. Truyền mã giao dịch vừa tự sinh xuống tầng Model xử lý DB Transaction
       const result = await WarehouseModel.createTransaction({
-        maGD: maGD.trim(),
+        maGD, // Chuỗi 20 ký tự vừa sinh ngẫu nhiên ở trên
         maSP,
         loaiGD: parsedLoaiGD,
         soLuong: parsedSoLuong,
@@ -129,7 +130,7 @@ class WarehouseController {
         return res.status(400).json({
           success: false,
           message:
-            "Mã giao dịch này đã tồn tại trong hệ thống! Vui lòng nhập mã khác.",
+            "Mã giao dịch ngẫu nhiên bị trùng lặp hệ thống! Vui lòng thử lại lần nữa.",
         });
       }
 
