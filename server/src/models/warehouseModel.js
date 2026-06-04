@@ -2,24 +2,42 @@ const { pool } = require("../config/database");
 
 class WarehouseModel {
   // 1. 🟢 CẬP NHẬT: Lấy danh sách lịch sử giao dịch kho có hỗ trợ phân trang
-  static async getAllTransactions(page = 1, limit = 10) {
+  static async getAllTransactions(page = 1, limit = 10, loaiGD = null) {
     try {
-      // Tính toán vị trí bắt đầu lấy dữ liệu
       const offset = (page - 1) * limit;
 
-      // Truy vấn 1: Lấy đúng 10 dòng giao dịch của trang hiện tại
+      // Xử lý xây dựng câu lệnh SQL động dựa trên bộ lọc loaiGD
+      let whereClause = "";
+      let params = [limit, offset];
+
+      // Nếu loaiGD có giá trị (1 hoặc 2)
+      if (loaiGD !== null && loaiGD !== undefined && loaiGD !== "") {
+        whereClause = "WHERE gdk.loaigd = $3";
+        params.push(parseInt(loaiGD, 10));
+      }
+
+      // Truy vấn lấy dữ liệu phân trang
       const dataQuery = `
         SELECT gdk.*, sp.tensp, sp.donvitinh 
         FROM giaodichkho gdk
         JOIN sanpham sp ON gdk.masp = sp.masp
+        ${whereClause}
         ORDER BY gdk.ngaygd DESC
         LIMIT $1 OFFSET $2
       `;
-      const dataResult = await pool.query(dataQuery, [limit, offset]);
+      const dataResult = await pool.query(dataQuery, params);
 
-      // Truy vấn 2: Đếm tổng số lượng giao dịch kho đang có
-      const countQuery = "SELECT COUNT(*) FROM giaodichkho";
-      const countResult = await pool.query(countQuery);
+      // Truy vấn đếm tổng số dòng (Bắt buộc phải đồng bộ điều kiện WHERE với câu lệnh trên)
+      let countQuery = "SELECT COUNT(*) FROM giaodichkho gdk";
+      let countParams = [];
+      if (whereClause) {
+        countQuery += ` ${whereClause}`;
+        countParams.push(parseInt(loaiGD, 10)); // Lúc này tham số duy nhất của countQuery là $1
+        // Thay thế chuỗi $3 thành $1 để tránh lỗi cú pháp Postgres
+        countQuery = countQuery.replace("$3", "$1");
+      }
+
+      const countResult = await pool.query(countQuery, countParams);
       const totalRecords = parseInt(countResult.rows[0].count, 10);
 
       return {
