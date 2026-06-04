@@ -98,7 +98,7 @@ export async function initProductManager() {
     try {
       const [resDM, resNCC] = await Promise.all([
         axios.get(`${BASE_URL}/categories`),
-        axios.get(`${BASE_URL}/suppliers`),
+        axios.get(`${BASE_URL}/suppliers/active/list`),
       ]);
 
       // --- KIỂM TRA VÀ TRÍCH XUẤT ĐÚNG MẢNG DANH MỤC ---
