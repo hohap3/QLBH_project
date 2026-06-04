@@ -1,5 +1,6 @@
 // src/models/supplierModel.js
 const { poolPromise } = require("../config/database");
+const { getAllSuppliers } = require("../controllers/supplierController");
 
 const Supplier = {
   // Lấy tất cả nhà cung cấp (Sắp xếp theo ngày tạo giảm dần)
@@ -8,6 +9,18 @@ const Supplier = {
       const pool = await poolPromise;
       // PostgreSQL khuyến khích viết thường tên bảng/trường: nhacungcap, ngaytao
       const query = "SELECT * FROM nhacungcap ORDER BY ngaytao DESC";
+      const result = await pool.query(query);
+      return result.rows;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  getAllActive: async () => {
+    try {
+      const pool = await poolPromise;
+      const query =
+        "SELECT * FROM nhacungcap WHERE trangthai = true ORDER BY tenncc ASC";
       const result = await pool.query(query);
       return result.rows;
     } catch (error) {

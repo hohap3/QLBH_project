@@ -15,6 +15,18 @@ const supplierController = {
     }
   },
 
+  getActiveSuppliers: async (req, res) => {
+    try {
+      const suppliers = await Supplier.getAllActive();
+      res.status(200).json(suppliers);
+    } catch (err) {
+      res.status(500).json({
+        message: "Lỗi Server khi tải danh sách NCC hoạt động",
+        error: err.message,
+      });
+    }
+  },
+
   // Lấy chi tiết theo ID
   getSupplierById: async (req, res) => {
     try {

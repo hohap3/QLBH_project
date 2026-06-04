@@ -4,6 +4,7 @@ const router = express.Router();
 const supplierController = require("../controllers/supplierController");
 
 router.get("/", supplierController.getAllSuppliers);
+router.get("/active/list", supplierController.getActiveSuppliers);
 router.get("/:id", supplierController.getSupplierById);
 router.post("/add", supplierController.createSupplier);
 router.put("/update/:id", supplierController.updateSupplier);

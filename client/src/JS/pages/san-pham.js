@@ -101,28 +101,59 @@ export async function initProductManager() {
         axios.get(`${BASE_URL}/suppliers`),
       ]);
 
+      // --- KIỂM TRA VÀ TRÍCH XUẤT ĐÚNG MẢNG DANH MỤC ---
+      let categoriesData = [];
+      if (Array.isArray(resDM.data)) {
+        categoriesData = resDM.data;
+      } else if (resDM.data && Array.isArray(resDM.data.data)) {
+        categoriesData = resDM.data.data; // Trường hợp backend bọc trong object { data: [...] }
+      } else if (resDM.data && Array.isArray(resDM.data.categories)) {
+        categoriesData = resDM.data.categories; // Trường hợp backend trả về { categories: [...] }
+      } else {
+        console.error("Dữ liệu danh mục trả về không phải mảng:", resDM.data);
+      }
+
+      // --- KIỂM TRA VÀ TRÍCH XUẤT ĐÚNG MẢNG NHÀ CUNG CẤP ---
+      let suppliersData = [];
+      if (Array.isArray(resNCC.data)) {
+        suppliersData = resNCC.data;
+      } else if (resNCC.data && Array.isArray(resNCC.data.data)) {
+        suppliersData = resNCC.data.data;
+      } else if (resNCC.data && Array.isArray(resNCC.data.suppliers)) {
+        suppliersData = resNCC.data.suppliers;
+      } else {
+        console.error(
+          "Dữ liệu nhà cung cấp trả về không phải mảng:",
+          resNCC.data,
+        );
+      }
+
+      // Render Options cho Danh Mục
       const dmOptions =
         '<option value="" disabled selected>-- Chọn danh mục --</option>' +
-        resDM.data
+        categoriesData
           .map(
             (dm) => `<option value="${dm.madanhmuc}">${dm.tendanhmuc}</option>`,
           )
           .join("");
 
+      // Render Options cho Nhà Cung Cấp
       const nccOptions =
         '<option value="" disabled selected>Chọn nhà cung cấp</option>' +
-        resNCC.data
+        suppliersData
           .map((ncc) => `<option value="${ncc.mancc}">${ncc.tenncc}</option>`)
           .join("");
 
-      if (document.getElementById("editMaDanhMuc"))
-        document.getElementById("editMaDanhMuc").innerHTML = dmOptions;
-      if (document.getElementById("addMaDanhMuc"))
-        document.getElementById("addMaDanhMuc").innerHTML = dmOptions;
-      if (document.getElementById("addMaNCC"))
-        document.getElementById("addMaNCC").innerHTML = nccOptions;
-      if (document.getElementById("editMaNCC"))
-        document.getElementById("editMaNCC").innerHTML = nccOptions;
+      // Điền dữ liệu vào DOM một cách an toàn
+      const editMaDMEl = document.getElementById("editMaDanhMuc");
+      const addMaDMEl = document.getElementById("addMaDanhMuc");
+      const editMaNCCEl = document.getElementById("editMaNCC");
+      const addMaNCCEl = document.getElementById("addMaNCC");
+
+      if (editMaDMEl) editMaDMEl.innerHTML = dmOptions;
+      if (addMaDMEl) addMaDMEl.innerHTML = dmOptions;
+      if (editMaNCCEl) editMaNCCEl.innerHTML = nccOptions;
+      if (addMaNCCEl) addMaNCCEl.innerHTML = nccOptions;
     } catch (err) {
       console.error("Lỗi tải dữ liệu danh mục/NCC:", err);
     }
