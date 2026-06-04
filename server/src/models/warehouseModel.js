@@ -6,17 +6,15 @@ class WarehouseModel {
     try {
       const offset = (page - 1) * limit;
 
-      // Xử lý xây dựng câu lệnh SQL động dựa trên bộ lọc loaiGD
+      // Sử dụng 'let' cho các biến có khả năng bị gán lại giá trị chuỗi
       let whereClause = "";
-      let params = [limit, offset];
+      const params = [limit, offset]; // Mảng dùng const vẫn .push() bình thường
 
-      // Nếu loaiGD có giá trị (1 hoặc 2)
       if (loaiGD !== null && loaiGD !== undefined && loaiGD !== "") {
         whereClause = "WHERE gdk.loaigd = $3";
         params.push(parseInt(loaiGD, 10));
       }
 
-      // Truy vấn lấy dữ liệu phân trang
       const dataQuery = `
         SELECT gdk.*, sp.tensp, sp.donvitinh 
         FROM giaodichkho gdk
@@ -27,13 +25,14 @@ class WarehouseModel {
       `;
       const dataResult = await pool.query(dataQuery, params);
 
-      // Truy vấn đếm tổng số dòng (Bắt buộc phải đồng bộ điều kiện WHERE với câu lệnh trên)
+      // 🟢 ĐỔI THÀNH 'let' ở đây để không bị lỗi "Assignment to constant variable"
       let countQuery = "SELECT COUNT(*) FROM giaodichkho gdk";
-      let countParams = [];
+      const countParams = [];
+
       if (whereClause) {
         countQuery += ` ${whereClause}`;
-        countParams.push(parseInt(loaiGD, 10)); // Lúc này tham số duy nhất của countQuery là $1
-        // Thay thế chuỗi $3 thành $1 để tránh lỗi cú pháp Postgres
+        countParams.push(parseInt(loaiGD, 10));
+        // Gán lại giá trị chuỗi mượt mà không lo bị lỗi
         countQuery = countQuery.replace("$3", "$1");
       }
 

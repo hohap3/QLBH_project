@@ -3,10 +3,10 @@ import Swal from "sweetalert2";
 import { BASE_URL } from "/src/JS/common/header";
 import * as bootstrap from "bootstrap";
 
-// Mảng chứa dữ liệu của TRANG HIỆN TẠI để phục vụ việc lọc và xuất file Excel tại chỗ
+// Mảng chứa dữ liệu của TRANG HIỆN TẠI để phục vụ việc xuất file Excel tại chỗ
 let currentTableData = [];
 
-// 🟢 BỔ SUNG: Biến quản lý trạng thái phân trang cục bộ
+// Biến quản lý trạng thái phân trang cục bộ
 let currentPage = 1;
 let totalPages = 1;
 
@@ -30,12 +30,14 @@ export async function initWarehouseManager() {
       }
     });
 
+  // 🟢 CẬP NHẬT: Khi đổi bộ lọc sẽ fetch lại từ API thay vì lọc cục bộ 10 dòng
   document
     .getElementById("searchWarehouse")
-    ?.addEventListener("input", applyFilters);
+    ?.addEventListener("input", () => fetchWarehouseLogs(1));
   document
     .getElementById("filterLoaiGD")
-    ?.addEventListener("change", applyFilters);
+    ?.addEventListener("change", () => fetchWarehouseLogs(1));
+
   document
     .getElementById("btnResetFilter")
     ?.addEventListener("click", resetFilters);
@@ -48,19 +50,24 @@ export async function initWarehouseManager() {
 
   await loadProductsToSelect();
 
-  // 🟢 CẬP NHẬT: Kích hoạt mặc định lấy dữ liệu ở Trang 1 khi khởi tạo
+  // Kích hoạt mặc định lấy dữ liệu ở Trang 1 khi khởi tạo
   await fetchWarehouseLogs(1);
 }
 
-// 1. Tải danh sách lịch sử kho từ API (Hỗ trợ tham số phân trang page)
+// 1. Tải danh sách lịch sử kho từ API (Hỗ trợ phân trang + Tích hợp bộ lọc loaiGD gửi lên Backend)
 async function fetchWarehouseLogs(page = 1) {
   try {
-    const response = await axios.get(
-      `${BASE_URL}/warehouse/transactions?page=${page}`,
-    );
+    const filterLoai = document.getElementById("filterLoaiGD")?.value || "";
+
+    // Tạo đường dẫn API động gửi kèm cả page và loaiGD cho Backend xử lý
+    let url = `${BASE_URL}/warehouse/transactions?page=${page}`;
+    if (filterLoai !== "") {
+      url += `&loaiGD=${filterLoai}`;
+    }
+
+    const response = await axios.get(url);
 
     if (response.data.success) {
-      // 🟢 CẬP NHẬT: Đọc cấu trúc metadata phân trang mới từ Controller trả về
       const {
         data,
         currentPage: resPage,
@@ -69,10 +76,25 @@ async function fetchWarehouseLogs(page = 1) {
 
       currentPage = resPage;
       totalPages = resTotalPages;
-      currentTableData = data; // 10 bản ghi giao dịch kho của trang này
+      currentTableData = data;
 
-      renderTable(currentTableData);
-      renderPagination(); // Vẽ các nút chuyển trang ra màn hình
+      // 🟢 CẬP NHẬT: Áp dụng thanh tìm kiếm (Client-side) trên tập dữ liệu sạch trả về từ API
+      const searchVal =
+        document
+          .getElementById("searchWarehouse")
+          ?.value.trim()
+          .toLowerCase() || "";
+      const displayData = currentTableData.filter((item) => {
+        return (
+          !searchVal ||
+          (item.magd && item.magd.toLowerCase().includes(searchVal)) ||
+          (item.tensp && item.tensp.toLowerCase().includes(searchVal)) ||
+          (item.masp && item.masp.toLowerCase().includes(searchVal))
+        );
+      });
+
+      renderTable(displayData);
+      renderPagination();
     }
   } catch (error) {
     console.error("Lỗi lấy dữ liệu kho:", error);
@@ -82,7 +104,7 @@ async function fetchWarehouseLogs(page = 1) {
   }
 }
 
-// 2. Render danh sách ra bảng HTML (Giữ nguyên cấu trúc giao diện của bạn)
+// 2. Render danh sách ra bảng HTML
 function renderTable(data) {
   const tbody = document.getElementById("warehouseDataBody");
   if (!tbody) return;
@@ -119,14 +141,13 @@ function renderTable(data) {
     .join("");
 }
 
-// 🟢 BỔ SUNG: Hàm render các nút bấm phân trang bằng CSS Bootstrap 5
+// 3. Render các nút bấm phân trang Bootstrap 5
 function renderPagination() {
   const paginationContainer = document.getElementById(
     "warehousePaginationContainer",
   );
   if (!paginationContainer) return;
 
-  // Nếu tổng số trang nhỏ hơn hoặc bằng 1 thì ẩn thanh phân trang đi
   if (totalPages <= 1) {
     paginationContainer.innerHTML = "";
     return;
@@ -164,7 +185,7 @@ function renderPagination() {
   html += `</ul></nav>`;
   paginationContainer.innerHTML = html;
 
-  // Gắn sự kiện click lắng nghe chuyển trang cho các nút bấm
+  // Lắng nghe sự kiện click chuyển trang
   paginationContainer.querySelectorAll(".page-link").forEach((button) => {
     button.addEventListener("click", (e) => {
       const targetPage = parseInt(
@@ -183,63 +204,34 @@ function renderPagination() {
   });
 }
 
-// 3. Xử lý bộ lọc (Lọc cục bộ dựa trên dữ liệu 10 dòng của trang hiện tại)
-function applyFilters() {
-  const searchVal = document
-    .getElementById("searchWarehouse")
-    .value.trim()
-    .toLowerCase();
-  const filterLoai = document.getElementById("filterLoaiGD").value;
-
-  const filtered = currentTableData.filter((item) => {
-    const matchesSearch =
-      (item.magd && item.magd.toLowerCase().includes(searchVal)) ||
-      (item.tensp && item.tensp.toLowerCase().includes(searchVal)) ||
-      (item.masp && item.masp.toLowerCase().includes(searchVal));
-
-    const matchesLoai =
-      filterLoai === "" || item.loaigd === parseInt(filterLoai);
-
-    return matchesSearch && matchesLoai;
-  });
-
-  renderTable(filtered);
-}
-
+// 4. Reset bộ lọc
 function resetFilters() {
   document.getElementById("searchWarehouse").value = "";
   document.getElementById("filterLoaiGD").value = "";
-  renderTable(currentTableData);
+  fetchWarehouseLogs(1); // Quay về trang 1 với dữ liệu gốc
 }
 
-// 4. Lấy danh sách sản phẩm đổ vào thẻ Select trong Modal tạo phiếu kho
+// 5. Lấy danh sách sản phẩm đổ vào thẻ Select trong Modal
 async function loadProductsToSelect() {
   const select = document.getElementById("selectProduct");
   if (!select) return;
   try {
     const response = await axios.get(`${BASE_URL}/products`);
-
-    // 🟢 SỬA TẠI ĐÂY: Kiểm tra và trích xuất mảng an toàn tuyệt đối
     let products = [];
 
     if (response.data && Array.isArray(response.data.data)) {
-      // Trường hợp API trả về cấu trúc: { success: true, data: [...] } hoặc có phân trang { data: [...] }
       products = response.data.data;
     } else if (Array.isArray(response.data)) {
-      // Trường hợp API trả về thẳng một mảng: [ ... ]
       products = response.data;
-    } else if (response.data && typeof response.data === "object") {
-      // Đề phòng trường hợp mảng nằm ở một attribute khác hoặc phải ép kiểu
-      products = response.data.products || [];
+    } else if (response.data && response.data.products) {
+      products = response.data.products;
     }
 
-    // Nếu cuối cùng vẫn không tìm thấy mảng hoặc mảng rỗng
     if (products.length === 0) {
       select.innerHTML = `<option value="">-- Không có sản phẩm nào --</option>`;
       return;
     }
 
-    // Tiến hành render khi đã chắc chắn products là một Mảng (Array)
     select.innerHTML = products
       .map((p) => {
         const maSP = p.masp || p.MaSP;
@@ -255,10 +247,11 @@ async function loadProductsToSelect() {
   }
 }
 
-// 5. Xử lý gửi Form tạo giao dịch kho mới lên API
+// 6. Xử lý gửi Form tạo giao dịch kho mới (ĐÃ KHỬ BỎ maGD)
 async function handleCreateTransaction(e) {
   e.preventDefault();
-  const maGD = document.getElementById("txtMaGD").value.trim();
+
+  // 🟢 ĐÃ XÓA: Dòng bóc tách dữ liệu từ ô nhập txtMaGD cũ!
   const maSP = document.getElementById("selectProduct").value;
   const loaiGDElement = document.querySelector(
     'input[name="radioLoaiGD"]:checked',
@@ -307,8 +300,8 @@ async function handleCreateTransaction(e) {
   }
 
   try {
+    // 🟢 ĐÃ XÓA: Trường maGD khỏi phần body gửi đi. Backend sẽ chịu trách nhiệm tự sinh ngẫu nhiên.
     const response = await axios.post(`${BASE_URL}/warehouse/transaction`, {
-      maGD,
       maSP,
       loaiGD: parseInt(loaiGDElement.value, 10),
       soLuong: soLuong,
@@ -325,8 +318,8 @@ async function handleCreateTransaction(e) {
         modal.hide();
       }
 
-      // 🟢 CẬP NHẬT: Tải lại đúng vị trí trang hiện tại để cập nhật bảng dữ liệu thực tế
-      await fetchWarehouseLogs(currentPage);
+      // Tải lại dữ liệu ở trang 1 để xem phiếu kho mới tinh vừa được sinh ra
+      await fetchWarehouseLogs(1);
     }
   } catch (error) {
     Swal.fire(
@@ -337,12 +330,12 @@ async function handleCreateTransaction(e) {
   }
 }
 
-// 6. LOGIC XUẤT BÁO CÁO FILE EXCEL (Xuất dữ liệu hiển thị hiện tại của trang đang xem)
+// 7. Xuất file Excel
 function exportToExcel() {
   if (!window.XLSX) {
     Swal.fire(
       "Thông báo",
-      "Thư viện xuất Excel đang được nạp, vui lòng thử lại sau giây lát!",
+      "Thư viện xuất Excel đang được nạp, vui lòng thử lại sau!",
       "info",
     );
     return;
@@ -353,7 +346,6 @@ function exportToExcel() {
     return;
   }
 
-  // 🟢 CẬP NHẬT: Đọc dữ liệu từ mảng currentTableData của trang này để ghi nhận ra Excel
   const excelData = currentTableData.map((item, index) => ({
     STT: index + 1,
     "Mã Giao Dịch": item.magd,
@@ -379,16 +371,16 @@ function exportToExcel() {
   );
 
   worksheet["!cols"] = [
-    { wch: 6 }, // STT
-    { wch: 15 }, // Mã GD
-    { wch: 20 }, // Mã SP
-    { wch: max_len + 5 }, // Tên SP
-    { wch: 15 }, // Loại GD
-    { wch: 10 }, // Số lượng
-    { wch: 12 }, // Đơn vị tính
-    { wch: 20 }, // Tồn Trước
-    { wch: 20 }, // Tồn Sau
-    { wch: 25 }, // Thời gian
+    { wch: 6 },
+    { wch: 15 },
+    { wch: 20 },
+    { wch: max_len + 5 },
+    { wch: 15 },
+    { wch: 10 },
+    { wch: 12 },
+    { wch: 20 },
+    { wch: 20 },
+    { wch: 25 },
   ];
 
   const today = new Date().toISOString().slice(0, 10);
