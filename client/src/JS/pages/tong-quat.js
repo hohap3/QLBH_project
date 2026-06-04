@@ -260,24 +260,33 @@ async function renderMonthlyOrdersChart() {
   }
 }
 
+function updateBadgeTrend(badgeEl, trendTextEl, percentage) {
+  if (!badgeEl || !trendTextEl) return;
+
+  if (percentage >= 0) {
+    // Nếu tăng trưởng Dương: Thêm class màu xanh của Bootstrap
+    badgeEl.className =
+      "badge bg-success-light text-success rounded-pill px-3 py-2";
+    trendTextEl.innerHTML = `<i class="fa-solid fa-arrow-up me-1"></i> +${percentage}%`;
+  } else {
+    // Nếu tăng trưởng Âm: Đổi sang class màu đỏ nhạt (Cần định nghĩa bg-danger-light nếu chưa có, hoặc dùng bg-danger và text-white)
+    badgeEl.className = "badge bg-danger text-white rounded-pill px-3 py-2";
+    trendTextEl.innerHTML = `<i class="fa-solid fa-arrow-down me-1"></i> ${percentage}%`;
+  }
+}
+
 // Hàm khởi tạo tổng hợp toàn bộ Dashboard Admin
 export async function initTongQuan() {
   try {
     const resStats = await axios.get(`${BASE_URL}/thongke/overview`);
     const stats = resStats.data.data;
 
-    // 🟢 FIX LINH HOẠT: Hỗ trợ đọc cả thuộc tính chữ Hoa hoặc chữ thường trả từ database Postgres
-    const doanhThu =
-      stats.DoanhThu !== undefined ? stats.DoanhThu : stats.doanhthu || 0;
-    const tongDonHang =
-      stats.TongDonHang !== undefined
-        ? stats.TongDonHang
-        : stats.tongdonhang || 0;
-    const tongKhachHang =
-      stats.TongKhachHang !== undefined
-        ? stats.TongKhachHang
-        : stats.tongkhachhang || 0;
+    // Phân rã dữ liệu từ cấu trúc Object đa tầng mới của Backend
+    const doanhThuObj = stats.DoanhThu || { ThangNay: 0, PhanTram: 0 };
+    const donHangObj = stats.TongDonHang || { ThangNay: 0, PhanTram: 0 };
+    const khachHangObj = stats.TongKhachHang || { ThangNay: 0, PhanTram: 0 };
 
+    // 1. Gán giá trị số liệu chính (Tháng này) vào thẻ
     const revenueEl = document.getElementById("totalRevenue");
     const ordersEl = document.getElementById("totalOrders");
     const customersEl = document.getElementById("totalCustomers");
@@ -286,12 +295,31 @@ export async function initTongQuan() {
       revenueEl.innerText = new Intl.NumberFormat("vi-VN", {
         style: "currency",
         currency: "VND",
-      }).format(parseFloat(doanhThu) || 0);
+      }).format(parseFloat(doanhThuObj.ThangNay) || 0);
     }
-    if (ordersEl) ordersEl.innerText = tongDonHang;
-    if (customersEl) customersEl.innerText = tongKhachHang;
+    if (ordersEl)
+      ordersEl.innerText = donHangObj.ThangNay.toLocaleString("vi-VN");
+    if (customersEl)
+      customersEl.innerText = khachHangObj.ThangNay.toLocaleString("vi-VN");
 
-    // Kích hoạt đồng thời cả 4 đồ thị và danh sách riêng biệt
+    // 2. Gán giá trị tăng trưởng phần trăm kèm thay đổi màu sắc Badge
+    updateBadgeTrend(
+      document.getElementById("revenueBadge"),
+      document.getElementById("revenueTrend"),
+      doanhThuObj.PhanTram,
+    );
+    updateBadgeTrend(
+      document.getElementById("ordersBadge"),
+      document.getElementById("ordersTrend"),
+      donHangObj.PhanTram,
+    );
+    updateBadgeTrend(
+      document.getElementById("customersBadge"),
+      document.getElementById("customersTrend"),
+      khachHangObj.PhanTram,
+    );
+
+    // Kích hoạt đồng thời 4 đồ thị và danh sách chi tiết
     renderCategoryChart();
     renderTopSellingList();
     renderMonthlyRevenueChart();
