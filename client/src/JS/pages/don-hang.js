@@ -15,29 +15,34 @@ export async function initOrderManager() {
   const searchInput = document.querySelector(".search-input");
   const filterSelect = document.querySelector(".filter-select");
   const btnExport = document.querySelector(".btn-export");
-
-  // 🟢 BỔ SUNG: Container chứa các nút phân trang trong file HTML của bạn
-  // (Nếu chưa có, bạn hãy thêm <div id="paginationContainer" class="d-flex justify-content-center mt-3"></div> dưới thẻ <table>)
   const paginationContainer = document.getElementById("paginationContainer");
 
-  // 🟢 CẬP NHẬT: Quản lý trạng thái phân trang cục bộ
+  // Quản lý trạng thái phân trang cục bộ
   let currentPage = 1;
   let totalPages = 1;
-  let currentTableData = []; // Dữ liệu của trang hiện tại dùng để render/filter
+  let currentTableData = [];
 
   /**
-   * 1. Tải danh sách đơn hàng từ API (Hỗ trợ tham số page)
+   * 1. Tải danh sách đơn hàng từ API (Hỗ trợ tham số page + bộ lọc trangThai)
    */
   const fetchOrders = async (page = 1) => {
     try {
       const userData = JSON.parse(localStorage.getItem("hpstore_user"));
       const token = userData?.token;
-      // Gọi API kèm theo query page
-      const response = await axios.get(`${BASE_URL}/orders?page=${page}`, {
-        headers: { Authorization: `Bearer ${token}` }, // <-- Thêm dòng này
+
+      // 🟢 CẬP NHẬT: Lấy giá trị bộ lọc trạng thái từ giao diện
+      const selectedStatus = filterSelect?.value || "Tất cả";
+
+      // Xây dựng URL động gửi lên Backend giống như phân hệ Kho
+      let url = `${BASE_URL}/orders?page=${page}`;
+      if (selectedStatus !== "Tất cả") {
+        url += `&trangThai=${encodeURIComponent(selectedStatus)}`;
+      }
+
+      const response = await axios.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
       });
 
-      // Đọc cấu trúc JSON bọc metadata mới từ Controller
       const {
         data,
         currentPage: resPage,
@@ -47,13 +52,14 @@ export async function initOrderManager() {
 
       currentPage = resPage;
       totalPages = resTotalPages;
-      currentTableData = data; // Bản ghi của trang này
+      currentTableData = data;
 
-      renderTable(currentTableData);
-      renderPagination(); // Vẽ các nút chuyển trang
+      // 🟢 CẬP NHẬT: Nếu đang có từ khóa tìm kiếm, áp dụng lọc nhanh trên Client
+      applyClientFilter();
+      renderPagination();
 
       if (orderCountSpan) {
-        orderCountSpan.innerText = totalRecords; // Hiển thị tổng số đơn hàng hệ thống
+        orderCountSpan.innerText = totalRecords;
       }
     } catch (error) {
       console.error("Lỗi tải đơn hàng:", error);
@@ -67,11 +73,43 @@ export async function initOrderManager() {
   };
 
   /**
-   * 2. Hàm render bảng dữ liệu (Giữ nguyên logic của bạn)
+   * 2. Hàm lọc Client-side kết hợp (Hỗ trợ gõ ô tìm kiếm ko bị mất dữ liệu phân trang)
+   */
+  const applyClientFilter = () => {
+    const searchTerm = searchInput?.value.trim().toLowerCase() || "";
+
+    if (!searchTerm) {
+      renderTable(currentTableData);
+      return;
+    }
+
+    const filtered = currentTableData.filter((order) => {
+      return (
+        order.madonhang.toLowerCase().includes(searchTerm) ||
+        (order.tenkhachhang &&
+          order.tenkhachhang.toLowerCase().includes(searchTerm)) ||
+        (order.emailkhachhang &&
+          order.emailkhachhang.toLowerCase().includes(searchTerm))
+      );
+    });
+
+    renderTable(filtered);
+  };
+
+  // Lắng nghe sự kiện ô tìm kiếm
+  searchInput.addEventListener("input", applyClientFilter);
+
+  // 🟢 CẬP NHẬT: Khi đổi trạng thái, fetch lại dữ liệu từ Server ở trang 1
+  filterSelect.addEventListener("change", () => {
+    fetchOrders(1);
+  });
+
+  /**
+   * 3. Hàm render bảng dữ liệu
    */
   const renderTable = (orders) => {
     if (!orders || orders.length === 0) {
-      orderTableBody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-muted">Không tìm thấy đơn hàng nào</td></tr>`;
+      orderTableBody.innerHTML = `<tr><td colspan="7" class="text-center py-5 text-muted">Không tìm thấy đơn hàng nào phù hợp</td></tr>`;
       return;
     }
 
@@ -80,25 +118,25 @@ export async function initOrderManager() {
         let statusBadge = "";
         switch (order.trangthai) {
           case "Chờ xác nhận":
-            statusBadge = `<span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;font-size:16px">Chờ xác nhận</span>`;
+            statusBadge = `<span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-semibold text-white" style="white-space: nowrap;font-size:16px">Chờ xác nhận</span>`;
             break;
           case "Đang xử lý":
-            statusBadge = `<span class="badge bg-info text-dark rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;font-size:16px">Đang xử lý</span>`;
+            statusBadge = `<span class="badge bg-info text-dark rounded-pill px-3 py-2 fw-semibold text-white" style="white-space: nowrap;font-size:16px">Đang xử lý</span>`;
             break;
           case "Đang giao":
-            statusBadge = `<span class="badge bg-primary text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;font-size:16px">Đang giao</span>`;
+            statusBadge = `<span class="badge bg-primary text-white rounded-pill px-3 py-2 fw-semibold text-white" style="white-space: nowrap;font-size:16px">Đang giao</span>`;
             break;
           case "Đã giao":
-            statusBadge = `<span class="badge bg-success text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;font-size:16px">Đã giao</span>`;
+            statusBadge = `<span class="badge bg-success text-white rounded-pill px-3 py-2 fw-semibold text-white" style="white-space: nowrap;font-size:16px">Đã giao</span>`;
             break;
           case "Thành công":
-            statusBadge = `<span class="badge bg-success text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;font-size:16px"><i class="fa-solid fa-circle-check me-1"></i>Thành công</span>`;
+            statusBadge = `<span class="badge bg-success text-white rounded-pill px-3 py-2 fw-semibold text-white" style="white-space: nowrap;font-size:16px"><i class="fa-solid fa-circle-check me-1"></i>Thành công</span>`;
             break;
           case "Đã hủy":
-            statusBadge = `<span class="badge bg-danger text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;font-size:16px">Đã hủy</span>`;
+            statusBadge = `<span class="badge bg-danger text-white rounded-pill px-3 py-2 fw-semibold text-white" style="white-space: nowrap;font-size:16px">Đã hủy</span>`;
             break;
           default:
-            statusBadge = `<span class="badge bg-secondary text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;font-size:16px">${order.trangthai || "Chưa rõ"}</span>`;
+            statusBadge = `<span class="badge bg-secondary text-white rounded-pill px-3 py-2 fw-semibold text-white" style="white-space: nowrap;font-size:16px">${order.trangthai || "Chưa rõ"}</span>`;
         }
 
         const formattedTotal =
@@ -108,29 +146,29 @@ export async function initOrderManager() {
           : "---";
 
         return `
-                <tr>
-                    <td><a href="#" class="order-id fw-bold text-decoration-none" onclick="viewOrderDetails('${order.madonhang}')">${order.madonhang}</a></td>
-                    <td>
-                        <div class="fw-bold">${order.tenkhachhang || "Khách vãng lai"}</div>
-                        <div class="small text-muted">${order.emailkhachhang || ""}</div>
-                    </td>
-                    <td class="text-muted">${orderDate}</td>
-                    <td>${order.soluongsanpham || 0} sản phẩm</td>
-                    <td class="fw-bold text-dark">${formattedTotal}</td>
-                    <td class="align-middle">${statusBadge}</td>
-                    <td class="text-center">
-                        <button class="btn-view" onclick="viewOrderDetails('${order.madonhang}')">
-                            <i class="fa-regular fa-eye"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
+          <tr>
+            <td><a href="#" class="order-id fw-bold text-decoration-none" onclick="viewOrderDetails('${order.madonhang}')">${order.madonhang}</a></td>
+            <td>
+              <div class="fw-bold">${order.tenkhachhang || "Khách vãng lai"}</div>
+              <div class="small text-muted">${order.emailkhachhang || ""}</div>
+            </td>
+            <td class="text-muted">${orderDate}</td>
+            <td>${order.soluongsanpham || 0} sản phẩm</td>
+            <td class="fw-bold text-dark">${formattedTotal}</td>
+            <td class="align-middle">${statusBadge}</td>
+            <td class="text-center">
+              <button class="btn-view" onclick="viewOrderDetails('${order.madonhang}')">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </td>
+          </tr>
+        `;
       })
       .join("");
   };
 
   /**
-   * 🟢 BỔ SUNG: Hàm render các nút bấm phân trang (Sử dụng CSS của Bootstrap 5)
+   * 4. Hàm render các nút bấm phân trang Bootstrap 5
    */
   const renderPagination = () => {
     if (!paginationContainer) return;
@@ -141,7 +179,6 @@ export async function initOrderManager() {
 
     let html = `<nav><ul class="pagination pagination-sm mb-0">`;
 
-    // Nút Quay lại (Previous)
     html += `
       <li class="page-item ${currentPage === 1 ? "disabled" : ""}">
         <button class="page-link" data-page="${currentPage - 1}" aria-label="Previous">
@@ -150,7 +187,6 @@ export async function initOrderManager() {
       </li>
     `;
 
-    // Các nút số trang
     for (let i = 1; i <= totalPages; i++) {
       html += `
         <li class="page-item ${currentPage === i ? "active" : ""}">
@@ -159,7 +195,6 @@ export async function initOrderManager() {
       `;
     }
 
-    // Nút Tiếp theo (Next)
     html += `
       <li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
         <button class="page-link" data-page="${currentPage + 1}" aria-label="Next">
@@ -171,7 +206,6 @@ export async function initOrderManager() {
     html += `</ul></nav>`;
     paginationContainer.innerHTML = html;
 
-    // Lắng nghe sự kiện click trên cụm nút phân trang
     paginationContainer.querySelectorAll(".page-link").forEach((button) => {
       button.addEventListener("click", (e) => {
         const targetPage = parseInt(
@@ -191,32 +225,7 @@ export async function initOrderManager() {
   };
 
   /**
-   * 3. Xử lý Lọc (Filter) và Tìm kiếm cục bộ trên trang hiện tại
-   */
-  const filterData = () => {
-    const searchTerm = searchInput.value.toLowerCase();
-    const statusTerm = filterSelect.value;
-
-    const filtered = currentTableData.filter((order) => {
-      const matchSearch =
-        order.madonhang.toLowerCase().includes(searchTerm) ||
-        (order.tenkhachhang &&
-          order.tenkhachhang.toLowerCase().includes(searchTerm));
-
-      const matchStatus =
-        statusTerm === "Tất cả" || statusTerm.includes(order.trangthai);
-
-      return matchSearch && matchStatus;
-    });
-
-    renderTable(filtered);
-  };
-
-  searchInput.addEventListener("input", filterData);
-  filterSelect.addEventListener("change", filterData);
-
-  /**
-   * Xử lý cập nhật trạng thái đơn hàng
+   * 5. Xử lý cập nhật trạng thái đơn hàng
    */
   const handleUpdateStatus = async (maDonHang, trangThaiMoi) => {
     let actionText = "";
@@ -271,7 +280,7 @@ export async function initOrderManager() {
       await axios.put(
         `${BASE_URL}/orders/status/${maDonHang}`,
         { TrangThai: trangThaiMoi },
-        { headers: { Authorization: `Bearer ${token}` } }, // <-- Thêm cấu hình Header vào tham số thứ 3
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
       await Swal.fire({
@@ -286,7 +295,7 @@ export async function initOrderManager() {
       );
       if (currentModal) currentModal.hide();
 
-      // 🟢 CẬP NHẬT: Tải lại đúng trang hiện tại thay vì reset về trang 1
+      // Tải lại đúng trang và bộ lọc hiện hành
       fetchOrders(currentPage);
     } catch (error) {
       console.error("Lỗi cập nhật trạng thái:", error);
@@ -304,7 +313,7 @@ export async function initOrderManager() {
   window.handleUpdateStatus = handleUpdateStatus;
 
   /**
-   * 4. Xem chi tiết đơn hàng (Giữ nguyên logic khớp chữ Hoa)
+   * 6. Xem chi tiết đơn hàng
    */
   window.viewOrderDetails = async (maDonHang) => {
     Swal.fire({
@@ -318,7 +327,7 @@ export async function initOrderManager() {
       const userData = JSON.parse(localStorage.getItem("hpstore_user"));
       const token = userData?.token;
       const response = await axios.get(`${BASE_URL}/orders/${maDonHang}`, {
-        headers: { Authorization: `Bearer ${token}` }, // <-- Thêm Header ở đây
+        headers: { Authorization: `Bearer ${token}` },
       });
       const order = response.data;
       Swal.close();
@@ -359,14 +368,14 @@ export async function initOrderManager() {
           const subTotal = price * quantity - discount;
 
           return `
-                        <tr>
-                            <td class="fw-bold text-secondary">${item.MaSP}</td>
-                            <td class="text-center fw-bold">${quantity}</td>
-                            <td class="text-end">${new Intl.NumberFormat("vi-VN").format(price)}đ</td>
-                            <td class="text-end text-success">-${new Intl.NumberFormat("vi-VN").format(discount)}đ</td>
-                            <td class="text-end fw-bold text-dark">${new Intl.NumberFormat("vi-VN").format(subTotal)}đ</td>
-                        </tr>
-                    `;
+            <tr>
+              <td class="fw-bold text-secondary">${item.MaSP}</td>
+              <td class="text-center fw-bold">${quantity}</td>
+              <td class="text-end">${new Intl.NumberFormat("vi-VN").format(price)}đ</td>
+              <td class="text-end text-success">-${new Intl.NumberFormat("vi-VN").format(discount)}đ</td>
+              <td class="text-end fw-bold text-dark">${new Intl.NumberFormat("vi-VN").format(subTotal)}đ</td>
+            </tr>
+          `;
         }).join("");
       }
 
@@ -375,45 +384,41 @@ export async function initOrderManager() {
       switch (order.TrangThai) {
         case "Chờ xác nhận":
           modalActionButtons.innerHTML = `
-                        <button class="btn btn-warning text-dark me-2 px-3 fw-bold fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đang xử lý')">
-                            <i class="fa-solid fa-bell-concierge me-1"></i> Xác nhận đơn hàng
-                        </button>
-                        <button class="btn btn-danger px-3 fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đã hủy')">
-                            <i class="fa-solid fa-xmark me-1"></i> Hủy đơn hàng
-                        </button>
-                    `;
+            <button class="btn btn-warning text-dark me-2 px-3 fw-bold fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đang xử lý')">
+              <i class="fa-solid fa-bell-concierge me-1"></i> Xác nhận đơn hàng
+            </button>
+            <button class="btn btn-danger px-3 fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đã hủy')">
+              <i class="fa-solid fa-xmark me-1"></i> Hủy đơn hàng
+            </button>
+          `;
           break;
-
         case "Đang xử lý":
           modalActionButtons.innerHTML = `
-                        <button class="btn btn-primary me-2 px-3 fw-bold fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đang giao')">
-                            <i class="fa-solid fa-truck-fast me-1"></i> Duyệt đơn (Giao hàng)
-                        </button>
-                        <button class="btn btn-danger px-3 fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đã hủy')">
-                            <i class="fa-solid fa-xmark me-1"></i> Hủy đơn hàng
-                        </button>
-                    `;
+            <button class="btn btn-primary me-2 px-3 fw-bold fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đang giao')">
+              <i class="fa-solid fa-truck-fast me-1"></i> Duyệt đơn (Giao hàng)
+            </button>
+            <button class="btn btn-danger px-3 fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đã hủy')">
+              <i class="fa-solid fa-xmark me-1"></i> Hủy đơn hàng
+            </button>
+          `;
           break;
-
         case "Đang giao":
           modalActionButtons.innerHTML = `
-                        <button class="btn btn-success me-2 px-3 fw-bold fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đã giao')">
-                            <i class="fa-solid fa-box-open me-1"></i> Đã giao hàng
-                        </button>
-                        <button class="btn btn-danger px-3 fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đã hủy')">
-                            <i class="fa-solid fa-xmark me-1"></i> Khách hoàn/Hủy đơn
-                        </button>
-                    `;
+            <button class="btn btn-success me-2 px-3 fw-bold fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đã giao')">
+              <i class="fa-solid fa-box-open me-1"></i> Đã giao hàng
+            </button>
+            <button class="btn btn-danger px-3 fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đã hủy')">
+              <i class="fa-solid fa-xmark me-1"></i> Khách hoàn/Hủy đơn
+            </button>
+          `;
           break;
-
         case "Đã giao":
           modalActionButtons.innerHTML = `
-                        <button class="btn btn-success me-2 px-3 fw-bold fs-5" style="background-color: #198754;" onclick="handleUpdateStatus('${order.MaDonHang}', 'Thành công')">
-                            <i class="fa-solid fa-circle-check me-1"></i> Hoàn thành (Tích điểm)
-                        </button>
-                    `;
+            <button class="btn btn-success me-2 px-3 fw-bold fs-5" style="background-color: #198754;" onclick="handleUpdateStatus('${order.MaDonHang}', 'Thành công')">
+              <i class="fa-solid fa-circle-check me-1"></i> Hoàn thành (Tích điểm)
+            </button>
+          `;
           break;
-
         default:
           modalActionButtons.innerHTML = "";
           break;
@@ -433,7 +438,7 @@ export async function initOrderManager() {
   };
 
   /**
-   * Xuất file Excel dựa trên dữ liệu hiển thị (Bao gồm dữ liệu thô chữ thường)
+   * 7. Xuất file Excel dựa trên dữ liệu hiển thị trên trang hiện hành
    */
   const exportToExcel = async (data) => {
     const workbook = new ExcelJS.Workbook();
@@ -494,9 +499,6 @@ export async function initOrderManager() {
     saveAs(blob, `Bao_cao_don_hang_${new Date().getTime()}.xlsx`);
   };
 
-  /**
-   * 5. Xuất báo cáo (Xuất dữ liệu của trang hiện tại đang xem)
-   */
   btnExport.onclick = async () => {
     if (currentTableData.length === 0) {
       Swal.fire("Thông báo", "Không có dữ liệu để xuất báo cáo!", "info");
@@ -534,6 +536,6 @@ export async function initOrderManager() {
     }
   };
 
-  // 🟢 Kích hoạt mặc định lấy dữ liệu ở Trang 1 khi tải trang
+  // Kích hoạt mặc định lấy dữ liệu ở Trang 1 khi tải trang
   fetchOrders(1);
 }
