@@ -49,10 +49,10 @@ export async function initSupplierManager() {
                 <td>
                 ${
                   ncc.trangthai
-                    ? `<span class="badge rounded-pill bg-success-subtle text-success border border-success px-3 py-2">
+                    ? `<span class="badge rounded-pill bg-success-subtle text-success border border-success px-3 py-2" style="font-size:14px" >
                             <i class="fa-solid fa-circle-check me-1"></i> Đang hoạt động
                     </span>`
-                    : `<span class="badge rounded-pill bg-danger-subtle text-danger border border-danger px-3 py-2">
+                    : `<span class="badge rounded-pill bg-danger-subtle text-danger border border-danger px-3 py-2" style="font-size:14px" >
                         <i class="fa-solid fa-circle-xmark me-1"></i> Ngừng hợp tác
                     </span>`
                 }

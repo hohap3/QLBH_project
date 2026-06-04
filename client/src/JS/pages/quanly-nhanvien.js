@@ -96,10 +96,10 @@ export async function initEmployeeManager() {
                     <td>
                         ${
                           nv.trangthai
-                            ? `<span class="badge rounded-pill bg-success-subtle text-success border border-success px-3 py-2">
+                            ? `<span class="badge rounded-pill bg-success-subtle text-success border border-success px-3 py-2" style="font-size:14px" >
                                     <i class="fa-solid fa-circle-check me-1"></i> Đang làm việc
                                </span>`
-                            : `<span class="badge rounded-pill bg-danger-subtle text-danger border border-danger px-3 py-2">
+                            : `<span class="badge rounded-pill bg-danger-subtle text-danger border border-danger px-3 py-2" style="font-size:14px">
                                     <i class="fa-solid fa-circle-xmark me-1"></i> Đang bị khóa
                                </span>`
                         }

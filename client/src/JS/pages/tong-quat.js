@@ -14,7 +14,6 @@ function generateRandomColors(count) {
 // 1. Biểu đồ hình tròn: Phân bổ sản phẩm theo danh mục
 async function renderCategoryChart() {
   try {
-    // 🟢 FIX CÚ PHÁP: Xóa dấu } thừa ở ${BASE_URL}
     const response = await axios.get(`${BASE_URL}/thongke/san-pham-danh-muc`);
     const stats = response.data.data;
 

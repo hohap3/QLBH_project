@@ -80,25 +80,25 @@ export async function initOrderManager() {
         let statusBadge = "";
         switch (order.trangthai) {
           case "Chờ xác nhận":
-            statusBadge = `<span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;">Chờ xác nhận</span>`;
+            statusBadge = `<span class="badge bg-warning text-dark rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;font-size:16px">Chờ xác nhận</span>`;
             break;
           case "Đang xử lý":
-            statusBadge = `<span class="badge bg-info text-dark rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;">Đang xử lý</span>`;
+            statusBadge = `<span class="badge bg-info text-dark rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;font-size:16px">Đang xử lý</span>`;
             break;
           case "Đang giao":
-            statusBadge = `<span class="badge bg-primary text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;">Đang giao</span>`;
+            statusBadge = `<span class="badge bg-primary text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;font-size:16px">Đang giao</span>`;
             break;
           case "Đã giao":
-            statusBadge = `<span class="badge bg-success text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;">Đã giao</span>`;
+            statusBadge = `<span class="badge bg-success text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;font-size:16px">Đã giao</span>`;
             break;
           case "Thành công":
-            statusBadge = `<span class="badge bg-success text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;"><i class="fa-solid fa-circle-check me-1"></i>Thành công</span>`;
+            statusBadge = `<span class="badge bg-success text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;font-size:16px"><i class="fa-solid fa-circle-check me-1"></i>Thành công</span>`;
             break;
           case "Đã hủy":
-            statusBadge = `<span class="badge bg-danger text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;">Đã hủy</span>`;
+            statusBadge = `<span class="badge bg-danger text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;font-size:16px">Đã hủy</span>`;
             break;
           default:
-            statusBadge = `<span class="badge bg-secondary text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;">${order.trangthai || "Chưa rõ"}</span>`;
+            statusBadge = `<span class="badge bg-secondary text-white rounded-pill px-3 py-2 fw-semibold" style="white-space: nowrap;font-size:16px">${order.trangthai || "Chưa rõ"}</span>`;
         }
 
         const formattedTotal =
@@ -375,10 +375,10 @@ export async function initOrderManager() {
       switch (order.TrangThai) {
         case "Chờ xác nhận":
           modalActionButtons.innerHTML = `
-                        <button class="btn btn-warning text-dark me-2 px-3 fw-bold" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đang xử lý')">
+                        <button class="btn btn-warning text-dark me-2 px-3 fw-bold fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đang xử lý')">
                             <i class="fa-solid fa-bell-concierge me-1"></i> Xác nhận đơn hàng
                         </button>
-                        <button class="btn btn-danger px-3" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đã hủy')">
+                        <button class="btn btn-danger px-3 fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đã hủy')">
                             <i class="fa-solid fa-xmark me-1"></i> Hủy đơn hàng
                         </button>
                     `;
@@ -386,10 +386,10 @@ export async function initOrderManager() {
 
         case "Đang xử lý":
           modalActionButtons.innerHTML = `
-                        <button class="btn btn-primary me-2 px-3 fw-bold" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đang giao')">
+                        <button class="btn btn-primary me-2 px-3 fw-bold fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đang giao')">
                             <i class="fa-solid fa-truck-fast me-1"></i> Duyệt đơn (Giao hàng)
                         </button>
-                        <button class="btn btn-danger px-3" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đã hủy')">
+                        <button class="btn btn-danger px-3 fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đã hủy')">
                             <i class="fa-solid fa-xmark me-1"></i> Hủy đơn hàng
                         </button>
                     `;
@@ -397,10 +397,10 @@ export async function initOrderManager() {
 
         case "Đang giao":
           modalActionButtons.innerHTML = `
-                        <button class="btn btn-success me-2 px-3 fw-bold" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đã giao')">
+                        <button class="btn btn-success me-2 px-3 fw-bold fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đã giao')">
                             <i class="fa-solid fa-box-open me-1"></i> Đã giao hàng
                         </button>
-                        <button class="btn btn-danger px-3" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đã hủy')">
+                        <button class="btn btn-danger px-3 fs-5" onclick="handleUpdateStatus('${order.MaDonHang}', 'Đã hủy')">
                             <i class="fa-solid fa-xmark me-1"></i> Khách hoàn/Hủy đơn
                         </button>
                     `;
@@ -408,7 +408,7 @@ export async function initOrderManager() {
 
         case "Đã giao":
           modalActionButtons.innerHTML = `
-                        <button class="btn btn-success me-2 px-3 fw-bold" style="background-color: #198754;" onclick="handleUpdateStatus('${order.MaDonHang}', 'Thành công')">
+                        <button class="btn btn-success me-2 px-3 fw-bold fs-5" style="background-color: #198754;" onclick="handleUpdateStatus('${order.MaDonHang}', 'Thành công')">
                             <i class="fa-solid fa-circle-check me-1"></i> Hoàn thành (Tích điểm)
                         </button>
                     `;
