@@ -15,6 +15,7 @@ const transporter = {
         subject: mailOptions.subject,
         html: mailOptions.html,
       });
+      console.log("👉 KẾT QUẢ TRẢ VỀ TỪ RESEND API:", data);
       return data;
     } catch (error) {
       throw error;
