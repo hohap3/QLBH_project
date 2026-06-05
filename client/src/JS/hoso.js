@@ -121,9 +121,9 @@ function initUIEvents(maND, token) {
       const email = document.getElementById("info-email").value.trim();
       const diaChi = document.getElementById("info-address").value.trim();
 
-      // --- 🟢 BỔ SUNG LOGIC VALIDATE DỮ LIỆU ---
+      // --- 🟢 ĐÃ CẬP NHẬT: LOGIC VALIDATE DỮ LIỆU CHUẨN ---
 
-      // 1. Kiểm tra họ và tên trống
+      // 1. Kiểm tra họ và tên trống hoặc ngắn hơn 6 ký tự
       if (!hoTen) {
         Swal.fire({
           icon: "warning",
@@ -134,13 +134,24 @@ function initUIEvents(maND, token) {
         return;
       }
 
-      // 2. Kiểm tra định dạng Email hợp lệ bằng Regular Expression
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
+      if (hoTen.length < 6) {
         Swal.fire({
           icon: "warning",
           title: "Lỗi nhập liệu",
-          text: "Định dạng Email không hợp lệ!",
+          text: "Họ và tên phải có độ dài từ 6 ký tự trở lên!",
+          confirmButtonColor: "#6138ff",
+        });
+        return;
+      }
+
+      // 2. Định dạng lại Email bằng RFC 5322 Tiêu chuẩn nâng cao
+      // Chấp nhận tất cả đuôi mở rộng phức tạp (ví dụ: .com, .edu.vn, .net) và chống ký tự lạ.
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!email || !emailRegex.test(email)) {
+        Swal.fire({
+          icon: "warning",
+          title: "Lỗi nhập liệu",
+          text: "Địa chỉ Email không hợp lệ hoặc sai cấu trúc (Ví dụ hợp lệ: nguyenvan@gmail.com)!",
           confirmButtonColor: "#6138ff",
         });
         return;
@@ -197,12 +208,28 @@ function initUIEvents(maND, token) {
         });
       } catch (error) {
         console.error("Lỗi cập nhật profile:", error);
+
+        // 🟢 ĐÃ CẬP NHẬT: Bắt lỗi trùng lặp Số điện thoại hoặc Email từ Backend/PostgreSQL
+        const errorDetail = error.response?.data?.error || "";
+        let errorMessage = "Không thể cập nhật thông tin lúc này.";
+
+        if (errorDetail.includes("uq_nd_sdt") || errorDetail.includes("sdt")) {
+          errorMessage =
+            "Số điện thoại này đã được sử dụng bởi một tài khoản khác!";
+        } else if (
+          errorDetail.includes("uq_nd_email") ||
+          errorDetail.includes("email")
+        ) {
+          errorMessage =
+            "Địa chỉ Email này đã được sử dụng bởi một tài khoản khác!";
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+
         Swal.fire({
           icon: "error",
-          title: "Lỗi!",
-          text:
-            error.response?.data?.message ||
-            "Không thể cập nhật thông tin lúc này.",
+          title: "Trùng lặp dữ liệu!",
+          text: errorMessage,
           confirmButtonColor: "#6138ff",
         });
       }
