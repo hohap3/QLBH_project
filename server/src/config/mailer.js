@@ -1,30 +1,39 @@
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
+const { MailtrapTransport } = require("mailtrap");
 
-// Khởi tạo đối tượng Resend sử dụng API Key cấu hình bảo mật trên Render
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Khởi tạo transport sử dụng Token API bảo mật từ Environment Render
+const transporter = nodemailer.createTransport(
+  MailtrapTransport({
+    token: process.env.MAILTRAP_API_TOKEN, // 🟢 Đặt tên biến này trên Render Dashboard
+  }),
+);
 
-// Giả lập hàm sendMail giống nodemailer cũ để bạn không phải sửa logic ở Controller
-const transporter = {
+// Bọc lại cấu trúc gửi mail để tương thích 100% với hàm gọi cũ của bạn
+const mailer = {
   sendMail: async (mailOptions) => {
     try {
-      const data = await resend.emails.send({
-        // Vì tài khoản Resend miễn phí chưa cấu hình Domain riêng,
-        // bạn BẮT BUỘC phải để người gửi là "onboarding@resend.dev"
-        from: "HP STORE <onboarding@resend.dev>",
-        to: mailOptions.to,
+      const info = await transporter.sendMail({
+        // ⚠️ BẮT BUỘC: Đối với tài khoản thử nghiệm Mailtrap API,
+        // địa chỉ gửi đi bắt buộc phải là "mailtrap@demomailtrap.com" hoặc "hello@demomailtrap.co"
+        from: {
+          address: "mailtrap@demomailtrap.com",
+          name: "HP STORE SYSTEM",
+        },
+        to: [mailOptions.to], // Đổi từ chuỗi đơn sang mảng theo yêu cầu của Mailtrap API
         subject: mailOptions.subject,
-        html: mailOptions.html,
+        html: mailOptions.html, // Sử dụng HTML để mã OTP hiển thị đẹp mắt
       });
-      console.log("👉 KẾT QUẢ TRẢ VỀ TỪ RESEND API:", data);
-      return data;
+
+      console.log("👉 ĐÃ GỬI OTP THÀNH CÔNG QUA MAILTRAP API!");
+      return info;
     } catch (error) {
+      console.error("❌ LỖI GỬI MAILTRAP API:", error.message);
       throw error;
     }
   },
 };
 
-console.log(
-  "✅ HỆ THỐNG RESEND HTTP API ĐÃ SẴN SÀNG (BYPASS FIREWALL RENDER)!",
-);
+// Kiểm tra trạng thái khi khởi động server
+console.log("✅ HỆ THỐNG MAILTRAP API TRANSPORT ĐÃ SẴN SÀNG TRÊN RENDER!");
 
-module.exports = transporter;
+module.exports = mailer;
