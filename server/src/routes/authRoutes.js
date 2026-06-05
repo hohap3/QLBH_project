@@ -9,6 +9,11 @@ const { verifyToken } = require("../middleware/auth");
 router.post("/register", authController.register);
 router.post("/login", authController.login);
 
+// forgot-password
+router.post("/forgot-password", authController.forgotPassword);
+// reset-password
+router.post("/reset-password", authController.resetPassword);
+
 // Tuyến đường Thẩm định quyền hạn thời gian thực dựa vào Token
 router.get("/verify-role", verifyToken, authController.verifyRole);
 

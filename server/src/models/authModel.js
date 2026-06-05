@@ -103,6 +103,58 @@ class AuthModel {
       client.release();
     }
   }
+
+  static async updateOTP(email, otpCode, expiredAt) {
+    try {
+      const result = await pool.query(
+        "UPDATE nguoidung SET otp_code = $1, otp_expired = $2 WHERE email = $3 RETURNING mand",
+        [otpCode, expiredAt, email],
+      );
+      return result.rows[0];
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  static async verifyAndResetPassword(email, otp, newPasswordHash) {
+    try {
+      // Lấy thông tin OTP hiện tại lên so sánh
+      const userResult = await pool.query(
+        "SELECT otp_code, otp_expired FROM nguoidung WHERE email = $1",
+        [email],
+      );
+
+      if (userResult.rows.length === 0) {
+        return {
+          success: false,
+          message: "Email không tồn tại trên hệ thống!",
+        };
+      }
+
+      const user = userResult.rows[0];
+
+      if (!user.otp_code || user.otp_code !== otp) {
+        return { success: false, message: "Mã xác thực OTP không chính xác!" };
+      }
+
+      if (new Date() > new Date(user.otp_expired)) {
+        return {
+          success: false,
+          message: "Mã xác thực OTP đã hết hạn sử dụng!",
+        };
+      }
+
+      // Cập nhật mật khẩu mới và dọn sạch cột OTP
+      await pool.query(
+        "UPDATE nguoidung SET matkhauhash = $1, otp_code = NULL, otp_expired = NULL WHERE email = $2",
+        [newPasswordHash, email],
+      );
+
+      return { success: true };
+    } catch (error) {
+      throw error;
+    }
+  }
 }
 
 module.exports = AuthModel;
