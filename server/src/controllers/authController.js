@@ -192,7 +192,6 @@ exports.forgotPassword = async (req, res) => {
 
     // Thiết lập và thực hiện gửi Mail
     const mailOptions = {
-      from: `"HP STORE" <${process.env.EMAIL_USER || "your-email@gmail.com"}>`,
       to: email,
       subject: "[HP STORE] - Mã xác thực khôi phục mật khẩu",
       html: `
