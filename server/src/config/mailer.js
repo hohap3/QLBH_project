@@ -1,34 +1,34 @@
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  // 🟢 THAY ĐỔI GỐC: Sử dụng IP tĩnh IPv4 trực tiếp của smtp.gmail.com
-  // Thay vì ghi "smtp.gmail.com", ta dùng IP để Node.js không thể phân giải ra IPv6 bậy bạ nữa
-  host: "74.125.200.108",
-  port: 465,
-  secure: true, // Bắt buộc sử dụng SSL/TLS cho cổng 465
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false, // Bắt buộc là false khi dùng cổng 587 (STARTTLS)
 
-  // Ép cấu hình TLS chấp nhận chứng chỉ từ IP (vì ta đang gọi bằng IP thay vì tên miền)
-  tls: {
-    rejectUnauthorized: false,
-  },
-
-  // Cấu hình kéo dài thời gian phản hồi chặn drop mạng trên Render
-  connectionTimeout: 20000,
-  greetingTimeout: 20000,
-  dnsTimeout: 20000,
+  // 🟢 ÉP SỬ DỤNG IPv4: Đặt trực tiếp thuộc tính này ở đây
+  // để Nodemailer tự động bỏ qua bản ghi IPv6 khi phân giải DNS smtp.gmail.com
+  family: 4,
 
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+
+  // Cấu hình bảo mật TLS bổ trợ cho cổng 587
+  tls: {
+    ciphers: "SSLv3",
+    rejectUnauthorized: false,
+  },
+
+  connectionTimeout: 10000, // 10 giây chờ kết nối
 });
 
-// Thêm hàm kiểm tra kết nối ngay khi khởi động Server để bạn dễ theo dõi log
+// Kiểm tra kết nối khi khởi động server
 transporter.verify((error, success) => {
   if (error) {
     console.error("❌ LỖI KẾT NỐI MAILER TẠI SERVER:", error.message);
   } else {
-    console.log("✅ HỆ THỐNG MAILER ĐÃ SẴN SÀNG GỬI OTP!");
+    console.log("✅ HỆ THỐNG MAILER ĐÃ SẴN SÀNG GỬI OTP QUA CỔNG 587!");
   }
 });
 
