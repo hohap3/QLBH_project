@@ -43,21 +43,36 @@ export async function initCaiDat() {
     profileForm.onsubmit = async (e) => {
       e.preventDefault();
 
-      // --- 🟢 BỔ SUNG LOGIC VALIDATE DỮ LIỆU ---
+      // Lấy dữ liệu và thực hiện loại bỏ khoảng trắng thừa (.trim())
       const hoTen = document.getElementById("txtHoTen").value.trim();
       const email = document.getElementById("txtEmail").value.trim();
       const sdt = document.getElementById("txtSDT").value.trim();
 
-      // 1. Kiểm tra họ tên không được để trống
+      // --- 🟢 ĐÃ CẬP NHẬT: LOGIC VALIDATE DỮ LIỆU CHUẨN ĐỒNG BỘ HOSO.JS ---
+
+      // 1. Kiểm tra họ tên không được để trống và phải từ 6 ký tự trở lên
       if (!hoTen) {
         Swal.fire("Lỗi nhập liệu", "Họ và tên không được để trống!", "warning");
         return;
       }
 
-      // 2. Kiểm tra định dạng Email hợp lệ bằng Regular Expression
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        Swal.fire("Lỗi nhập liệu", "Định dạng Email không hợp lệ!", "warning");
+      if (hoTen.length < 6) {
+        Swal.fire(
+          "Lỗi nhập liệu",
+          "Họ và tên phải có độ dài từ 6 ký tự trở lên!",
+          "warning",
+        );
+        return;
+      }
+
+      // 2. Định dạng lại Email bằng RFC 5322 Tiêu chuẩn nâng cao
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (!email || !emailRegex.test(email)) {
+        Swal.fire(
+          "Lỗi nhập liệu",
+          "Địa chỉ Email không hợp lệ hoặc sai cấu trúc (Ví dụ: nguyenvan@gmail.com)!",
+          "warning",
+        );
         return;
       }
 
@@ -66,13 +81,13 @@ export async function initCaiDat() {
       if (!phoneRegex.test(sdt)) {
         Swal.fire(
           "Lỗi nhập liệu",
-          "Số điện thoại bắt buộc phải là các ký tự số!",
+          "Số điện thoại bắt buộc phải là các ký tự số từ 0-9!",
           "warning",
         );
         return;
       }
 
-      // 4. Kiểm tra độ dài tối thiểu của Số điện thoại
+      // 4. Kiểm tra độ dài tối thiểu của Số điện thoại (từ 10 số trở lên)
       if (sdt.length < 10) {
         Swal.fire(
           "Lỗi nhập liệu",
@@ -113,10 +128,24 @@ export async function initCaiDat() {
       } catch (error) {
         console.error("Lỗi update:", error);
 
-        // Hiển thị lỗi từ backend (ví dụ: trùng Email/SDT)
-        const errorMsg =
-          error.response?.data?.message || "Có lỗi xảy ra khi cập nhật";
-        Swal.fire("Thất bại", errorMsg, "error");
+        // 🟢 ĐÃ CẬP NHẬT: Bắt lỗi trùng lặp dữ liệu Số điện thoại hoặc Email từ Backend/PostgreSQL
+        const errorDetail = error.response?.data?.error || "";
+        let errorMessage = "Có lỗi xảy ra khi cập nhật";
+
+        if (errorDetail.includes("uq_nd_sdt") || errorDetail.includes("sdt")) {
+          errorMessage =
+            "Số điện thoại này đã được sử dụng bởi một tài khoản khác!";
+        } else if (
+          errorDetail.includes("uq_nd_email") ||
+          errorDetail.includes("email")
+        ) {
+          errorMessage =
+            "Địa chỉ Email này đã được sử dụng bởi một tài khoản khác!";
+        } else if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        }
+
+        Swal.fire("Trùng lặp dữ liệu!", errorMessage, "error");
       } finally {
         // Khôi phục trạng thái nút bấm ban đầu
         submitBtn.disabled = false;
