@@ -1,10 +1,15 @@
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 465,
+  secure: true, // Sử dụng SSL/TLS cho cổng 465
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  dnsTimeout: 10000,
   auth: {
-    user: "hohap3@gmail.com", // Email hệ thống HP STORE
-    pass: "aaoh kqxa kilr uspg", // Mật khẩu ứng dụng Google (16 ký tự)
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS, // Mật khẩu ứng dụng ứng dụng Google
   },
 });
 
