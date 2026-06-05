@@ -16,7 +16,7 @@ const mailer = {
         // ⚠️ BẮT BUỘC: Đối với tài khoản thử nghiệm Mailtrap API,
         // địa chỉ gửi đi bắt buộc phải là "mailtrap@demomailtrap.com" hoặc "hello@demomailtrap.co"
         from: {
-          address: "mailtrap@demomailtrap.com",
+          address: "hello@demomailtrap.co",
           name: "HP STORE SYSTEM",
         },
         to: [mailOptions.to], // Đổi từ chuỗi đơn sang mảng theo yêu cầu của Mailtrap API
