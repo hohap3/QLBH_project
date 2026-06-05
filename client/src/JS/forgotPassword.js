@@ -93,12 +93,27 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      if (newPassword.length < 6) {
-        Swal.fire(
-          "Lỗi nhập liệu",
-          "Mật khẩu mới bắt buộc phải từ 6 ký tự trở lên!",
-          "warning",
-        );
+      // 🟢 CẬP NHẬT: Kiểm tra độ mạnh của mật khẩu bằng biểu thức chính quy (Regex)
+      // (?=.*[a-z]): Có ít nhất 1 ký tự thường
+      // (?=.*[A-Z]): Có ít nhất 1 ký tự hoa
+      // (?=.*[!@#$%^&*(),.?":{}|<>]): Có ít nhất 1 ký tự đặc biệt
+      // .{6,}: Độ dài tối thiểu là 6 ký tự
+      const passwordRegex =
+        /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>]).{6,}$/;
+
+      if (!passwordRegex.test(newPassword)) {
+        Swal.fire({
+          icon: "warning",
+          title: "Mật khẩu yếu",
+          html: `Mật khẩu mới của bạn chưa đúng yêu cầu bảo mật:<br>
+                 <ul style="text-align: left; margin-top: 10px;">
+                    <li>Phải có ít nhất <b>6 ký tự</b>.</li>
+                    <li>Có ít nhất <b>1 chữ cái thường</b> (a-z).</li>
+                    <li>Có ít nhất <b>1 chữ cái hoa</b> (A-Z).</li>
+                    <li>Có ít nhất <b>1 ký tự đặc biệt</b> (!@#$...).</li>
+                 </ul>`,
+          confirmButtonColor: "#6138ff",
+        });
         return;
       }
 
