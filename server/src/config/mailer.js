@@ -3,7 +3,10 @@ const nodemailer = require("nodemailer");
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
   port: 465,
-  secure: true, // Sử dụng SSL/TLS cho cổng 465
+  secure: true,
+  connectionOptions: {
+    family: 4,
+  },
   connectionTimeout: 10000,
   greetingTimeout: 10000,
   dnsTimeout: 10000,
