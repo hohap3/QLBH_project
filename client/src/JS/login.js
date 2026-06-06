@@ -3,7 +3,6 @@ import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import Swal from "sweetalert2";
 import axios from "axios";
 
-// Đổi URL này thành domain Render của bạn khi deploy (ví dụ: https://qlbh-project.onrender.com/api)
 const BASE_URL = "https://qlbh-project.onrender.com/api";
 
 async function handleLoginPage() {
@@ -13,13 +12,16 @@ async function handleLoginPage() {
   const usernameInput = document.querySelector("#username");
   const togglePassword = document.querySelector("#togglePassword");
 
+  // Thêm các phần tử chứa text lỗi vào DOM selector
+  const usernameError = document.querySelector("#usernameError");
+  const passwordError = document.querySelector("#passwordError");
+
   // ─── 1. KIỂM TRA ĐĂNG NHẬP SỚM (ANTI-TAMPERING) ───
   if (savedUser) {
     try {
       const userData = JSON.parse(savedUser);
 
       if (userData && userData.token) {
-        // Hiển thị màn hình chờ tải thông tin phân quyền
         Swal.fire({
           title: "Đang tự động đăng nhập...",
           allowOutsideClick: false,
@@ -28,21 +30,16 @@ async function handleLoginPage() {
           },
         });
 
-        // Gửi token lên Backend kiểm tra xem có bị sửa đổi hay tài khoản bị khóa không
         const response = await axios.get(`${BASE_URL}/auth/verify-role`, {
           headers: { Authorization: `Bearer ${userData.token}` },
         });
 
         Swal.close();
 
-        // Nhận thuộc tính chữ thường (.role) phản hồi từ Controller mới
         const realRole = response.data.role;
-
-        // Cập nhật lại role chuẩn từ database vào localStorage
         userData.role = realRole;
         localStorage.setItem("hpstore_user", JSON.stringify(userData));
 
-        // Tiến hành điều hướng dựa trên role thực tế
         if (realRole === "Manager" || realRole === "ADMIN") {
           window.location.href = "/src/pages/dashboard.html";
         } else if (realRole === "Employee" || realRole === "STAFF") {
@@ -50,17 +47,23 @@ async function handleLoginPage() {
         } else {
           window.location.href = window.location.origin;
         }
-        return; // Ngắt luồng, không chạy đoạn dựng Form phía dưới
+        return;
       }
     } catch (e) {
       Swal.close();
-      // Nếu token hết hạn hoặc chuỗi JSON lỗi -> Xóa sạch để người dùng đăng nhập lại
       localStorage.removeItem("hpstore_user");
     }
   }
 
   // ─── 2. KHỞI TẠO ĐIỀU KHIỂN GIAO DIỆN FORM ───
-  if (!togglePassword || !passwordInput || !loginForm || !usernameInput) {
+  if (
+    !togglePassword ||
+    !passwordInput ||
+    !loginForm ||
+    !usernameInput ||
+    !usernameError ||
+    !passwordError
+  ) {
     console.warn(
       "Một số phần tử không tìm thấy trong DOM. Kiểm tra lại ID trong file HTML.",
     );
@@ -69,17 +72,30 @@ async function handleLoginPage() {
 
   const eyeIcon = togglePassword.querySelector("i");
 
-  const showError = (message) => {
-    loginForm.classList.add("position-relative", "animate-shake");
-    setTimeout(() => loginForm.classList.remove("animate-shake"), 500);
+  // 🟢 CẬP NHẬT: Hàm hiển thị lỗi dưới Input + Hiệu ứng rung Form
+  const showInputError = (errorElement, inputElement, message) => {
+    errorElement.innerText = message;
+    errorElement.classList.remove("d-none");
+    inputElement.classList.add("is-invalid"); // Thêm viền đỏ Bootstrap cho input
 
-    Swal.fire({
-      icon: "error",
-      title: "Thất bại",
-      text: message,
-      confirmButtonColor: "#6138ff",
-    });
+    loginForm.classList.add("animate-shake");
+    setTimeout(() => loginForm.classList.remove("animate-shake"), 500);
   };
+
+  // 🟢 CẬP NHẬT: Hàm xóa toàn bộ thông báo lỗi cũ
+  const clearErrors = () => {
+    usernameError.classList.add("d-none");
+    usernameError.innerText = "";
+    usernameInput.classList.remove("is-invalid");
+
+    passwordError.classList.add("d-none");
+    passwordError.innerText = "";
+    passwordInput.classList.remove("is-invalid");
+  };
+
+  // Xóa lỗi cũ khi người dùng tập trung gõ lại dữ liệu
+  usernameInput.addEventListener("input", clearErrors);
+  passwordInput.addEventListener("input", clearErrors);
 
   // Hiện/ẩn mật khẩu
   togglePassword.addEventListener("click", function () {
@@ -93,17 +109,34 @@ async function handleLoginPage() {
   // ─── 3. XỬ LÝ SỰ KIỆN XÁC THỰC ĐĂNG NHẬP ───
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+    clearErrors(); // Xóa lỗi cũ trước khi kiểm tra lượt mới
 
     const username = usernameInput.value.trim();
     const password = passwordInput.value.trim();
 
-    if (!username || !password) {
-      showError("Vui lòng nhập đầy đủ Tên đăng nhập và Mật khẩu!");
+    // Kiểm tra dữ liệu rỗng Client-side
+    if (!username) {
+      showInputError(
+        usernameError,
+        usernameInput,
+        "Vui lòng nhập tên đăng nhập!",
+      );
+      usernameInput.focus();
+      return;
+    }
+
+    if (!password) {
+      showInputError(passwordError, passwordInput, "Vui lòng nhập mật khẩu!");
+      passwordInput.focus();
       return;
     }
 
     if (username.length < 5) {
-      showError("Tên đăng nhập phải có ít nhất 5 ký tự!");
+      showInputError(
+        usernameError,
+        usernameInput,
+        "Tên đăng nhập phải có ít nhất 5 ký tự!",
+      );
       usernameInput.focus();
       return;
     }
@@ -126,12 +159,11 @@ async function handleLoginPage() {
       if (response.status === 200) {
         const { token, user } = response.data;
 
-        // 🟢 ĐÃ FIX: Áp dụng mapping theo đúng dữ liệu chữ thường trả về từ Postgres
         const userData = {
-          id: user.maND, // Nhận từ user.maND của authController mới
-          username: user.username, // Nhận từ user.username
-          name: user.fullname, // Nhận từ user.fullname
-          role: user.role, // Nhận từ user.role
+          id: user.maND,
+          username: user.username,
+          name: user.fullname,
+          role: user.role,
           token: token,
           loginAt: new Date().toISOString(),
         };
@@ -145,7 +177,6 @@ async function handleLoginPage() {
           timer: 1500,
           showConfirmButton: false,
         }).then(() => {
-          // Điều hướng thông minh chuẩn quyền hạn
           const userRole = userData.role;
           if (userRole === "Manager" || userRole === "ADMIN") {
             window.location.href = "/src/pages/dashboard.html";
@@ -159,14 +190,15 @@ async function handleLoginPage() {
     } catch (error) {
       console.error("Lỗi đăng nhập:", error);
       Swal.close();
-      passwordInput.value = ""; // Xóa password cũ bảo mật
+      passwordInput.value = ""; // Xóa mật khẩu vì lý do bảo mật
 
-      let errorMessage = "Không thể kết nối đến máy chủ!";
+      let errorMessage = "Thông tin đăng nhập không chính xác!";
 
       if (error.response) {
         errorMessage =
           error.response.data.message || "Thông tin đăng nhập không chính xác";
 
+        // Trường hợp tài khoản bị khóa thì hiển thị cảnh báo lớn bằng Swal
         if (error.response.status === 403) {
           Swal.fire({
             icon: "warning",
@@ -177,8 +209,21 @@ async function handleLoginPage() {
           });
           return;
         }
+
+        // 🟢 CẬP NHẬT: Trích xuất hiển thị lỗi của server xuống dưới input
+        if (errorMessage.toLowerCase().includes("mật khẩu")) {
+          showInputError(passwordError, passwordInput, errorMessage);
+        } else {
+          showInputError(usernameError, usernameInput, errorMessage);
+        }
+      } else {
+        // Lỗi kết nối mạng/máy chủ sập
+        showInputError(
+          usernameError,
+          usernameInput,
+          "Không thể kết nối đến máy chủ!",
+        );
       }
-      showError(errorMessage);
     }
   });
 }

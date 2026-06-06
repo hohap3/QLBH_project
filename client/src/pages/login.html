@@ -32,7 +32,6 @@
             >
             <div class="input-wrapper">
               <i class="fa-regular fa-user input-icon"></i>
-              <!-- Đổi icon từ envelope sang user -->
               <input
                 type="text"
                 id="username"
@@ -40,6 +39,11 @@
                 placeholder="Nhập tên đăng nhập"
               />
             </div>
+            <div
+              id="usernameError"
+              class="error-text text-danger small mt-1 d-none"
+              style="font-size: 13px"
+            ></div>
           </div>
 
           <div class="input-group mb-4">
@@ -60,6 +64,11 @@
                 <i class="fa-regular fa-eye"></i>
               </button>
             </div>
+            <div
+              id="passwordError"
+              class="error-text text-danger small mt-1 d-none"
+              style="font-size: 13px"
+            ></div>
           </div>
 
           <div
