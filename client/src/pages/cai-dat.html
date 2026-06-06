@@ -2,7 +2,6 @@
   <h4 class="mb-4">Thông tin cá nhân</h4>
   <form id="profileForm">
     <div class="row g-3">
-      <!-- Tên đăng nhập - Readonly -->
       <div class="col-md-6">
         <label class="form-label small fw-bold">Tên đăng nhập</label>
         <input
@@ -12,17 +11,23 @@
           readonly
         />
       </div>
-      <!-- Họ tên -->
+
       <div class="col-md-6">
-        <label class="form-label small fw-bold">Họ và tên</label>
+        <label class="form-label small fw-bold"
+          >Họ và tên <span class="text-danger">*</span></label
+        >
         <input
           type="text"
           class="form-control"
           id="txtHoTen"
           placeholder="Nhập họ tên"
         />
+        <div
+          id="txtHoTen-error"
+          class="error-text text-danger small mt-1 d-none"
+        ></div>
       </div>
-      <!-- Email -->
+
       <div class="col-md-6">
         <label class="form-label small fw-bold">Email</label>
         <input
@@ -31,17 +36,28 @@
           id="txtEmail"
           placeholder="example@gmail.com"
         />
+        <div
+          id="txtEmail-error"
+          class="error-text text-danger small mt-1 d-none"
+        ></div>
       </div>
-      <!-- Số điện thoại -->
+
       <div class="col-md-6">
-        <label class="form-label small fw-bold">Số điện thoại</label>
+        <label class="form-label small fw-bold"
+          >Số điện thoại <span class="text-danger">*</span></label
+        >
         <input
           type="text"
           class="form-control"
           id="txtSDT"
           placeholder="Nhập số điện thoại"
         />
+        <div
+          id="txtSDT-error"
+          class="error-text text-danger small mt-1 d-none"
+        ></div>
       </div>
+
       <div class="col-12 mt-4">
         <button
           type="submit"
@@ -55,7 +71,6 @@
   </form>
 </div>
 
-<!-- Phần Đăng xuất giữ nguyên bên dưới -->
 <div class="card shadow-sm border-0 p-4">
   <h4 class="mb-4">Hệ thống</h4>
   <div class="list-group list-group-flush">
