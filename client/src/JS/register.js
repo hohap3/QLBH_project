@@ -78,8 +78,25 @@ function handleRegisterPage() {
       return;
     }
 
+    const fullnameRegex =
+      /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểิếệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ\s]+$/;
+    if (!fullnameRegex.test(fullname)) {
+      showError(
+        "Họ và tên chỉ được phép chứa chữ cái và khoảng trắng, không được chứa số hoặc ký tự đặc biệt!",
+      );
+      return;
+    }
+
     if (username.length < 5) {
       showError("Tên đăng nhập phải có ít nhất 5 ký tự!");
+      return;
+    }
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      showError(
+        "Định dạng địa chỉ Email không hợp lệ (Ví dụ đúng: link@hpstore.com)!",
+      );
       return;
     }
 
