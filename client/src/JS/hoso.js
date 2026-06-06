@@ -1,7 +1,7 @@
 import axios from "axios";
 import Swal from "sweetalert2";
 
-// 🟢 ĐÃ CẬP NHẬT: Đổi từ localhost sang domain Render để chạy thực tế
+// 🟢 Cấu hình domain API chạy thực tế
 const BASE_URL = "https://qlbh-project.onrender.com/api";
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -29,7 +29,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // 2. Tải thông tin tài khoản chi tiết đổ vào Sidebar và Form
     await loadUserProfile(maND, token);
 
-    // 3. Khởi tạo các sự kiện Form
+    // 3. Khởi tạo các sự kiện Form & Bắt lỗi Inline
     initUIEvents(maND, token);
   } catch (e) {
     console.error("Lỗi parse cấu trúc dữ liệu session:", e);
@@ -58,7 +58,7 @@ async function initLocationDropdowns() {
   if (!provinceSel) return;
 
   try {
-    // Reset về trạng thái ban đầu để tránh trùng lặp option khi reload hoặc gọi lại
+    // Reset về trạng thái ban đầu để tránh trùng lặp option
     provinceSel.innerHTML =
       '<option value="">-- Chọn Tỉnh/Thành phố --</option>';
 
@@ -138,7 +138,7 @@ async function loadUserProfile(maND, token) {
     document.getElementById("info-phone").value = data.sdt || "";
     document.getElementById("info-email").value = data.email || "";
 
-    // 🟢 SỬA LỖI ĐỊA CHỈ NULL: Kiểm tra nghiêm ngặt tính hợp lệ của chuỗi
+    // SỬA LỖI ĐỊA CHỈ NULL: Kiểm tra nghiêm ngặt tính hợp lệ của chuỗi
     if (
       data.diachi &&
       data.diachi.trim() !== "" &&
@@ -147,7 +147,6 @@ async function loadUserProfile(maND, token) {
     ) {
       const parts = data.diachi.split(",").map((p) => p.trim());
 
-      // Nếu chuỗi chuẩn mực có cấu trúc: [Số nhà], [Phường/Xã], [Quận/Huyện], [Tỉnh/Thành]
       if (parts.length >= 4) {
         const provinceText = parts.pop();
         const districtText = parts.pop();
@@ -161,7 +160,7 @@ async function loadUserProfile(maND, token) {
         for (let i = 0; i < provinceSel.options.length; i++) {
           if (provinceSel.options[i].text === provinceText) {
             provinceSel.selectedIndex = i;
-            provinceSel.dispatchEvent(new Event("change")); // Kích hoạt sự kiện để load Huyện
+            provinceSel.dispatchEvent(new Event("change"));
             break;
           }
         }
@@ -172,7 +171,7 @@ async function loadUserProfile(maND, token) {
           for (let i = 0; i < districtSel.options.length; i++) {
             if (districtSel.options[i].text === districtText) {
               districtSel.selectedIndex = i;
-              districtSel.dispatchEvent(new Event("change")); // Kích hoạt sự kiện để load Xã
+              districtSel.dispatchEvent(new Event("change"));
               break;
             }
           }
@@ -189,11 +188,10 @@ async function loadUserProfile(maND, token) {
           }, 600);
         }, 600);
       } else {
-        // Fallback nếu dữ liệu cũ dạng tự do không đúng 4 phần, đổ hết vào ô số nhà
         document.getElementById("info-street").value = data.diachi;
       }
     } else {
-      // 🟢 FIX: Đảm bảo khi địa chỉ trống, ô Tỉnh vẫn sẵn sàng để chọn lựa
+      // Khi địa chỉ trống, ô Tỉnh vẫn sẵn sàng để chọn lựa
       document.getElementById("info-street").value = "";
       document.getElementById("info-province").selectedIndex = 0;
       document.getElementById("info-district").innerHTML =
@@ -225,7 +223,7 @@ async function loadUserProfile(maND, token) {
 
 // KHỞI TẠO CÁC SỰ KIỆN FORM VÀ THAO TÁC TRÊN TRANG HỒ SƠ
 function initUIEvents(maND, token) {
-  // Ẩn/Hiện mật khẩu nhanh cho các ô Input Password
+  // Gắn sự kiện Ẩn/Hiện mật khẩu nhanh
   document.querySelectorAll(".toggle-password").forEach((btn) => {
     btn.onclick = function () {
       const input = this.parentElement.querySelector("input");
@@ -239,17 +237,67 @@ function initUIEvents(maND, token) {
     };
   });
 
-  // SUBMIT: CẬP NHẬT THÔNG TIN CÁ NHÂN
+  // 🔴 Hàm tiện ích hiển thị lỗi Inline
+  function showInlineError(inputId, errorId, message) {
+    const inputField = document.getElementById(inputId);
+    const errorContainer = document.getElementById(errorId);
+    if (inputField && errorContainer) {
+      inputField.classList.add("is-invalid");
+      errorContainer.innerText = message;
+      errorContainer.classList.remove("d-none");
+    }
+  }
+
+  // 🔴 Hàm tiện ích xóa toàn bộ lỗi cũ của form mục tiêu
+  function clearFormErrors(formId) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+    form.querySelectorAll(".form-control").forEach((input) => {
+      input.classList.remove("is-invalid");
+    });
+    form.querySelectorAll(".error-text").forEach((errDiv) => {
+      errDiv.classList.add("d-none");
+      errDiv.innerText = "";
+    });
+  }
+
+  // Khởi tạo cơ chế tự động xóa lỗi khi người dùng nhập/thay đổi ký tự
+  const allInputs = [
+    "info-fullname",
+    "info-phone",
+    "info-email",
+    "pass-current",
+    "pass-new",
+    "pass-confirm",
+  ];
+  allInputs.forEach((id) => {
+    const inputEl = document.getElementById(id);
+    if (inputEl) {
+      inputEl.addEventListener("input", function () {
+        this.classList.remove("is-invalid");
+        const errDiv = document.getElementById(`${id}-error`);
+        if (errDiv) {
+          errDiv.classList.add("d-none");
+          errDiv.innerText = "";
+        }
+      });
+    }
+  });
+
+  // =================================================================================
+  // ⚡ SUBMIT FORM 1: CẬP NHẬT THÔNG TIN CÁ NHÂN
+  // =================================================================================
   const formInfo = document.getElementById("form-update-profile");
   if (formInfo) {
     formInfo.onsubmit = async (e) => {
       e.preventDefault();
+      clearFormErrors("form-update-profile");
 
       const hoTen = document.getElementById("info-fullname").value.trim();
       const sdt = document.getElementById("info-phone").value.trim();
       const email = document.getElementById("info-email").value.trim();
 
-      // Thu thập thông tin từ bộ dropdown địa chính mới
+      // Thu thập thông tin từ bộ dropdown địa chính
       const pEl = document.getElementById("info-province");
       const dEl = document.getElementById("info-district");
       const wEl = document.getElementById("info-ward");
@@ -265,84 +313,89 @@ function initUIEvents(maND, token) {
         ? wEl.options[wEl.selectedIndex].text
         : "";
 
-      // Validate bắt buộc chọn đầy đủ các cấp địa chỉ nếu đã nhập số nhà hoặc có thao tác chọn địa chính
+      let hasError = false;
+
+      // Validate Họ và tên
+      if (!hoTen) {
+        showInlineError(
+          "info-fullname",
+          "info-fullname-error",
+          "Họ và tên không được để trống!",
+        );
+        hasError = true;
+      } else if (hoTen.length < 6) {
+        showInlineError(
+          "info-fullname",
+          "info-fullname-error",
+          "Họ và tên phải từ 6 ký tự trở lên!",
+        );
+        hasError = true;
+      }
+
+      // Validate Số điện thoại
+      const phoneRegex = /^[0-9]+$/;
+      if (!sdt) {
+        showInlineError(
+          "info-phone",
+          "info-phone-error",
+          "Số điện thoại không được để trống!",
+        );
+        hasError = true;
+      } else if (!phoneRegex.test(sdt)) {
+        showInlineError(
+          "info-phone",
+          "info-phone-error",
+          "Số điện thoại bắt buộc phải nhập số!",
+        );
+        hasError = true;
+      } else if (sdt.length < 10) {
+        showInlineError(
+          "info-phone",
+          "info-phone-error",
+          "Số điện thoại phải từ 10 chữ số trở lên!",
+        );
+        hasError = true;
+      }
+
+      // Validate Email (nếu có nhập)
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+      if (email && !emailRegex.test(email)) {
+        showInlineError(
+          "info-email",
+          "info-email-error",
+          "Địa chỉ Email không hợp lệ!",
+        );
+        hasError = true;
+      }
+
+      // Validate bắt buộc chọn đầy đủ các cấp địa chỉ nếu đã nhập số nhà hoặc thao tác chọn địa chính
       if (
         (streetText || provinceText || districtText || wardText) &&
         (!provinceText || !districtText || !wardText || !streetText)
       ) {
+        // Địa chỉ không ép buộc trong database (null) nên dùng thông báo cảnh báo nhanh dạng Alert để họ biết cần hoàn tất form nếu lỡ gõ dở
         Swal.fire({
           icon: "warning",
           title: "Thiếu thông tin địa chỉ",
-          text: "Vui lòng nhập đầy đủ Số nhà kèm chọn Tỉnh, Huyện, Xã!",
+          text: "Vui lòng nhập đầy đủ Số nhà kèm chọn Tỉnh, Huyện, Xã để lưu định dạng vị trí!",
           confirmButtonColor: "#6138ff",
         });
-        return;
+        hasError = true;
       }
 
-      // Ghép chuỗi địa chỉ ngăn cách bằng dấu phẩy theo chuẩn quốc gia
+      if (hasError) return;
+
+      // Ghép chuỗi địa chỉ theo chuẩn quốc gia nếu hợp lệ
       let diaChi = "";
       if (streetText) {
         diaChi = `${streetText}, ${wardText}, ${districtText}, ${provinceText}`;
       }
 
-      // --- LOGIC VALIDATE CÁC TRƯỜNG DỮ LIỆU CÒN LẠI ---
-      if (!hoTen) {
-        Swal.fire({
-          icon: "warning",
-          title: "Lỗi nhập liệu",
-          text: "Họ và tên không được để trống!",
-          confirmButtonColor: "#6138ff",
-        });
-        return;
-      }
-
-      if (hoTen.length < 6) {
-        Swal.fire({
-          icon: "warning",
-          title: "Lỗi nhập liệu",
-          text: "Họ và tên phải từ 6 ký tự trở lên!",
-          confirmButtonColor: "#6138ff",
-        });
-        return;
-      }
-
-      const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      if (email && !emailRegex.test(email)) {
-        Swal.fire({
-          icon: "warning",
-          title: "Lỗi nhập liệu",
-          text: "Địa chỉ Email không hợp lệ!",
-          confirmButtonColor: "#6138ff",
-        });
-        return;
-      }
-
-      const phoneRegex = /^[0-9]+$/;
-      if (!phoneRegex.test(sdt)) {
-        Swal.fire({
-          icon: "warning",
-          title: "Lỗi nhập liệu",
-          text: "Số điện thoại bắt buộc phải là số!",
-          confirmButtonColor: "#6138ff",
-        });
-        return;
-      }
-
-      if (sdt.length < 10) {
-        Swal.fire({
-          icon: "warning",
-          title: "Lỗi nhập liệu",
-          text: "Số điện thoại phải từ 10 số trở lên!",
-          confirmButtonColor: "#6138ff",
-        });
-        return;
-      }
-
       const payload = {
         HoTen: hoTen,
         SDT: sdt,
-        Email: email || null, // Chuyển chuỗi rỗng thành null để khớp DB
-        DiaChi: diaChi || null, // Chuyển chuỗi rỗng thành null nếu khách xóa địa chỉ
+        Email: email || null,
+        DiaChi: diaChi || null,
       };
 
       try {
@@ -366,70 +419,108 @@ function initUIEvents(maND, token) {
       } catch (error) {
         console.error("Lỗi cập nhật profile:", error);
         const errorDetail = error.response?.data?.error || "";
-        let errorMessage = "Không thể cập nhật thông tin lúc này.";
+        const serverMsg = error.response?.data?.message || "";
 
-        if (errorDetail.includes("uq_nd_sdt") || errorDetail.includes("sdt")) {
-          errorMessage =
-            "Số điện thoại này đã được sử dụng bởi một tài khoản khác!";
+        // Map lỗi từ server trực tiếp xuống form inline thay vì bắn Alert
+        if (
+          errorDetail.includes("uq_nd_sdt") ||
+          errorDetail.includes("sdt") ||
+          serverMsg.includes("Số điện thoại")
+        ) {
+          showInlineError(
+            "info-phone",
+            "info-phone-error",
+            "Số điện thoại này đã được sử dụng bởi một tài khoản khác!",
+          );
         } else if (
           errorDetail.includes("uq_nd_email") ||
-          errorDetail.includes("email")
+          errorDetail.includes("email") ||
+          serverMsg.includes("Email")
         ) {
-          errorMessage =
-            "Địa chỉ Email này đã được sử dụng bởi một tài khoản khác!";
-        } else if (error.response?.data?.message) {
-          errorMessage = error.response.data.message;
+          showInlineError(
+            "info-email",
+            "info-email-error",
+            "Địa chỉ Email này đã được sử dụng bởi một tài khoản khác!",
+          );
+        } else {
+          Swal.fire({
+            icon: "error",
+            title: "Lỗi hệ thống!",
+            text: serverMsg || "Không thể cập nhật thông tin lúc này.",
+            confirmButtonColor: "#6138ff",
+          });
         }
-
-        Swal.fire({
-          icon: "error",
-          title: "Trùng lặp dữ liệu!",
-          text: errorMessage,
-          confirmButtonColor: "#6138ff",
-        });
       }
     };
   }
 
-  // SUBMIT: THAY ĐỔI MẬT KHẨU (Giữ nguyên)
+  // =================================================================================
+  // ⚡ SUBMIT FORM 2: THAY ĐỔI MẬT KHẨU
+  // =================================================================================
   const formPassword = document.getElementById("form-change-password");
   if (formPassword) {
     formPassword.onsubmit = async (e) => {
       e.preventDefault();
+      clearFormErrors("form-change-password");
 
       const currentPassword = document.getElementById("pass-current").value;
       const newPassword = document.getElementById("pass-new").value;
       const confirmPassword = document.getElementById("pass-confirm").value;
 
-      if (newPassword.length < 6) {
-        Swal.fire({
-          icon: "warning",
-          title: "Cảnh báo!",
-          text: "Mật khẩu mới phải từ 6 ký tự trở lên!",
-          confirmButtonColor: "#6138ff",
-        });
-        return;
+      let hasError = false;
+
+      // Validate mật khẩu hiện tại
+      if (!currentPassword) {
+        showInlineError(
+          "pass-current",
+          "pass-current-error",
+          "Vui lòng nhập mật khẩu hiện tại!",
+        );
+        hasError = true;
       }
 
-      if (currentPassword === newPassword) {
-        Swal.fire({
-          icon: "warning",
-          title: "Cảnh báo!",
-          text: "Mật khẩu mới không được trùng mật khẩu cũ!",
-          confirmButtonColor: "#6138ff",
-        });
-        return;
+      // Validate mật khẩu mới
+      if (!newPassword) {
+        showInlineError(
+          "pass-new",
+          "pass-new-error",
+          "Vui lòng nhập mật khẩu mới!",
+        );
+        hasError = true;
+      } else if (newPassword.length < 6) {
+        showInlineError(
+          "pass-new",
+          "pass-new-error",
+          "Mật khẩu mới phải từ 6 ký tự trở lên!",
+        );
+        hasError = true;
+      } else if (currentPassword === newPassword) {
+        showInlineError(
+          "pass-new",
+          "pass-new-error",
+          "Mật khẩu mới không được trùng mật khẩu hiện tại!",
+        );
+        hasError = true;
       }
 
-      if (newPassword !== confirmPassword) {
-        Swal.fire({
-          icon: "warning",
-          title: "Cảnh báo!",
-          text: "Xác nhận mật khẩu mới không khớp!",
-          confirmButtonColor: "#6138ff",
-        });
-        return;
+      // Validate xác nhận lại mật khẩu
+      if (!confirmPassword) {
+        showInlineError(
+          "pass-confirm",
+          "pass-confirm-error",
+          "Vui lòng xác nhận lại mật khẩu mới!",
+        );
+        hasError = true;
+      } else if (newPassword !== confirmPassword) {
+        showInlineError(
+          "pass-confirm",
+          "pass-confirm-error",
+          "Xác nhận mật khẩu mới không khớp!",
+        );
+        hasError = true;
       }
+
+      if (hasError) return;
 
       try {
         await axios.put(
@@ -451,12 +542,27 @@ function initUIEvents(maND, token) {
         });
       } catch (error) {
         console.error("Lỗi đổi mật khẩu:", error);
-        Swal.fire({
-          icon: "error",
-          title: "Thất bại!",
-          text: error.response?.data?.message || "Mật khẩu cũ không chính xác.",
-          confirmButtonColor: "#6138ff",
-        });
+        const serverMsg = error.response?.data?.message || "";
+
+        // Map lỗi sai mật khẩu cũ trả về từ server vào ô input hiện tại
+        if (
+          serverMsg.toLowerCase().includes("hiện tại") ||
+          serverMsg.toLowerCase().includes("cũ") ||
+          serverMsg.toLowerCase().includes("không chính xác")
+        ) {
+          showInlineError(
+            "pass-current",
+            "pass-current-error",
+            "Mật khẩu hiện tại không chính xác!",
+          );
+        } else {
+          Swal.fire({
+            icon: "error",
+            title: "Thất bại!",
+            text: serverMsg || "Mật khẩu cũ không chính xác.",
+            confirmButtonColor: "#6138ff",
+          });
+        }
       }
     };
   }

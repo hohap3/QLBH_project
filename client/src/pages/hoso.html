@@ -109,9 +109,12 @@
                       type="text"
                       id="info-fullname"
                       class="form-control"
-                      required
                       placeholder="Nhập họ và tên"
                     />
+                    <div
+                      id="info-fullname-error"
+                      class="error-text text-danger small mt-1 d-none"
+                    ></div>
                   </div>
                   <div class="col-md-6">
                     <label class="form-label fw-semibold text-secondary"
@@ -121,9 +124,12 @@
                       type="tel"
                       id="info-phone"
                       class="form-control"
-                      required
                       placeholder="Nhập số điện thoại"
                     />
+                    <div
+                      id="info-phone-error"
+                      class="error-text text-danger small mt-1 d-none"
+                    ></div>
                   </div>
                   <div class="col-md-6">
                     <label class="form-label fw-semibold text-secondary"
@@ -135,6 +141,10 @@
                       class="form-control"
                       placeholder="example@gmail.com"
                     />
+                    <div
+                      id="info-email-error"
+                      class="error-text text-danger small mt-1 d-none"
+                    ></div>
                   </div>
                   <div class="col-12">
                     <label class="form-label fw-semibold text-secondary"
@@ -202,7 +212,6 @@
                       type="password"
                       id="pass-current"
                       class="form-control"
-                      required
                       placeholder="Nhập mật khẩu cũ"
                     />
                     <button
@@ -212,6 +221,10 @@
                       <i class="fa fa-eye"></i>
                     </button>
                   </div>
+                  <div
+                    id="pass-current-error"
+                    class="error-text text-danger small mt-1 d-none"
+                  ></div>
                 </div>
                 <div class="mb-3">
                   <label class="form-label fw-semibold text-secondary"
@@ -222,7 +235,6 @@
                       type="password"
                       id="pass-new"
                       class="form-control"
-                      required
                       placeholder="Tối thiểu 6 ký tự"
                     />
                     <button
@@ -232,6 +244,10 @@
                       <i class="fa fa-eye"></i>
                     </button>
                   </div>
+                  <div
+                    id="pass-new-error"
+                    class="error-text text-danger small mt-1 d-none"
+                  ></div>
                 </div>
                 <div class="mb-4">
                   <label class="form-label fw-semibold text-secondary"
@@ -243,7 +259,6 @@
                       type="password"
                       id="pass-confirm"
                       class="form-control"
-                      required
                       placeholder="Nhập lại mật khẩu mới"
                     />
                     <button
@@ -253,6 +268,10 @@
                       <i class="fa fa-eye"></i>
                     </button>
                   </div>
+                  <div
+                    id="pass-confirm-error"
+                    class="error-text text-danger small mt-1 d-none"
+                  ></div>
                 </div>
                 <div class="text-end">
                   <button
