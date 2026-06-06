@@ -32,9 +32,13 @@
                 id="username"
                 class="form-control"
                 placeholder="username123"
-                required
               />
             </div>
+            <div
+              id="usernameError"
+              class="error-text text-danger small mt-1 d-none"
+              style="font-size: 13px"
+            ></div>
           </div>
 
           <div class="mb-3 text-start">
@@ -48,9 +52,13 @@
                 id="fullname"
                 class="form-control"
                 placeholder="Nguyễn Văn A"
-                required
               />
             </div>
+            <div
+              id="fullnameError"
+              class="error-text text-danger small mt-1 d-none"
+              style="font-size: 13px"
+            ></div>
           </div>
 
           <div class="mb-3 text-start">
@@ -62,9 +70,13 @@
                 id="email"
                 class="form-control"
                 placeholder="email@example.com"
-                required
               />
             </div>
+            <div
+              id="emailError"
+              class="error-text text-danger small mt-1 d-none"
+              style="font-size: 13px"
+            ></div>
           </div>
 
           <div class="mb-3 text-start">
@@ -78,9 +90,13 @@
                 id="phone"
                 class="form-control"
                 placeholder="0123456789"
-                required
               />
             </div>
+            <div
+              id="phoneError"
+              class="error-text text-danger small mt-1 d-none"
+              style="font-size: 13px"
+            ></div>
           </div>
 
           <div class="mb-3 text-start">
@@ -94,15 +110,19 @@
                 id="password"
                 class="form-control"
                 placeholder="********"
-                required
               />
               <button type="button" class="eye-btn toggle-password">
                 <i class="fa-regular fa-eye"></i>
               </button>
             </div>
-            <div class="form-text" style="font-size: 10px">
+            <div class="form-text text-muted" style="font-size: 10px">
               Ít nhất 6 ký tự, gồm chữ hoa, chữ thường và ký tự đặc biệt.
             </div>
+            <div
+              id="passwordError"
+              class="error-text text-danger small mt-1 d-none"
+              style="font-size: 13px"
+            ></div>
           </div>
 
           <div class="mb-4 text-start">
@@ -116,21 +136,20 @@
                 id="confirmPassword"
                 class="form-control"
                 placeholder="********"
-                required
               />
               <button type="button" class="eye-btn toggle-password">
                 <i class="fa-regular fa-eye"></i>
               </button>
             </div>
+            <div
+              id="confirmPasswordError"
+              class="error-text text-danger small mt-1 d-none"
+              style="font-size: 13px"
+            ></div>
           </div>
 
           <div class="form-check mb-4 text-start small">
-            <input
-              class="form-check-input"
-              type="checkbox"
-              id="terms"
-              required
-            />
+            <input class="form-check-input" type="checkbox" id="terms" />
             <label class="form-check-label text-muted" for="terms">
               Tôi đồng ý với
               <a
@@ -149,6 +168,11 @@
                 >Chính sách bảo mật</a
               >
             </label>
+            <div
+              id="termsError"
+              class="error-text text-danger small mt-1 d-none"
+              style="font-size: 13px"
+            ></div>
           </div>
 
           <button
@@ -203,29 +227,11 @@
             </p>
             <p>
               <strong>1. Chấp thuận điều khoản:</strong> Bằng cách hoàn tất thủ
-              tục đăng ký và tạo tài khoản tại hệ thống HP STORE, bạn mặc định
-              đồng ý chịu ràng buộc pháp lý bởi các quy định, điều kiện hoạt
-              động thuộc quyền quản lý trực tiếp từ ban quản trị cửa hàng.
+              tục đăng ký tại HP STORE...
             </p>
             <p>
-              <strong>2. Quy định tài khoản:</strong> Thành viên có trách nhiệm
-              tự bảo mật thông tin mật khẩu truy cập cá nhân. Mọi hành vi chia
-              sẻ tài khoản dẫn đến thất thoát thông tin hoặc can thiệp phá hoại
-              dữ liệu hệ thống cục bộ sẽ bị hủy quyền thành viên ngay lập tức mà
-              không cần báo trước.
-            </p>
-            <p>
-              <strong>3. Giao dịch mua hàng:</strong> Các đơn đặt hàng được
-              thiết lập dựa trên nguyên tắc tự nguyện, thông tin cung ứng về giá
-              niêm yết và tình trạng tồn kho thực tế. Chúng tôi giữ quyền từ
-              chối các đơn hàng có dấu hiệu ảo, phá hoại hoặc lỗi định giá hệ
-              thống.
-            </p>
-            <p>
-              <strong>4. Thay đổi nội dung:</strong> Ban quản trị HP STORE có
-              toàn quyền cập nhật, chỉnh sửa nội dung điều khoản hoạt động bất
-              kỳ lúc nào để phù hợp với định hướng kinh doanh hoặc quy định pháp
-              luật hiện hành.
+              <strong>2. Quy định tài khoản:</strong> Thành viên chịu trách
+              nhiệm bảo mật mật khẩu...
             </p>
           </div>
           <div class="modal-footer border-top-0 pb-4 px-4">
@@ -275,34 +281,9 @@
             class="modal-body px-4 py-3 text-secondary"
             style="font-size: 14px; line-height: 1.6"
           >
-            <p class="fw-bold text-dark">
-              Bảo vệ quyền riêng tư cá nhân của khách hàng là tiêu chuẩn hàng
-              đầu:
-            </p>
             <p>
               <strong>1. Thu thập dữ liệu:</strong> Hệ thống thực hiện thu thập
-              chuỗi thông tin bao gồm: Họ và tên, Email, Số điện thoại và Địa
-              chỉ giao dịch nhằm mục đích xác thực danh tính người dùng và tối
-              ưu hóa quy trình xử lý đơn vận hàng hóa.
-            </p>
-            <p>
-              <strong>2. Sử dụng thông tin:</strong> Toàn bộ dữ liệu thu thập
-              chỉ lưu hành nội bộ trong hệ thống HP STORE nhằm phục vụ quản trị,
-              gửi thông báo trạng thái hóa đơn hoặc hỗ trợ kỹ thuật sau bán
-              hàng.
-            </p>
-            <p>
-              <strong>3. Cam kết bảo mật:</strong> Chúng tôi áp dụng kiến trúc
-              mã hóa một chiều (như hash mật khẩu bằng Bcrypt) để lưu trữ thông
-              tin nhạy cảm. Cam kết không thực hiện chuyển nhượng, trao đổi hay
-              cung ứng dữ liệu thành viên cho bất kỳ bên thứ ba nào khi chưa có
-              sự đồng ý trực tiếp của bạn.
-            </p>
-            <p>
-              <strong>4. Quyền lưu trữ:</strong> Dữ liệu thành viên sẽ được lưu
-              trữ an toàn trên hệ thống máy chủ cơ sở dữ liệu cho đến khi nhận
-              được văn bản yêu cầu hủy bỏ hoặc khóa tài khoản chính thức từ phía
-              người dùng.
+              chuỗi thông tin...
             </p>
           </div>
           <div class="modal-footer border-top-0 pb-4 px-4">

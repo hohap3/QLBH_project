@@ -3,14 +3,11 @@ import "bootstrap";
 import Swal from "sweetalert2";
 import axios from "axios";
 
-// Đổi URL này thành domain Render khi bạn deploy (ví dụ: https://qlbh-project.onrender.com/api)
 const BASE_URL = "https://qlbh-project.onrender.com/api";
 
 const checkLoggedIn = () => {
   const userData = JSON.parse(localStorage.getItem("hpstore_user"));
-
   if (userData && userData.token) {
-    // Nếu đã đăng nhập thành công, tự động chuyển hướng về trang chủ
     window.location.href = "/index.html";
   }
 };
@@ -22,6 +19,22 @@ function handleRegisterPage() {
   const toggleButtons = document.querySelectorAll(".toggle-password");
   const termsCheckbox = document.querySelector("#terms");
   const btnAcceptTerms = document.querySelector("#btnAcceptTerms");
+
+  // DOM các phần tử hiển thị lỗi và input tương ứng
+  const usernameInput = document.querySelector("#username");
+  const fullnameInput = document.querySelector("#fullname");
+  const emailInput = document.querySelector("#email");
+  const phoneInput = document.querySelector("#phone");
+  const passwordInput = document.querySelector("#password");
+  const confirmPasswordInput = document.querySelector("#confirmPassword");
+
+  const usernameError = document.querySelector("#usernameError");
+  const fullnameError = document.querySelector("#fullnameError");
+  const emailError = document.querySelector("#emailError");
+  const phoneError = document.querySelector("#phoneError");
+  const passwordError = document.querySelector("#passwordError");
+  const confirmPasswordError = document.querySelector("#confirmPasswordError");
+  const termsError = document.querySelector("#termsError");
 
   // 1. Xử lý ẩn/hiện mật khẩu
   toggleButtons.forEach((btn) => {
@@ -37,97 +50,199 @@ function handleRegisterPage() {
   if (btnAcceptTerms && termsCheckbox) {
     btnAcceptTerms.addEventListener("click", () => {
       termsCheckbox.checked = true;
+      // Xóa thông báo lỗi điều khoản khi đã check qua modal
+      termsError.classList.add("d-none");
+      termsCheckbox.classList.remove("is-invalid");
     });
   }
 
-  // Nếu không tìm thấy form đăng ký thì dừng xử lý để tránh lỗi JS trên các trang khác
   if (!registerForm) return;
+
+  // 🟢 Hàm hiển thị thông báo lỗi dưới từng Input
+  const showInputError = (errorElement, inputElement, message) => {
+    errorElement.innerText = message;
+    errorElement.classList.remove("d-none");
+    inputElement.classList.add("is-invalid");
+
+    registerForm.classList.add("animate-shake");
+    setTimeout(() => registerForm.classList.remove("animate-shake"), 500);
+  };
+
+  // 🟢 Hàm xóa sạch trạng thái lỗi cũ
+  const clearErrors = () => {
+    const errorElements = [
+      usernameError,
+      fullnameError,
+      emailError,
+      phoneError,
+      passwordError,
+      confirmPasswordError,
+      termsError,
+    ];
+    const inputElements = [
+      usernameInput,
+      fullnameInput,
+      emailInput,
+      phoneInput,
+      passwordInput,
+      confirmPasswordInput,
+      termsCheckbox,
+    ];
+
+    errorElements.forEach((el) => {
+      if (el) {
+        el.classList.add("d-none");
+        el.innerText = "";
+      }
+    });
+    inputElements.forEach((input) => {
+      if (input) input.classList.remove("is-invalid");
+    });
+  };
+
+  // Gắn sự kiện xóa lỗi ngay khi người dùng chỉnh sửa lại dữ liệu
+  [
+    usernameInput,
+    fullnameInput,
+    emailInput,
+    phoneInput,
+    passwordInput,
+    confirmPasswordInput,
+  ].forEach((input) => {
+    input.addEventListener("input", clearErrors);
+  });
+  termsCheckbox.addEventListener("change", clearErrors);
 
   // 2. Xử lý gửi form với Axios
   registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+    clearErrors(); // Xóa lỗi cũ trước khi kiểm tra
 
     // Lấy dữ liệu từ form
-    const fullname = document.querySelector("#fullname").value.trim();
-    const username = document.querySelector("#username").value.trim();
-    const email = document.querySelector("#email").value.trim();
-    const phone = document.querySelector("#phone").value.trim();
-    const password = document.querySelector("#password").value;
-    const confirmPassword = document.querySelector("#confirmPassword").value;
-    const terms = document.querySelector("#terms").checked;
+    const fullname = fullnameInput.value.trim();
+    const username = usernameInput.value.trim();
+    const email = emailInput.value.trim();
+    const phone = phoneInput.value.trim();
+    const password = passwordInput.value;
+    const confirmPassword = confirmPasswordInput.value;
+    const terms = termsCheckbox.checked;
 
     // --- VALIDATION TẠI CLIENT ---
-    const showError = (message) => {
-      Swal.fire({
-        icon: "error",
-        title: "Lỗi rồi...",
-        text: message,
-        confirmButtonColor: "#e91e63",
-      });
-    };
+    if (!username) {
+      showInputError(
+        usernameError,
+        usernameInput,
+        "Vui lòng nhập tên đăng nhập!",
+      );
+      usernameInput.focus();
+      return;
+    }
 
-    if (
-      !fullname ||
-      !username ||
-      !email ||
-      !phone ||
-      !password ||
-      !confirmPassword
-    ) {
-      showError("Vui lòng điền đầy đủ tất cả các trường thông tin!");
+    if (username.length < 5) {
+      showInputError(
+        usernameError,
+        usernameInput,
+        "Tên đăng nhập phải có ít nhất 5 ký tự!",
+      );
+      usernameInput.focus();
+      return;
+    }
+
+    if (!fullname) {
+      showInputError(fullnameError, fullnameInput, "Vui lòng điền họ và tên!");
+      fullnameInput.focus();
       return;
     }
 
     const fullnameRegex =
       /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểิếệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ\s]+$/;
     if (!fullnameRegex.test(fullname)) {
-      showError(
-        "Họ và tên chỉ được phép chứa chữ cái và khoảng trắng, không được chứa số hoặc ký tự đặc biệt!",
+      showInputError(
+        fullnameError,
+        fullnameInput,
+        "Họ và tên chỉ được chứa chữ cái và khoảng trắng!",
       );
+      fullnameInput.focus();
       return;
     }
 
-    if (username.length < 5) {
-      showError("Tên đăng nhập phải có ít nhất 5 ký tự!");
+    if (!email) {
+      showInputError(emailError, emailInput, "Vui lòng nhập địa chỉ Email!");
+      emailInput.focus();
       return;
     }
 
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     if (!emailRegex.test(email)) {
-      showError(
-        "Định dạng địa chỉ Email không hợp lệ (Ví dụ đúng: link@hpstore.com)!",
+      showInputError(
+        emailError,
+        emailInput,
+        "Định dạng địa chỉ Email không hợp lệ (Ví dụ: link@hpstore.com)!",
       );
+      emailInput.focus();
+      return;
+    }
+
+    if (!phone) {
+      showInputError(phoneError, phoneInput, "Vui lòng nhập số điện thoại!");
+      phoneInput.focus();
       return;
     }
 
     const phoneRegex = /^[0-9]{10}$/;
     if (!phoneRegex.test(phone)) {
-      showError("Số điện thoại không hợp lệ!");
+      showInputError(
+        phoneError,
+        phoneInput,
+        "Số điện thoại không hợp lệ (phải gồm 10 chữ số)!",
+      );
+      phoneInput.focus();
+      return;
+    }
+
+    if (!password) {
+      showInputError(
+        passwordError,
+        passwordInput,
+        "Vui lòng cấu hình mật khẩu an toàn!",
+      );
+      passwordInput.focus();
       return;
     }
 
     const passwordRegex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>]).{6,}$/;
     if (!passwordRegex.test(password)) {
-      showError(
+      showInputError(
+        passwordError,
+        passwordInput,
         "Mật khẩu phải từ 6 ký tự, bao gồm chữ hoa, chữ thường và ký tự đặc biệt!",
       );
+      passwordInput.focus();
       return;
     }
 
     if (password !== confirmPassword) {
-      showError("Xác nhận mật khẩu không khớp!");
+      showInputError(
+        confirmPasswordError,
+        confirmPasswordInput,
+        "Xác nhận mật khẩu không trùng khớp!",
+      );
+      confirmPasswordInput.focus();
       return;
     }
 
     if (!terms) {
-      showError("Bạn phải đồng ý với điều khoản sử dụng!");
+      showInputError(
+        termsError,
+        termsCheckbox,
+        "Bạn phải xác nhận đồng ý với điều khoản sử dụng!",
+      );
       return;
     }
 
     // --- GỬI DỮ LIỆU LÊN SERVER ---
     try {
-      // Hiện trạng thái Loading
       Swal.fire({
         title: "Đang xử lý...",
         text: "Vui lòng chờ trong giây lát",
@@ -137,7 +252,6 @@ function handleRegisterPage() {
         },
       });
 
-      // Gọi API bằng Axios theo hằng số BASE_URL
       const response = await axios.post(`${BASE_URL}/auth/register`, {
         fullname,
         username,
@@ -146,22 +260,45 @@ function handleRegisterPage() {
         password,
       });
 
-      // Xử lý phản hồi thành công
       Swal.fire({
         icon: "success",
         title: "Đăng ký thành công!",
         text: response.data.message || "Chào mừng bạn đến với HP STORE",
-        confirmButtonColor: "#e91e63",
+        confirmButtonColor: "#6138ff",
         timer: 2000,
+        showConfirmButton: false,
       }).then(() => {
-        window.location.href = "login.html"; // Chuyển hướng sang trang Login chung thư mục
+        window.location.href = "login.html";
       });
     } catch (error) {
       console.error("Lỗi đăng ký:", error);
-      // Xử lý lỗi trả về từ PostgreSQL / Server thông qua Controller
-      const errorMessage =
-        error.response?.data?.message || "Không thể kết nối đến máy chủ!";
-      showError(errorMessage);
+      Swal.close();
+
+      let errorMessage = "Không thể kết nối đến máy chủ!";
+
+      if (error.response) {
+        errorMessage = error.response.data.message || "Đăng ký thất bại";
+        const lowerMsg = errorMessage.toLowerCase();
+
+        // 🟢 Điều hướng text lỗi từ Server xuống đúng ô input bị trùng dữ liệu
+        if (
+          lowerMsg.includes("tên đăng nhập") ||
+          lowerMsg.includes("username")
+        ) {
+          showInputError(usernameError, usernameInput, errorMessage);
+        } else if (lowerMsg.includes("email")) {
+          showInputError(emailError, emailInput, errorMessage);
+        } else if (
+          lowerMsg.includes("số điện thoại") ||
+          lowerMsg.includes("phone")
+        ) {
+          showInputError(phoneError, phoneInput, errorMessage);
+        } else {
+          showInputError(usernameError, usernameInput, errorMessage);
+        }
+      } else {
+        showInputError(usernameError, usernameInput, errorMessage);
+      }
     }
   });
 }
