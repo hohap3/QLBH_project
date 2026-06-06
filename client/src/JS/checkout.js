@@ -13,7 +13,9 @@ const BANK_CONFIG = {
   accountName: "CONG TY HP STORE",
 };
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  // 🟢 ĐÃ CẬP NHẬT: Đảm bảo dropdown địa chính được nạp danh sách Tỉnh trước khi fill dữ liệu người dùng
+  await initLocationDropdowns();
   autofillUserInfo();
   renderCheckoutSummary();
 
@@ -41,7 +43,11 @@ function getCartKey() {
   return "hpstore_cart_guest";
 }
 
-// 🟢 CHUẨN HÓA ĐƯỜNG DẪN ẢNH ĐỒNG BỘ CLOUDINARY
+// 🟢 HÀM LẤY KEY CỦA CÁC MÓN ĐƯỢC TÍCH CHỌN SANG ĐỂ ĐỒNG BỘ
+function getCheckedItemsKey() {
+  return getCartKey() + "_checked_items";
+}
+
 function getProductImageUrl(hinhanh) {
   if (
     !hinhanh ||
@@ -52,15 +58,14 @@ function getProductImageUrl(hinhanh) {
   ) {
     return DEFAULT_IMAGE;
   }
-  // Nếu DB lưu full URL trực tiếp từ Cloudinary
   if (hinhanh.startsWith("http://") || hinhanh.startsWith("https://")) {
     return hinhanh;
   }
-  // Trường hợp fallback nếu DB chỉ lưu tên file cục bộ
   const rootUrl = BASE_URL.replace("/api", "");
   return `${rootUrl}/uploads/products/${hinhanh}`;
 }
 
+// 🟢 ĐÃ CẬP NHẬT: Tự động điền thông tin và bóc tách chuỗi địa chỉ 4 cấp an toàn chống null
 async function autofillUserInfo() {
   const userData = JSON.parse(localStorage.getItem("hpstore_user"));
   const maND =
@@ -85,9 +90,72 @@ async function autofillUserInfo() {
       if (user.sdt || user.SDT) {
         document.getElementById("checkout-phone").value = user.sdt || user.SDT;
       }
-      if (user.diachi || user.DiaChi) {
-        document.getElementById("checkout-address").value =
-          user.diachi || user.DiaChi;
+
+      // 🟢 XỬ LÝ ĐỔ DỮ LIỆU ĐỊA CHỈ LÊN DROPDOWN 3 CẤP
+      const rawAddress = user.diachi || user.DiaChi;
+      if (
+        rawAddress &&
+        rawAddress.trim() !== "" &&
+        rawAddress !== "null" &&
+        rawAddress !== "undefined"
+      ) {
+        const parts = rawAddress.split(",").map((p) => p.trim());
+
+        // Nếu chuỗi chuẩn cấu trúc: [Số nhà], [Phường/Xã], [Quận/Huyện], [Tỉnh/Thành]
+        if (parts.length >= 4) {
+          const provinceText = parts.pop();
+          const districtText = parts.pop();
+          const wardText = parts.pop();
+          const streetText = parts.join(", "); // Phần còn lại là số nhà, tên đường
+
+          document.getElementById("checkout-street").value = streetText;
+
+          // Khớp chọn Tỉnh/Thành
+          const provinceSel = document.getElementById("checkout-province");
+          for (let i = 0; i < provinceSel.options.length; i++) {
+            if (provinceSel.options[i].text === provinceText) {
+              provinceSel.selectedIndex = i;
+              provinceSel.dispatchEvent(new Event("change")); // Kích hoạt sự kiện để load danh sách Huyện
+              break;
+            }
+          }
+
+          // Đợi API nạp danh sách Huyện rồi tiếp tục khớp dữ liệu
+          setTimeout(async () => {
+            const districtSel = document.getElementById("checkout-district");
+            for (let i = 0; i < districtSel.options.length; i++) {
+              if (districtSel.options[i].text === districtText) {
+                districtSel.selectedIndex = i;
+                districtSel.dispatchEvent(new Event("change")); // Kích hoạt sự kiện để load danh sách Xã
+                break;
+              }
+            }
+
+            // Đợi API nạp danh sách Xã rồi khớp nốt giá trị cuối cùng
+            setTimeout(() => {
+              const wardSel = document.getElementById("checkout-ward");
+              for (let i = 0; i < wardSel.options.length; i++) {
+                if (wardSel.options[i].text === wardText) {
+                  wardSel.selectedIndex = i;
+                  break;
+                }
+              }
+            }, 600);
+          }, 600);
+        } else {
+          // Fallback nếu địa chỉ cũ lưu tự do thì đẩy hết vào ô số nhà
+          document.getElementById("checkout-street").value = rawAddress;
+        }
+      } else {
+        // Địa chỉ là null/rỗng: Reset sạch các ô để khách tự chọn mới
+        document.getElementById("checkout-street").value = "";
+        document.getElementById("checkout-province").selectedIndex = 0;
+        document.getElementById("checkout-district").innerHTML =
+          '<option value="">-- Chọn Quận/Huyện --</option>';
+        document.getElementById("checkout-ward").innerHTML =
+          '<option value="">-- Chọn Phường/Xã --</option>';
+        document.getElementById("checkout-district").disabled = true;
+        document.getElementById("checkout-ward").disabled = true;
       }
 
       if (user.diemtichluy !== undefined) {
@@ -102,6 +170,69 @@ async function autofillUserInfo() {
   }
 }
 
+// 🟢 HÀM KHỞI TẠO ĐỊA CHỈ 3 CẤP TỪ API PUBLIC
+async function initLocationDropdowns() {
+  const provinceSel = document.getElementById("checkout-province");
+  const districtSel = document.getElementById("checkout-district");
+  const wardSel = document.getElementById("checkout-ward");
+
+  if (!provinceSel) return;
+
+  try {
+    // Đảm bảo trạng thái ban đầu sạch sẽ
+    provinceSel.innerHTML =
+      '<option value="">-- Chọn Tỉnh/Thành phố --</option>';
+
+    // 1. Tải danh sách Tỉnh/Thành phố (dùng API public không cần Token)
+    const res = await axios.get("https://provinces.open-api.vn/api/p/");
+    res.data.forEach((p) => {
+      provinceSel.options[provinceSel.options.length] = new Option(
+        p.name,
+        p.code,
+      );
+    });
+
+    // 2. Lắng nghe thay đổi ở ô Tỉnh -> Tải Huyện
+    provinceSel.addEventListener("change", async () => {
+      districtSel.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+      wardSel.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+      districtSel.disabled = true;
+      wardSel.disabled = true;
+
+      if (provinceSel.value) {
+        const dRes = await axios.get(
+          `https://provinces.open-api.vn/api/p/${provinceSel.value}?depth=2`,
+        );
+        dRes.data.districts.forEach((d) => {
+          districtSel.options[districtSel.options.length] = new Option(
+            d.name,
+            d.code,
+          );
+        });
+        districtSel.disabled = false;
+      }
+    });
+
+    // 3. Lắng nghe thay đổi ở ô Huyện -> Tải Xã
+    districtSel.addEventListener("change", async () => {
+      wardSel.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+      wardSel.disabled = true;
+
+      if (districtSel.value) {
+        const wRes = await axios.get(
+          `https://provinces.open-api.vn/api/d/${districtSel.value}?depth=2`,
+        );
+        wRes.data.wards.forEach((w) => {
+          wardSel.options[wardSel.options.length] = new Option(w.name, w.code);
+        });
+        wardSel.disabled = false;
+      }
+    });
+  } catch (error) {
+    console.error("Không thể tải API địa chính:", error);
+  }
+}
+
 function resetPlaceholdersToGuest() {
   const nameEl = document.getElementById("checkout-fullname");
   const phoneEl = document.getElementById("checkout-phone");
@@ -113,35 +244,33 @@ function renderCheckoutSummary() {
   const container = document.getElementById("checkout-items-list");
   if (!container) return;
 
-  const cartKey = getCartKey();
-  const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+  const checkoutCart =
+    JSON.parse(localStorage.getItem("hpstore_checkout_cart")) || [];
 
-  if (cart.length === 0) {
+  if (checkoutCart.length === 0) {
     Swal.fire({
       icon: "warning",
-      title: "Giỏ hàng trống!",
-      text: "Không có sản phẩm nào để thanh toán. Quay lại trang chủ mua sắm nhé!",
+      title: "Chưa chọn sản phẩm!",
+      text: "Không tìm thấy dữ liệu mặt hàng được chọn để thanh toán. Quay lại giỏ hàng nhé!",
       confirmButtonColor: "#6366f1",
     }).then(() => {
-      window.location.href = "/index.html";
+      window.location.href = "/src/pages/cart.html";
     });
     return;
   }
 
-  baseTotalMoney = cart.reduce((sum, item) => {
+  baseTotalMoney = checkoutCart.reduce((sum, item) => {
     const gia = parseFloat(item.GiaBan || item.giaban) || 0;
     const qty = parseInt(item.SoLuong || item.soluong) || 0;
     return sum + gia * qty;
   }, 0);
 
-  container.innerHTML = cart
+  container.innerHTML = checkoutCart
     .map((item) => {
       const gia = parseFloat(item.GiaBan || item.giaban) || 0;
       const qty = parseInt(item.SoLuong || item.soluong) || 0;
       const rawImg = item.hinhanh || item.hinhAnh || item.HinhAnh;
       const tenSP = item.tensp || item.TenSP || "Sản phẩm";
-
-      // 🟢 ĐỔI LOGIC: Sử dụng hàm chuẩn hóa tự động xử lý Cloudinary hoặc link tuyệt đối
       const imgPath = getProductImageUrl(rawImg);
 
       return `
@@ -213,7 +342,35 @@ async function handleCheckoutSubmit(e) {
 
   const name = document.getElementById("checkout-fullname").value.trim();
   const phone = document.getElementById("checkout-phone").value.trim();
-  const address = document.getElementById("checkout-address").value.trim();
+
+  // 🟢 ĐÃ CẬP NHẬT: Gom dữ liệu từ bộ chọn địa chỉ mới để tạo chuỗi gán cho payload gửi lên API
+  const pEl = document.getElementById("checkout-province");
+  const dEl = document.getElementById("checkout-district");
+  const wEl = document.getElementById("checkout-ward");
+  const streetText = document.getElementById("checkout-street").value.trim();
+
+  const provinceText = pEl.options[pEl.selectedIndex]?.value
+    ? pEl.options[pEl.selectedIndex].text
+    : "";
+  const districtText = dEl.options[dEl.selectedIndex]?.value
+    ? dEl.options[dEl.selectedIndex].text
+    : "";
+  const wardText = wEl.options[wEl.selectedIndex]?.value
+    ? wEl.options[wEl.selectedIndex].text
+    : "";
+
+  // Validate nghiêm ngặt nếu nhập thiếu các tầng cấp hành chính
+  if (!streetText || !provinceText || !districtText || !wardText) {
+    Swal.fire({
+      icon: "warning",
+      title: "Thiếu thông tin địa chỉ",
+      text: "Vui lòng nhập số nhà/tên đường và chọn đầy đủ Tỉnh thành, Quận huyện, Phường xã nhận hàng!",
+      confirmButtonColor: "#6366f1",
+    });
+    return;
+  }
+
+  const address = `${streetText}, ${wardText}, ${districtText}, ${provinceText}`;
   const note = document.getElementById("checkout-note").value.trim();
   const paymentElement = document.querySelector(
     'input[name="paymentMethod"]:checked',
@@ -225,18 +382,18 @@ async function handleCheckoutSubmit(e) {
   }
   const paymentMethod = paymentElement.value;
 
-  if (!name || !phone || !address) {
+  if (!name || !phone) {
     Swal.fire({
       icon: "warning",
       title: "Thiếu thông tin nhận hàng",
-      text: "Vui lòng cung cấp đầy đủ Tên, Số điện thoại và Địa chỉ giao hàng chính xác!",
+      text: "Vui lòng cung cấp đầy đủ Tên và Số điện thoại nhận hàng chính xác!",
       confirmButtonColor: "#6366f1",
     });
     return;
   }
 
-  const cartKey = getCartKey();
-  const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+  const checkoutCart =
+    JSON.parse(localStorage.getItem("hpstore_checkout_cart")) || [];
   const userData = JSON.parse(localStorage.getItem("hpstore_user")) || {};
   const finalTotalMoney = updateFinalTotalDisplay();
 
@@ -254,7 +411,7 @@ async function handleCheckoutSubmit(e) {
     PhuongThucThanhToan: paymentMethod,
     PointsToDeduct: discountInfo.pointsToDeduct,
     TongGiamGia: discountInfo.amount,
-    ChiTiet: cart.map((item) => {
+    ChiTiet: checkoutCart.map((item) => {
       const giaBan = parseFloat(item.GiaBan || item.giaban) || 0;
       const soLuong = parseInt(item.SoLuong || item.soluong) || 0;
 
@@ -305,7 +462,7 @@ async function handleCheckoutSubmit(e) {
         const qrUrl = `https://img.vietqr.io/image/${BANK_CONFIG.bankId}-${BANK_CONFIG.accountNo}-compact2.jpg?amount=${finalTotalMoney}&addInfo=${encodeURIComponent(memo)}&accountName=${encodeURIComponent(BANK_CONFIG.accountName)}`;
 
         Swal.fire({
-          title: "Thanh Tán Chuyển Khoản QR",
+          title: "Thanh Toán Chuyển Khoản QR",
           html: `
             <div class="text-center">
               <p class="text-muted small mb-2">Vui lòng quét mã QR dưới đây bằng ứng dụng Ngân hàng để thanh toán.</p>
@@ -327,7 +484,7 @@ async function handleCheckoutSubmit(e) {
           allowOutsideClick: false,
         }).then((invoiceResult) => {
           if (invoiceResult.isConfirmed) {
-            clearCartAndRedirect(cartKey);
+            clearPurchasedItems();
           }
         });
       } else {
@@ -338,7 +495,7 @@ async function handleCheckoutSubmit(e) {
           confirmButtonColor: "#6366f1",
           confirmButtonText: "Quay lại trang chủ",
         }).then(() => {
-          clearCartAndRedirect(cartKey);
+          clearPurchasedItems();
         });
       }
     } else {
@@ -360,9 +517,29 @@ async function handleCheckoutSubmit(e) {
   }
 }
 
-function clearCartAndRedirect(cartKey) {
-  localStorage.removeItem(cartKey);
+function clearPurchasedItems() {
+  const cartKey = getCartKey();
+  const fullCart = JSON.parse(localStorage.getItem(cartKey)) || [];
+  const checkoutCart =
+    JSON.parse(localStorage.getItem("hpstore_checkout_cart")) || [];
+
+  const purchasedIds = checkoutCart.map((item) => item.MaSP || item.masp);
+
+  const remainingCart = fullCart.filter(
+    (item) => !purchasedIds.includes(item.MaSP || item.masp),
+  );
+
+  localStorage.setItem(cartKey, JSON.stringify(remainingCart));
+
+  localStorage.removeItem("hpstore_checkout_cart");
+  localStorage.removeItem(getCheckedItemsKey());
+
+  const totalItems = remainingCart.reduce(
+    (sum, item) => sum + (parseInt(item.SoLuong || item.soluong) || 0),
+    0,
+  );
   const badge = document.getElementById("cart-count");
-  if (badge) badge.innerText = "0";
+  if (badge) badge.innerText = totalItems;
+
   window.location.href = "/";
 }

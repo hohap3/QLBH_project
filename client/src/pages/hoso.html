@@ -140,12 +140,26 @@
                     <label class="form-label fw-semibold text-secondary"
                       >Địa chỉ giao hàng</label
                     >
-                    <textarea
-                      id="info-address"
+                    <select
+                      id="info-province"
+                      class="form-select mb-2"
+                    ></select>
+                    <select
+                      id="info-district"
+                      class="form-select mb-2"
+                      disabled
+                    ></select>
+                    <select
+                      id="info-ward"
+                      class="form-select mb-2"
+                      disabled
+                    ></select>
+                    <input
+                      type="text"
+                      id="info-street"
                       class="form-control"
-                      rows="3"
-                      placeholder="Số nhà, tên đường, phường/xã, quận/huyện..."
-                    ></textarea>
+                      placeholder="Số nhà, tên đường..."
+                    />
                   </div>
                   <div class="col-md-6">
                     <label class="form-label fw-semibold text-secondary"

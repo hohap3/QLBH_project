@@ -8,7 +8,7 @@ const DEFAULT_IMAGE = "/img/default.jpg";
 let userPoints = 0;
 let currentDiscountPercent = 0;
 let currentDiscountAmount = 0;
-let baseSubTotal = 0; // Lưu tổng tiền gốc trước giảm giá
+let baseSubTotal = 0; // Lưu tổng tiền của CÁC SẢN PHẨM ĐƯỢC TÍCH CHỌN trước giảm giá
 
 document.addEventListener("DOMContentLoaded", async () => {
   // 1. Tải thông tin điểm tích lũy của khách hàng trước
@@ -48,7 +48,6 @@ function updateCartBadgeCount() {
   }
 }
 
-// 🟢 HÀM CHUẨN HÓA ĐƯỜNG DẪN ẢNH (TỰ ĐỘNG NHẬN DIỆN CLOUDINARY)
 function getProductImageUrl(hinhanh) {
   if (
     !hinhanh ||
@@ -66,7 +65,6 @@ function getProductImageUrl(hinhanh) {
   return `${rootUrl}/uploads/products/${hinhanh}`;
 }
 
-// 🟢 BỔ SUNG: Lấy điểm tích lũy của khách hàng từ Backend Postgres
 async function fetchUserPoints() {
   const userData = JSON.parse(localStorage.getItem("hpstore_user"));
   const maND =
@@ -88,6 +86,11 @@ async function fetchUserPoints() {
   }
 }
 
+// 🟢 HÀM KHỞI TẠO HOẶC LẤY DANH SÁCH CHECKBOX SẢN PHẨM ĐƯỢC CHỌN TỪ LOCALSTORAGE
+function getCheckedItemsKey() {
+  return getCartKey() + "_checked_items";
+}
+
 function renderCartPage() {
   const tableBody = document.getElementById("cart-table-body");
   if (!tableBody) return;
@@ -98,16 +101,24 @@ function renderCartPage() {
   if (cart.length === 0) {
     tableBody.innerHTML = `
             <tr>
-                <td colspan="4" class="text-center py-5">
+                <td colspan="5" class="text-center py-5">
                     <i class="fa-solid fa-bag-shopping text-muted mb-3" style="font-size: 3rem; opacity:0.3;"></i>
                     <h6 class="text-secondary fw-semibold">Giỏ hàng của bạn đang trống!</h6>
                     <a href="/index.html" class="btn btn-sm btn-outline-primary mt-2 px-3" style="border-radius:8px;">Quay lại mua sắm</a>
                 </td>
             </tr>
         `;
+    // Xóa bộ nhớ tích chọn cũ nếu giỏ hàng trống
+    localStorage.removeItem(getCheckedItemsKey());
+    updateSelectAllCheckbox(false);
     updateSummary(0);
     return;
   }
+
+  // Lấy danh sách các mã sản phẩm được tích chọn trước đó (nếu có)
+  const checkedItems =
+    JSON.parse(localStorage.getItem(getCheckedItemsKey())) ||
+    cart.map((item) => item.MaSP || item.masp);
 
   baseSubTotal = 0;
 
@@ -116,20 +127,29 @@ function renderCartPage() {
       const giaBan = parseFloat(item.GiaBan || item.giaban) || 0;
       const soLuong = parseInt(item.SoLuong || item.soluong) || 0;
       const itemTotal = giaBan * soLuong;
+      const maSP = item.MaSP || item.masp;
 
-      baseSubTotal += itemTotal;
+      // Kiểm tra xem sản phẩm này có đang được tích chọn hay không
+      const isChecked = checkedItems.includes(maSP) ? "checked" : "";
+
+      // 🟢 CHỈ CỘNG VÀO TỔNG TIỀN NẾU SẢN PHẨM ĐƯỢC TÍCH CHỌN MUA
+      if (checkedItems.includes(maSP)) {
+        baseSubTotal += itemTotal;
+      }
 
       const rawImg = item.hinhanh || item.hinhAnh || item.HinhAnh;
       const imgPath = getProductImageUrl(rawImg);
-      const maSP = item.MaSP || item.masp;
 
       return `
     <tr data-masp="${maSP}">
+        <td class="text-center align-middle">
+            <input type="checkbox" class="form-check-input cart-item-checkbox" style="width: 19px; height: 19px; cursor: pointer;" data-masp="${maSP}" ${isChecked} onchange="handleSingleCheck()">
+        </td>
         <td>
             <div class="d-flex align-items-center gap-3">
                 <img src="${imgPath}" class="product-cart-img" alt="${item.tensp || item.TenSP || "Sản phẩm"}" style="width:70px; height:70px; object-fit:contain;" onerror="this.onerror=null; this.src='${DEFAULT_IMAGE}'">
                 <div>
-                    <h6 class="fw-bold text-dark mb-1 text-truncate" style="max-width: 250px;">${item.tensp || item.TenSP || item.tensanpham || "Không rõ tên"}</h6>
+                    <h6 class="fw-bold text-dark mb-1 text-truncate" style="max-width: 220px;">${item.tensp || item.TenSP || item.tensanpham || "Không rõ tên"}</h6>
                     <small class="text-muted d-block">Đơn giá: ${giaBan.toLocaleString("vi-VN")} đ</small>
                 </div>
             </div>
@@ -143,7 +163,7 @@ function renderCartPage() {
                 </div>
             </div>
         </td>
-        <td class="text-end fw-bold text-dark">${itemTotal.toLocaleString("vi-VN")} đ</td>
+        <td class="text-end fw-bold text-dark vertical-align-middle">${itemTotal.toLocaleString("vi-VN")} đ</td>
         <td class="text-center">
             <button class="btn btn-sm text-danger" onclick="removeCartItem('${maSP}')">
                 <i class="fa-regular fa-trash-can fs-5"></i>
@@ -155,8 +175,57 @@ function renderCartPage() {
     .join("");
 
   tableBody.innerHTML = htmlRows;
+
+  // Đồng bộ trạng thái của nút "Chọn tất cả" trên tiêu đề bảng
+  const allCheckboxes = document.querySelectorAll(".cart-item-checkbox");
+  const allChecked =
+    allCheckboxes.length > 0 &&
+    Array.from(allCheckboxes).every((cb) => cb.checked);
+  updateSelectAllCheckbox(allChecked);
+
   renderDiscountSection();
   calculateDiscount();
+}
+
+// 🟢 HÀM XỬ LÝ KHI TÍCH/BỎ TÍCH MỘT SẢN PHẨM LẺ
+window.handleSingleCheck = function () {
+  const checkboxes = document.querySelectorAll(".cart-item-checkbox");
+  const checkedMaspList = [];
+
+  checkboxes.forEach((cb) => {
+    if (cb.checked) {
+      checkedMaspList.push(cb.getAttribute("data-masp"));
+    }
+  });
+
+  // Lưu lại danh sách được chọn sang LocalStorage
+  localStorage.setItem(getCheckedItemsKey(), JSON.stringify(checkedMaspList));
+
+  // Vẽ lại giao diện tiền tệ và trạng thái
+  renderCartPage();
+};
+
+// 🟢 HÀM XỬ LÝ KHI BẤM NÚT "CHỌN TẤT CẢ" (SELECT ALL)
+window.handleSelectAll = function (selectAllCheckbox) {
+  const cartKey = getCartKey();
+  const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+
+  if (selectAllCheckbox.checked) {
+    // Tích hết -> Lấy toàn bộ mã sản phẩm
+    const allMasp = cart.map((item) => item.MaSP || item.masp);
+    localStorage.setItem(getCheckedItemsKey(), JSON.stringify(allMasp));
+  } else {
+    // Bỏ tích hết -> Mảng rỗng
+    localStorage.setItem(getCheckedItemsKey(), JSON.stringify([]));
+  }
+  renderCartPage();
+};
+
+function updateSelectAllCheckbox(status) {
+  const selectAllBtn = document.getElementById("select-all-cart");
+  if (selectAllBtn) {
+    selectAllBtn.checked = status;
+  }
 }
 
 function renderDiscountSection() {
@@ -182,7 +251,8 @@ function renderDiscountSection() {
     const isChecked = currentDiscountPercent === r.percent ? "checked" : "";
     const isDisabled =
       (!isEligible && currentDiscountPercent === 0) ||
-      (currentDiscountPercent !== 0 && currentDiscountPercent !== r.percent)
+      (currentDiscountPercent !== 0 && currentDiscountPercent !== r.percent) ||
+      baseSubTotal === 0 // Bổ sung: Nếu không tích mặt hàng nào thì block không cho đổi điểm
         ? "disabled"
         : "";
 
@@ -211,6 +281,16 @@ function renderDiscountSection() {
 window.handleSelectDiscount = function (radioElement) {
   const percent = parseInt(radioElement.value);
   const requiredPoints = parseInt(radioElement.getAttribute("data-points"));
+
+  if (baseSubTotal === 0) {
+    Swal.fire(
+      "Thông báo",
+      "Vui lòng chọn ít nhất 1 sản phẩm để áp dụng giảm giá!",
+      "warning",
+    );
+    radioElement.checked = false;
+    return;
+  }
 
   if (userPoints < requiredPoints) {
     Swal.fire(
@@ -270,7 +350,7 @@ function updateSummary(subTotal) {
     subtotalEl.innerText = `${subTotal.toLocaleString("vi-VN")} đ`;
 
   if (discountRowEl && discountEl) {
-    if (currentDiscountPercent > 0) {
+    if (currentDiscountPercent > 0 && subTotal > 0) {
       discountRowEl.classList.remove("d-none");
       discountEl.innerText = `-${currentDiscountAmount.toLocaleString("vi-VN")} đ (${currentDiscountPercent}%)`;
     } else {
@@ -284,7 +364,6 @@ function updateSummary(subTotal) {
   updateCartBadgeCount();
 }
 
-// 🟢 CẬP NHẬT: Kiểm tra số lượng tồn kho (SoLuongTon) từ API chi tiết sản phẩm
 window.changeQty = async function (maSP, delta) {
   const cartKey = getCartKey();
   let cart = JSON.parse(localStorage.getItem(cartKey)) || [];
@@ -295,7 +374,6 @@ window.changeQty = async function (maSP, delta) {
       parseInt(cart[itemIndex].SoLuong || cart[itemIndex].soluong) || 1;
     let targetQty = currentQty + delta;
 
-    // 1. Trường hợp giảm số lượng xuống 0 -> Hỏi xóa sản phẩm
     if (targetQty <= 0) {
       Swal.fire({
         title: "Xóa sản phẩm?",
@@ -310,6 +388,16 @@ window.changeQty = async function (maSP, delta) {
         if (result.isConfirmed) {
           cart.splice(itemIndex, 1);
           localStorage.setItem(cartKey, JSON.stringify(cart));
+
+          // Xóa luôn khỏi danh sách tích chọn nếu có
+          let checkedItems =
+            JSON.parse(localStorage.getItem(getCheckedItemsKey())) || [];
+          checkedItems = checkedItems.filter((id) => id !== maSP);
+          localStorage.setItem(
+            getCheckedItemsKey(),
+            JSON.stringify(checkedItems),
+          );
+
           renderCartPage();
 
           Swal.fire({
@@ -325,14 +413,11 @@ window.changeQty = async function (maSP, delta) {
       return;
     }
 
-    // 2. Trường hợp tăng số lượng -> Kiểm tra tồn kho thực tế từ API Backend
     if (delta > 0) {
       try {
-        // Gọi API chi tiết sản phẩm để lấy số lượng tồn thực tế từ DB
         const response = await axios.get(`${BASE_URL}/products/${maSP}`);
         const productData = response.data.data || response.data;
 
-        // Bóc tách trường số lượng tồn (hỗ trợ cả chữ hoa/thường tùy Postgres/SQL Server)
         const stockQty =
           parseInt(
             productData.soluongton ||
@@ -348,18 +433,16 @@ window.changeQty = async function (maSP, delta) {
             text: `Sản phẩm này chỉ còn tối đa ${stockQty} sản phẩm trong kho.`,
             confirmButtonColor: "#6366f1",
           });
-          return; // Chặn hành động tăng số lượng
+          return;
         }
       } catch (error) {
         console.error(
           "Không thể kiểm tra số lượng tồn kho của sản phẩm:",
           error,
         );
-        // Fallback: Nếu API lỗi, vẫn cho phép tăng nhưng log cảnh báo để tránh block trải nghiệm khách hàng
       }
     }
 
-    // 3. Nếu các điều kiện hợp lệ, tiến hành lưu lại số lượng mới
     cart[itemIndex].SoLuong = targetQty;
     localStorage.setItem(cartKey, JSON.stringify(cart));
     renderCartPage();
@@ -383,6 +466,13 @@ window.removeCartItem = function (maSP) {
     if (result.isConfirmed) {
       cart = cart.filter((item) => (item.MaSP || item.masp) !== maSP);
       localStorage.setItem(cartKey, JSON.stringify(cart));
+
+      // Xóa khỏi danh sách tích chọn nếu có
+      let checkedItems =
+        JSON.parse(localStorage.getItem(getCheckedItemsKey())) || [];
+      checkedItems = checkedItems.filter((id) => id !== maSP);
+      localStorage.setItem(getCheckedItemsKey(), JSON.stringify(checkedItems));
+
       renderCartPage();
 
       Swal.fire({
@@ -417,18 +507,29 @@ function handleCheckoutRedirect() {
     return;
   }
 
+  // 🟢 CẬP NHẬT: Lấy danh sách sản phẩm thực sự được tích chọn để mua đi thanh toán
   const cartKey = getCartKey();
-  const cart = JSON.parse(localStorage.getItem(cartKey)) || [];
+  const fullCart = JSON.parse(localStorage.getItem(cartKey)) || [];
+  const checkedItems =
+    JSON.parse(localStorage.getItem(getCheckedItemsKey())) || [];
 
-  if (cart.length === 0) {
+  // Lọc ra các sản phẩm nằm trong danh sách checked
+  const checkoutCart = fullCart.filter((item) =>
+    checkedItems.includes(item.MaSP || item.masp),
+  );
+
+  if (checkoutCart.length === 0) {
     Swal.fire({
       icon: "warning",
-      title: "Giỏ hàng trống",
-      text: "Vui lòng thêm sản phẩm vào giỏ hàng trước khi tiến hành thanh toán!",
+      title: "Chưa chọn sản phẩm",
+      text: "Vui lòng tích chọn ít nhất một sản phẩm trong giỏ hàng để tiến hành thanh toán!",
       confirmButtonColor: "#6366f1",
     });
     return;
   }
+
+  // Lưu thông tin giỏ hàng rút gọn (chỉ chứa các món được chọn mua) vào một Key tạm để trang checkout.html đọc dữ liệu độc lập
+  localStorage.setItem("hpstore_checkout_cart", JSON.stringify(checkoutCart));
 
   const checkoutDiscountInfo = {
     percent: currentDiscountPercent,

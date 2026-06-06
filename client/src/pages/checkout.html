@@ -23,7 +23,11 @@
             <a href="/" class="text-decoration-none text-muted">Trang chủ</a>
           </li>
           <li class="breadcrumb-item">
-            <a href="#" class="text-decoration-none text-muted">Giỏ hàng</a>
+            <a
+              href="/src/pages/cart.html"
+              class="text-decoration-none text-muted"
+              >Giỏ hàng</a
+            >
           </li>
           <li
             class="breadcrumb-item active fw-semibold text-dark"
@@ -81,17 +85,64 @@
                     required
                   />
                 </div>
-                <div class="col-md-6 mb-3">
+                <div class="col-md-12 mb-3">
                   <label class="form-label small fw-semibold text-secondary"
                     >Địa chỉ giao hàng</label
                   >
-                  <input
-                    type="text"
-                    id="checkout-address"
-                    class="form-control form-control-lg fs-6"
-                    placeholder="Nhập địa chỉ nhận hàng chi tiết..."
-                    required
-                  />
+                  <div class="row g-3">
+                    <div class="col-md-4">
+                      <label class="form-label small fw-bold"
+                        >Tỉnh / Thành phố
+                        <span class="text-danger">*</span></label
+                      >
+                      <select
+                        id="checkout-province"
+                        class="form-select form-select-sm"
+                        required
+                      >
+                        <option value="">-- Chọn Tỉnh/Thành phố --</option>
+                      </select>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label small fw-bold"
+                        >Quận / Huyện <span class="text-danger">*</span></label
+                      >
+                      <select
+                        id="checkout-district"
+                        class="form-select form-select-sm"
+                        required
+                        disabled
+                      >
+                        <option value="">-- Chọn Quận/Huyện --</option>
+                      </select>
+                    </div>
+                    <div class="col-md-4">
+                      <label class="form-label small fw-bold"
+                        >Phường / Xã <span class="text-danger">*</span></label
+                      >
+                      <select
+                        id="checkout-ward"
+                        class="form-select form-select-sm"
+                        required
+                        disabled
+                      >
+                        <option value="">-- Chọn Phường/Xã --</option>
+                      </select>
+                    </div>
+                    <div class="col-12">
+                      <label class="form-label small fw-bold"
+                        >Số nhà, tên đường
+                        <span class="text-danger">*</span></label
+                      >
+                      <input
+                        type="text"
+                        id="checkout-street"
+                        class="form-control form-control-sm"
+                        placeholder="Ví dụ: 123 Nguyễn Trãi..."
+                        required
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 

@@ -23,6 +23,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
+    // Khởi tạo bộ chọn địa chỉ trước khi load profile
+    await initLocationDropdowns();
+
     // 2. Tải thông tin tài khoản chi tiết đổ vào Sidebar và Form
     await loadUserProfile(maND, token);
 
@@ -46,6 +49,69 @@ function showLoginAlert() {
   });
 }
 
+// 🟢 HÀM KHỞI TẠO ĐỊA CHỈ 3 CẤP TỪ API PUBLIC
+async function initLocationDropdowns() {
+  const provinceSel = document.getElementById("info-province");
+  const districtSel = document.getElementById("info-district");
+  const wardSel = document.getElementById("info-ward");
+
+  if (!provinceSel) return;
+
+  try {
+    // Reset về trạng thái ban đầu để tránh trùng lặp option khi reload hoặc gọi lại
+    provinceSel.innerHTML =
+      '<option value="">-- Chọn Tỉnh/Thành phố --</option>';
+
+    // Tải danh sách Tỉnh/Thành phố
+    const res = await axios.get("https://provinces.open-api.vn/api/p/");
+    res.data.forEach((p) => {
+      provinceSel.options[provinceSel.options.length] = new Option(
+        p.name,
+        p.code,
+      );
+    });
+
+    // Lắng nghe thay đổi ở ô Tỉnh -> Tải Huyện
+    provinceSel.addEventListener("change", async () => {
+      districtSel.innerHTML = '<option value="">-- Chọn Quận/Huyện --</option>';
+      wardSel.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+      districtSel.disabled = true;
+      wardSel.disabled = true;
+
+      if (provinceSel.value) {
+        const dRes = await axios.get(
+          `https://provinces.open-api.vn/api/p/${provinceSel.value}?depth=2`,
+        );
+        dRes.data.districts.forEach((d) => {
+          districtSel.options[districtSel.options.length] = new Option(
+            d.name,
+            d.code,
+          );
+        });
+        districtSel.disabled = false;
+      }
+    });
+
+    // Lắng nghe thay đổi ở ô Huyện -> Tải Xã
+    districtSel.addEventListener("change", async () => {
+      wardSel.innerHTML = '<option value="">-- Chọn Phường/Xã --</option>';
+      wardSel.disabled = true;
+
+      if (districtSel.value) {
+        const wRes = await axios.get(
+          `https://provinces.open-api.vn/api/d/${districtSel.value}?depth=2`,
+        );
+        wRes.data.wards.forEach((w) => {
+          wardSel.options[wardSel.options.length] = new Option(w.name, w.code);
+        });
+        wardSel.disabled = false;
+      }
+    });
+  } catch (error) {
+    console.error("Không thể tải API địa chính công cộng:", error);
+  }
+}
+
 // HÀM LẤY VÀ ĐỔ DỮ LIỆU TỪ BACKEND
 async function loadUserProfile(maND, token) {
   try {
@@ -56,25 +122,89 @@ async function loadUserProfile(maND, token) {
     const data = response.data;
     console.log("Dữ liệu Profile nhận được:", data);
 
-    // Đổ dữ liệu vào vùng Sidebar bên trái của trang hoso.html
+    // Đổ dữ liệu vào vùng Sidebar bên trái
     const sidebarFullname = document.getElementById("sidebar-fullname");
     const sidebarUsername = document.getElementById("sidebar-username");
     const sidebarPoints = document.getElementById("sidebar-points");
 
-    // 🟢 ĐÃ CẬP NHẬT: Sửa các trường dữ liệu thành CHỮ THƯỜNG đồng bộ với PostgreSQL
     if (sidebarFullname)
       sidebarFullname.innerText = data.hoten || "Chưa cập nhật";
     if (sidebarUsername) sidebarUsername.innerText = `@${data.tendangnhap}`;
     if (sidebarPoints) sidebarPoints.innerText = data.diemtichluy || 0;
 
-    // Điền dữ liệu vào Form thông tin chi tiết (Sửa sang chữ thường)
+    // Điền dữ liệu vào Form thông tin chi tiết
     document.getElementById("info-username").value = data.tendangnhap;
     document.getElementById("info-fullname").value = data.hoten || "";
     document.getElementById("info-phone").value = data.sdt || "";
     document.getElementById("info-email").value = data.email || "";
-    document.getElementById("info-address").value = data.diachi || "";
 
-    // Định dạng ngày tạo tài khoản thân thiện (Sửa sang chữ thường)
+    // 🟢 SỬA LỖI ĐỊA CHỈ NULL: Kiểm tra nghiêm ngặt tính hợp lệ của chuỗi
+    if (
+      data.diachi &&
+      data.diachi.trim() !== "" &&
+      data.diachi !== "null" &&
+      data.diachi !== "undefined"
+    ) {
+      const parts = data.diachi.split(",").map((p) => p.trim());
+
+      // Nếu chuỗi chuẩn mực có cấu trúc: [Số nhà], [Phường/Xã], [Quận/Huyện], [Tỉnh/Thành]
+      if (parts.length >= 4) {
+        const provinceText = parts.pop();
+        const districtText = parts.pop();
+        const wardText = parts.pop();
+        const streetText = parts.join(", "); // Gom các phần còn lại làm số nhà
+
+        document.getElementById("info-street").value = streetText;
+
+        // Kích hoạt khớp chọn Tỉnh
+        const provinceSel = document.getElementById("info-province");
+        for (let i = 0; i < provinceSel.options.length; i++) {
+          if (provinceSel.options[i].text === provinceText) {
+            provinceSel.selectedIndex = i;
+            provinceSel.dispatchEvent(new Event("change")); // Kích hoạt sự kiện để load Huyện
+            break;
+          }
+        }
+
+        // Đợi API tải danh sách Huyện rồi khớp dữ liệu
+        setTimeout(async () => {
+          const districtSel = document.getElementById("info-district");
+          for (let i = 0; i < districtSel.options.length; i++) {
+            if (districtSel.options[i].text === districtText) {
+              districtSel.selectedIndex = i;
+              districtSel.dispatchEvent(new Event("change")); // Kích hoạt sự kiện để load Xã
+              break;
+            }
+          }
+
+          // Đợi API tải danh sách Xã rồi khớp dữ liệu nốt
+          setTimeout(() => {
+            const wardSel = document.getElementById("info-ward");
+            for (let i = 0; i < wardSel.options.length; i++) {
+              if (wardSel.options[i].text === wardText) {
+                wardSel.selectedIndex = i;
+                break;
+              }
+            }
+          }, 600);
+        }, 600);
+      } else {
+        // Fallback nếu dữ liệu cũ dạng tự do không đúng 4 phần, đổ hết vào ô số nhà
+        document.getElementById("info-street").value = data.diachi;
+      }
+    } else {
+      // 🟢 FIX: Đảm bảo khi địa chỉ trống, ô Tỉnh vẫn sẵn sàng để chọn lựa
+      document.getElementById("info-street").value = "";
+      document.getElementById("info-province").selectedIndex = 0;
+      document.getElementById("info-district").innerHTML =
+        '<option value="">-- Chọn Quận/Huyện --</option>';
+      document.getElementById("info-ward").innerHTML =
+        '<option value="">-- Chọn Phường/Xã --</option>';
+      document.getElementById("info-district").disabled = true;
+      document.getElementById("info-ward").disabled = true;
+    }
+
+    // Định dạng ngày tạo tài khoản thân thiện
     if (data.ngaytao) {
       const orderDate = new Date(data.ngaytao);
       document.getElementById("info-created-date").value =
@@ -115,15 +245,47 @@ function initUIEvents(maND, token) {
     formInfo.onsubmit = async (e) => {
       e.preventDefault();
 
-      // Lấy dữ liệu và thực hiện loại bỏ khoảng trắng thừa (.trim())
       const hoTen = document.getElementById("info-fullname").value.trim();
       const sdt = document.getElementById("info-phone").value.trim();
       const email = document.getElementById("info-email").value.trim();
-      const diaChi = document.getElementById("info-address").value.trim();
 
-      // --- 🟢 ĐÃ CẬP NHẬT: LOGIC VALIDATE DỮ LIỆU CHUẨN ---
+      // Thu thập thông tin từ bộ dropdown địa chính mới
+      const pEl = document.getElementById("info-province");
+      const dEl = document.getElementById("info-district");
+      const wEl = document.getElementById("info-ward");
+      const streetText = document.getElementById("info-street").value.trim();
 
-      // 1. Kiểm tra họ và tên trống hoặc ngắn hơn 6 ký tự
+      const provinceText = pEl.options[pEl.selectedIndex]?.value
+        ? pEl.options[pEl.selectedIndex].text
+        : "";
+      const districtText = dEl.options[dEl.selectedIndex]?.value
+        ? dEl.options[dEl.selectedIndex].text
+        : "";
+      const wardText = wEl.options[wEl.selectedIndex]?.value
+        ? wEl.options[wEl.selectedIndex].text
+        : "";
+
+      // Validate bắt buộc chọn đầy đủ các cấp địa chỉ nếu đã nhập số nhà hoặc có thao tác chọn địa chính
+      if (
+        (streetText || provinceText || districtText || wardText) &&
+        (!provinceText || !districtText || !wardText || !streetText)
+      ) {
+        Swal.fire({
+          icon: "warning",
+          title: "Thiếu thông tin địa chỉ",
+          text: "Vui lòng nhập đầy đủ Số nhà kèm chọn Tỉnh, Huyện, Xã!",
+          confirmButtonColor: "#6138ff",
+        });
+        return;
+      }
+
+      // Ghép chuỗi địa chỉ ngăn cách bằng dấu phẩy theo chuẩn quốc gia
+      let diaChi = "";
+      if (streetText) {
+        diaChi = `${streetText}, ${wardText}, ${districtText}, ${provinceText}`;
+      }
+
+      // --- LOGIC VALIDATE CÁC TRƯỜNG DỮ LIỆU CÒN LẠI ---
       if (!hoTen) {
         Swal.fire({
           icon: "warning",
@@ -138,54 +300,49 @@ function initUIEvents(maND, token) {
         Swal.fire({
           icon: "warning",
           title: "Lỗi nhập liệu",
-          text: "Họ và tên phải có độ dài từ 6 ký tự trở lên!",
+          text: "Họ và tên phải từ 6 ký tự trở lên!",
           confirmButtonColor: "#6138ff",
         });
         return;
       }
 
-      // 2. Định dạng lại Email bằng RFC 5322 Tiêu chuẩn nâng cao
-      // Chấp nhận tất cả đuôi mở rộng phức tạp (ví dụ: .com, .edu.vn, .net) và chống ký tự lạ.
       const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-      if (!email || !emailRegex.test(email)) {
+      if (email && !emailRegex.test(email)) {
         Swal.fire({
           icon: "warning",
           title: "Lỗi nhập liệu",
-          text: "Địa chỉ Email không hợp lệ hoặc sai cấu trúc (Ví dụ hợp lệ: nguyenvan@gmail.com)!",
+          text: "Địa chỉ Email không hợp lệ!",
           confirmButtonColor: "#6138ff",
         });
         return;
       }
 
-      // 3. Kiểm tra số điện thoại bắt buộc phải là các ký tự số
       const phoneRegex = /^[0-9]+$/;
       if (!phoneRegex.test(sdt)) {
         Swal.fire({
           icon: "warning",
           title: "Lỗi nhập liệu",
-          text: "Số điện thoại bắt buộc phải là các ký tự số từ 0-9!",
+          text: "Số điện thoại bắt buộc phải là số!",
           confirmButtonColor: "#6138ff",
         });
         return;
       }
 
-      // 4. Kiểm tra độ dài tối thiểu của Số điện thoại (từ 10 số trở lên)
       if (sdt.length < 10) {
         Swal.fire({
           icon: "warning",
           title: "Lỗi nhập liệu",
-          text: "Số điện thoại phải từ 10 ký tự trở lên!",
+          text: "Số điện thoại phải từ 10 số trở lên!",
           confirmButtonColor: "#6138ff",
         });
         return;
       }
 
-      // 🟢 ĐÃ CẬP NHẬT: Gửi chuỗi dữ liệu sạch sau khi đã kiểm tra định dạng thành công
       const payload = {
         HoTen: hoTen,
         SDT: sdt,
-        Email: email,
-        DiaChi: diaChi,
+        Email: email || null, // Chuyển chuỗi rỗng thành null để khớp DB
+        DiaChi: diaChi || null, // Chuyển chuỗi rỗng thành null nếu khách xóa địa chỉ
       };
 
       try {
@@ -208,8 +365,6 @@ function initUIEvents(maND, token) {
         });
       } catch (error) {
         console.error("Lỗi cập nhật profile:", error);
-
-        // 🟢 ĐÃ CẬP NHẬT: Bắt lỗi trùng lặp Số điện thoại hoặc Email từ Backend/PostgreSQL
         const errorDetail = error.response?.data?.error || "";
         let errorMessage = "Không thể cập nhật thông tin lúc này.";
 
@@ -236,7 +391,7 @@ function initUIEvents(maND, token) {
     };
   }
 
-  // SUBMIT: THAY ĐỔI MẬT KHẨU
+  // SUBMIT: THAY ĐỔI MẬT KHẨU (Giữ nguyên)
   const formPassword = document.getElementById("form-change-password");
   if (formPassword) {
     formPassword.onsubmit = async (e) => {
@@ -246,7 +401,6 @@ function initUIEvents(maND, token) {
       const newPassword = document.getElementById("pass-new").value;
       const confirmPassword = document.getElementById("pass-confirm").value;
 
-      // 1. Kiểm tra độ dài mật khẩu mới
       if (newPassword.length < 6) {
         Swal.fire({
           icon: "warning",
@@ -257,50 +411,42 @@ function initUIEvents(maND, token) {
         return;
       }
 
-      // 2. Kiểm tra mật khẩu mới không được trùng mật khẩu cũ
       if (currentPassword === newPassword) {
         Swal.fire({
           icon: "warning",
           title: "Cảnh báo!",
-          text: "Mật khẩu mới không được phép trùng với mật khẩu hiện tại!",
+          text: "Mật khẩu mới không được trùng mật khẩu cũ!",
           confirmButtonColor: "#6138ff",
         });
         return;
       }
 
-      // 3. Kiểm tra nhập lại mật khẩu mới
       if (newPassword !== confirmPassword) {
         Swal.fire({
           icon: "warning",
           title: "Cảnh báo!",
-          text: "Xác nhận mật khẩu mới không trùng khớp!",
+          text: "Xác nhận mật khẩu mới không khớp!",
           confirmButtonColor: "#6138ff",
         });
         return;
       }
 
       try {
-        // Gửi request PUT đổi mật khẩu
         await axios.put(
           `${BASE_URL}/profile/change-password/${maND}`,
           { currentPassword, newPassword },
           { headers: { Authorization: `Bearer ${token}` } },
         );
 
-        // 4. Đổi mật khẩu thành công -> Xóa bộ nhớ Session & Yêu cầu đăng nhập lại
         Swal.fire({
           icon: "success",
           title: "Thành công!",
-          text: "Mật khẩu đã được thay đổi. Vui lòng đăng nhập lại với mật khẩu mới!",
+          text: "Mật khẩu đã được thay đổi. Vui lòng đăng nhập lại!",
           confirmButtonColor: "#6138ff",
           allowOutsideClick: false,
         }).then(() => {
           formPassword.reset();
-
-          // Thực hiện xóa sạch token đăng nhập cũ trong localStorage
           localStorage.removeItem("hpstore_user");
-
-          // Điều hướng ngay lập tức về trang Login
           window.location.href = "/src/pages/login.html";
         });
       } catch (error) {
@@ -308,9 +454,7 @@ function initUIEvents(maND, token) {
         Swal.fire({
           icon: "error",
           title: "Thất bại!",
-          text:
-            error.response?.data?.message ||
-            "Mật khẩu cũ không chính xác hoặc lỗi hệ thống.",
+          text: error.response?.data?.message || "Mật khẩu cũ không chính xác.",
           confirmButtonColor: "#6138ff",
         });
       }
