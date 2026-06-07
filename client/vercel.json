@@ -10,11 +10,11 @@
 
     {
       "source": "/forgot-password",
-      "destination": "/forgot-password.html.html"
+      "destination": "/forgot-password.html"
     },
     {
-      "source": "/src/pages/forgot-password.html.html",
-      "destination": "/forgot-password.html.html"
+      "source": "/src/pages/forgot-password.html",
+      "destination": "/forgot-password.html"
     },
 
     { "source": "/cart", "destination": "/cart.html" },
