@@ -6,6 +6,12 @@ const orderController = require("../controllers/orderController");
 const { verifyToken, authorizeRoles } = require("../middleware/auth");
 
 // Đường dẫn gốc: /api/orders
+router.put(
+  "/orders/bulk-status",
+  verifyToken,
+  authorizeRoles("Manager", "Employee"),
+  orderController.updateBulkStatus,
+);
 
 // 1. Lấy danh sách đơn hàng (Chỉ cho phép Manager và Employee vào xem để quản lý)
 router.get(

@@ -159,6 +159,43 @@ const orderController = {
       });
     }
   },
+
+  updateBulkStatus: async (req, res) => {
+    try {
+      const { orderIds, actionType } = req.body;
+
+      // Kiểm tra dữ liệu đầu vào cơ bản
+      if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Danh sách mã đơn hàng trống hoặc không hợp lệ.",
+        });
+      }
+
+      if (!["APPROVE", "CANCEL"].includes(actionType)) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Hành động xử lý (actionType) không hợp lệ. Chỉ chấp nhận 'APPROVE' hoặc 'CANCEL'.",
+        });
+      }
+
+      // Thực thi Transaction trong Model
+      await Order.processBulkStatusUpdate(orderIds, actionType);
+
+      return res.status(200).json({
+        success: true,
+        message: `Đã xử lý hàng loạt thành công cho ${orderIds.length} đơn hàng.`,
+      });
+    } catch (err) {
+      console.error("❌ LỖI DUYỆT HÀNG LOẠT TẠI CONTROLLER:", err.message);
+      return res.status(500).json({
+        success: false,
+        message: "Lỗi hệ thống khi cập nhật trạng thái đơn hàng loạt.",
+        error: err.message,
+      });
+    }
+  },
 };
 
 module.exports = orderController;

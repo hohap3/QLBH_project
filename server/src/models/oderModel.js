@@ -166,6 +166,75 @@ const Order = {
       client.release();
     }
   },
+
+  processBulkStatusUpdate: async (orderIds, actionType) => {
+    const pool = await poolPromise;
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      for (const id of orderIds) {
+        if (actionType === "CANCEL") {
+          // Xử lý HỦY hàng loạt: Cần lấy chi tiết sản phẩm của từng đơn để hoàn kho trước
+          const detailsQuery = `SELECT masp, soluong FROM chitiet_donhang WHERE madonhang = $1`;
+          const detailsRes = await client.query(detailsQuery, [id]);
+
+          // Hoàn kho cho đơn này
+          for (const item of detailsRes.rows) {
+            await client.query(
+              `UPDATE sanpham SET soluongton = soluongton + $1 WHERE masp = $2`,
+              [item.soluong, item.masp],
+            );
+          }
+          // Chuyển trạng thái đơn sang Đã hủy
+          await client.query(
+            `UPDATE donhang SET trangthai = 'Đã hủy' WHERE madonhang = $1`,
+            [id],
+          );
+        } else if (actionType === "APPROVE") {
+          // Xử lý DUYỆT hàng loạt: Tự động nhảy cấp trạng thái kế tiếp theo quy trình
+          const orderQuery = `SELECT trangthai FROM donhang WHERE madonhang = $1`;
+          const orderRes = await client.query(orderQuery, [id]);
+
+          if (orderRes.rows.length > 0) {
+            const currentStatus = orderRes.rows[0].trangthai;
+            let nextStatus = currentStatus;
+
+            switch (currentStatus) {
+              case "Chờ xác nhận":
+                nextStatus = "Đang xử lý";
+                break;
+              case "Đang xử lý":
+                nextStatus = "Đang giao";
+                break;
+              case "Đang giao":
+                nextStatus = "Đã giao";
+                break;
+              case "Đã giao":
+                nextStatus = "Thành công";
+                break;
+              // Nếu đơn đã Thành công hoặc Đã hủy thì giữ nguyên trạng thái
+            }
+
+            if (nextStatus !== currentStatus) {
+              await client.query(
+                `UPDATE donhang SET trangthai = $1 WHERE madonhang = $2`,
+                [nextStatus, id],
+              );
+            }
+          }
+        }
+      }
+
+      await client.query("COMMIT");
+      return true;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  },
 };
 
 module.exports = Order;

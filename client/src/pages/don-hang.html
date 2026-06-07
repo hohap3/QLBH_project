@@ -33,12 +33,43 @@
     </select>
   </div>
 
+  <div
+    id="bulkActionContainer"
+    class="alert alert-primary d-none d-flex align-items-center justify-content-between p-3 mb-3"
+    style="border-radius: 8px"
+  >
+    <div>
+      <i class="fa-solid fa-circle-info me-2"></i>
+      Đang chọn: <b class="selected-count text-danger">0</b> đơn hàng khả dụng
+      trên trang này.
+    </div>
+    <div>
+      <button
+        id="btnBulkApprove"
+        class="btn btn-success btn-sm fw-bold me-2 px-3"
+      >
+        <i class="fa-solid fa-check me-1"></i> Duyệt hàng loạt (Chuyển trạng
+        thái tiếp theo)
+      </button>
+      <button id="btnBulkCancel" class="btn btn-danger btn-sm px-3">
+        <i class="fa-solid fa-xmark me-1"></i> Hủy các đơn đã chọn
+      </button>
+    </div>
+  </div>
+
   <!-- Table -->
   <div class="content-card">
     <div class="table-responsive">
-      <table class="table mb-0">
+      <table class="table table-hover align-middle">
         <thead>
           <tr>
+            <th width="40" class="text-center">
+              <input
+                type="checkbox"
+                class="form-check-input"
+                id="checkAllOrders"
+              />
+            </th>
             <th>Mã đơn hàng</th>
             <th>Khách hàng</th>
             <th>Ngày đặt</th>
@@ -48,61 +79,7 @@
             <th class="text-center">Hành động</th>
           </tr>
         </thead>
-        <tbody id="orderTableBody">
-          <!-- Row 1 -->
-          <tr>
-            <td><a href="#" class="order-id">ORD-2026-001</a></td>
-            <td>
-              <div class="fw-bold">Nguyễn Văn A</div>
-              <div class="small text-muted">nguyenvana@gmail.com</div>
-            </td>
-            <td class="text-muted">2026-04-25</td>
-            <td>3 sản phẩm</td>
-            <td class="fw-bold">45.980.000đ</td>
-            <td><span class="status-badge status-delivered">Đã giao</span></td>
-            <td class="text-center">
-              <button class="btn-view">
-                <i class="fa-regular fa-eye"></i>
-              </button>
-            </td>
-          </tr>
-          <!-- Row 2 -->
-          <tr>
-            <td><a href="#" class="order-id">ORD-2026-002</a></td>
-            <td>
-              <div class="fw-bold">Trần Thị B</div>
-              <div class="small text-muted">tranthib@gmail.com</div>
-            </td>
-            <td class="text-muted">2026-04-26</td>
-            <td>1 sản phẩm</td>
-            <td class="fw-bold">29.990.000đ</td>
-            <td><span class="status-badge status-shipping">Đang giao</span></td>
-            <td class="text-center">
-              <button class="btn-view">
-                <i class="fa-regular fa-eye"></i>
-              </button>
-            </td>
-          </tr>
-          <!-- Row 3 -->
-          <tr>
-            <td><a href="#" class="order-id">ORD-2026-003</a></td>
-            <td>
-              <div class="fw-bold">Lê Văn C</div>
-              <div class="small text-muted">levanc@gmail.com</div>
-            </td>
-            <td class="text-muted">2026-04-26</td>
-            <td>2 sản phẩm</td>
-            <td class="fw-bold">19.980.000đ</td>
-            <td>
-              <span class="status-badge status-processing">Đang xử lý</span>
-            </td>
-            <td class="text-center">
-              <button class="btn-view">
-                <i class="fa-regular fa-eye"></i>
-              </button>
-            </td>
-          </tr>
-        </tbody>
+        <tbody id="orderTableBody"></tbody>
       </table>
       <div
         id="paginationContainer"
