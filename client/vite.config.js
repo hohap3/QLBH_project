@@ -54,6 +54,7 @@ export default defineConfig({
         "tong-quan": resolve(__dirname, "src/pages/tong-quan.html"),
         "update-pass": resolve(__dirname, "src/pages/update-pass.html"),
         "cai-dat": resolve(__dirname, "src/pages/cai-dat.html"),
+        "forgot-password": resolve(__dirname, "src/pages/forgot-password.html"),
       },
     },
   },
