@@ -257,9 +257,9 @@
 
     <div
       class="modal fade"
-      id="privacyModal"
+      id="termsModal"
       tabindex="-1"
-      aria-labelledby="privacyModalLabel"
+      aria-labelledby="termsModalLabel"
       aria-hidden="true"
     >
       <div
@@ -267,8 +267,8 @@
       >
         <div class="modal-content border-0 shadow rounded-4">
           <div class="modal-header border-bottom-0 pt-4 px-4">
-            <h5 class="modal-title fw-bold text-dark" id="privacyModalLabel">
-              🛡️ Chính sách bảo mật thông tin
+            <h5 class="modal-title fw-bold text-dark" id="termsModalLabel">
+              📄 Điều khoản sử dụng - HP STORE
             </h5>
             <button
               type="button"
@@ -281,9 +281,156 @@
             class="modal-body px-4 py-3 text-secondary"
             style="font-size: 14px; line-height: 1.6"
           >
+            <p class="fw-bold text-dark text-uppercase mb-3 border-bottom pb-2">
+              Chính sách hoạt động và điều kiện giao dịch nền tảng thương mại
+              điện tử:
+            </p>
+
             <p>
-              <strong>1. Thu thập dữ liệu:</strong> Hệ thống thực hiện thu thập
-              chuỗi thông tin...
+              <strong>1. Chấp thuận điều khoản:</strong> Bằng việc nhấn nút
+              "Đăng ký" và hoàn tất thủ tục tạo tài khoản cá nhân tại hệ thống
+              cửa hàng công nghệ <strong>HP STORE</strong>, quý khách chính thức
+              xác nhận đã đọc, hiểu kỹ và cam kết tuân thủ nghiêm ngặt theo toàn
+              bộ các quy định được nêu trong văn bản này.
+            </p>
+
+            <p>
+              <strong>2. Quy định xác thực kích hoạt (Email OTP):</strong> Để
+              bảo vệ quyền lợi cá nhân và ngăn ngừa các tài khoản ảo, hệ thống
+              áp dụng cơ chế xác thực bắt buộc thông qua email. Sau khi đăng ký,
+              tài khoản sẽ tạm khóa ở trạng thái <em>"Chờ kích hoạt"</em>. Quý
+              khách có trách nhiệm cung cấp chính xác địa chỉ Email cá nhân và
+              nhập đúng mã xác thực OTP (hiệu lực trong vòng 5 phút) gửi về hòm
+              thư để mở khóa tài khoản.
+            </p>
+
+            <p>
+              <strong>3. Quản lý và bảo mật thông tin tài khoản:</strong> Thành
+              viên chịu hoàn toàn trách nhiệm đối với bất kỳ hành vi và hoạt
+              động giao dịch nào được thực hiện dưới tên tài khoản và mật khẩu
+              cá nhân. Bạn cam kết không chia sẻ, chuyển nhượng hoặc cho mượn
+              tài khoản đối với bất kỳ bên thứ ba nào. Trong trường hợp phát
+              hiện dấu hiệu xâm nhập bất hợp pháp hoặc lộ thông tin bảo mật, vui
+              lòng thông báo khẩn cấp cho bộ phận Quản trị viên (Admin) để có
+              biện pháp can thiệp kịp thời.
+            </p>
+
+            <p>
+              <strong>4. Quy tắc ứng xử và cấm hành vi phá hoại:</strong> HP
+              STORE nghiêm cấm tuyệt đối các hành vi: sử dụng dữ liệu giả mạo để
+              đăng ký tài khoản, lợi dụng hệ thống lỗi nhằm trục lợi cá nhân,
+              thực hiện tấn công từ chối dịch vụ (DDOS), can thiệp thay đổi cấu
+              trúc database hoặc can thiệp mã nguồn ứng dụng. Các tài khoản có
+              hành vi vi phạm sẽ bị khóa vĩnh viễn không cần thông báo trước và
+              chuyển thông tin đến cơ quan chức năng nếu gây ra thiệt hại kinh
+              tế.
+            </p>
+
+            <p>
+              <strong>5. Giới hạn trách nhiệm:</strong> HP STORE đảm bảo vận
+              hành nền tảng ổn định trong điều kiện tiêu chuẩn kỹ thuật. Tuy
+              nhiên, chúng tôi không chịu trách nhiệm đối với các gián đoạn, lỗi
+              truyền tải dữ liệu hoặc mất mát thông tin phát sinh từ phía nhà
+              cung cấp dịch vụ mạng mạng của người dùng hoặc các trường hợp bất
+              khả kháng nằm ngoài tầm kiểm soát mạng hệ thống toàn cục.
+            </p>
+          </div>
+          <div class="modal-footer border-top-0 pb-4 px-4">
+            <button
+              type="button"
+              class="btn btn-secondary rounded-pill px-4"
+              data-bs-dismiss="modal"
+            >
+              Đóng
+            </button>
+            <button
+              type="button"
+              class="btn btn-primary rounded-pill px-4"
+              id="btnAcceptTerms"
+              data-bs-dismiss="modal"
+            >
+              Tôi đã hiểu và đồng ý
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="modal fade"
+      id="privacyModal"
+      tabindex="-1"
+      aria-labelledby="privacyModalLabel"
+      aria-hidden="true"
+    >
+      <div
+        class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg"
+      >
+        <div class="modal-content border-0 shadow rounded-4">
+          <div class="modal-header border-bottom-0 pt-4 px-4">
+            <h5 class="modal-title fw-bold text-dark" id="privacyModalLabel">
+              🛡️ Chính sách bảo mật thông tin - HP STORE
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div
+            class="modal-body px-4 py-3 text-secondary"
+            style="font-size: 14px; line-height: 1.6"
+          >
+            <p class="fw-bold text-dark text-uppercase mb-3 border-bottom pb-2">
+              Cam kết bảo vệ dữ liệu cá nhân khách hàng:
+            </p>
+
+            <p>
+              <strong>1. Danh mục thông tin thu thập:</strong> Khi bạn thực hiện
+              đăng ký thành viên hoặc tương tác mua hàng, HP STORE sẽ tiến hành
+              thu thập các thông tin cơ bản cần thiết bao gồm: Họ và tên, Tên
+              đăng nhập, Địa chỉ Email cá nhân, Số điện thoại liên lạc và Địa
+              chỉ giao hàng (cho phép tùy chọn để trống hoặc cập nhật sau tùy
+              nhu cầu).
+            </p>
+
+            <p>
+              <strong>2. Mục đích sử dụng dữ liệu:</strong> Toàn bộ dữ liệu thu
+              thập được sử dụng riêng biệt cho mục đích: Quản lý định danh thành
+              viên, xử lý đơn đặt hàng, gửi thư điện tử thông báo trạng thái đơn
+              hàng, gửi mã bảo mật OTP (cho hoạt động kích hoạt và khôi phục mật
+              khẩu), tích lũy điểm thưởng thành viên và nâng cao chất lượng trải
+              nghiệm trực tiếp của người dùng tại hệ thống.
+            </p>
+
+            <p>
+              <strong>3. Tiêu chuẩn mã hóa và bảo mật thông tin:</strong> Chúng
+              tôi áp dụng cấu trúc băm mật khẩu nâng cao thông qua thư viện
+              thuật toán
+              <strong>Cryptographic (Bcrypt Salt Rounds)</strong> trước khi lưu
+              giữ xuống cơ sở dữ liệu hệ thống PostgreSQL, đảm bảo ngay cả quản
+              trị viên cũng không thể đọc được mật khẩu gốc. Tất cả các tiến
+              trình truyền tải thông tin giữa máy khách và máy chủ đều được nén
+              bảo vệ chống rò rỉ dữ liệu.
+            </p>
+
+            <p>
+              <strong>4. Cam kết không chia sẻ dữ liệu:</strong> HP STORE cam
+              đoan tuyệt đối không bán, cho thuê, trao đổi hoặc tiết lộ thông
+              tin cá nhân của thành viên cho bất kỳ đơn vị kinh doanh hoặc bên
+              thứ ba nào khác mà không có sự đồng ý bằng văn bản của chính chủ
+              tài khoản, ngoại trừ trường hợp có yêu cầu chính thức bằng văn bản
+              từ cơ quan pháp luật có thẩm quyền.
+            </p>
+
+            <p>
+              <strong>5. Quyền hạn của người dùng đối với dữ liệu:</strong>
+              Thành viên có toàn quyền tự do kiểm tra, cập nhật chỉnh sửa thông
+              tin cá nhân hoặc thay đổi mật khẩu thông qua bảng quản lý tài
+              khoản cá nhân sau khi đăng nhập thành công. Bạn cũng có quyền yêu
+              cầu hệ thống hỗ trợ xóa bỏ hoàn toàn dữ liệu tài khoản lịch sử
+              giao dịch bằng cách liên hệ với bộ phận CSKH của HP STORE.
             </p>
           </div>
           <div class="modal-footer border-top-0 pb-4 px-4">

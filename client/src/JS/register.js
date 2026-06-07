@@ -50,7 +50,6 @@ function handleRegisterPage() {
   if (btnAcceptTerms && termsCheckbox) {
     btnAcceptTerms.addEventListener("click", () => {
       termsCheckbox.checked = true;
-      // Xóa thông báo lỗi điều khoản khi đã check qua modal
       termsError.classList.add("d-none");
       termsCheckbox.classList.remove("is-invalid");
     });
@@ -58,7 +57,7 @@ function handleRegisterPage() {
 
   if (!registerForm) return;
 
-  // 🟢 Hàm hiển thị thông báo lỗi dưới từng Input
+  // Hàm hiển thị thông báo lỗi dưới từng Input
   const showInputError = (errorElement, inputElement, message) => {
     errorElement.innerText = message;
     errorElement.classList.remove("d-none");
@@ -68,7 +67,7 @@ function handleRegisterPage() {
     setTimeout(() => registerForm.classList.remove("animate-shake"), 500);
   };
 
-  // 🟢 Hàm xóa sạch trạng thái lỗi cũ
+  // Hàm xóa sạch trạng thái lỗi cũ
   const clearErrors = () => {
     const errorElements = [
       usernameError,
@@ -116,7 +115,7 @@ function handleRegisterPage() {
   // 2. Xử lý gửi form với Axios
   registerForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    clearErrors(); // Xóa lỗi cũ trước khi kiểm tra
+    clearErrors();
 
     // Lấy dữ liệu từ form
     const fullname = fullnameInput.value.trim();
@@ -177,7 +176,7 @@ function handleRegisterPage() {
       showInputError(
         emailError,
         emailInput,
-        "Định dạng địa chỉ Email không hợp lệ (Ví dụ: link@hpstore.com)!",
+        "Định dạng địa chỉ Email không hợp lệ!",
       );
       emailInput.focus();
       return;
@@ -241,11 +240,11 @@ function handleRegisterPage() {
       return;
     }
 
-    // --- GỬI DỮ LIỆU LÊN SERVER ---
+    // --- GỬI DỮ LIỆU ĐĂNG KÝ LÊN SERVER ---
     try {
       Swal.fire({
         title: "Đang xử lý...",
-        text: "Vui lòng chờ trong giây lát",
+        text: "Hệ thống đang khởi tạo tài khoản và gửi mail xác thực.",
         allowOutsideClick: false,
         didOpen: () => {
           Swal.showLoading();
@@ -260,15 +259,70 @@ function handleRegisterPage() {
         password,
       });
 
+      // 🟢 CẢI TIẾN: Sử dụng preConfirm để lồng tiến trình kiểm tra mã OTP chống đóng Modal
       Swal.fire({
-        icon: "success",
-        title: "Đăng ký thành công!",
-        text: response.data.message || "Chào mừng bạn đến với HP STORE",
+        icon: "info",
+        title: "Xác thực Email!",
+        text:
+          response.data.message ||
+          "Mã OTP kích hoạt gồm 6 số đã được gửi đến Email của bạn.",
+        input: "text",
+        inputPlaceholder: "Nhập mã OTP 6 chữ số tại đây...",
         confirmButtonColor: "#6138ff",
-        timer: 2000,
-        showConfirmButton: false,
-      }).then(() => {
-        window.location.href = "login.html";
+        confirmButtonText: "Kích hoạt tài khoản",
+        allowOutsideClick: false,
+        showLoaderOnConfirm: true, // Hiển thị vòng xoay loading ngay trên nút xác nhận khi chờ API
+        inputAttributes: {
+          maxlength: "6",
+          autocapitalize: "off",
+          autocorrect: "off",
+        },
+        inputValidator: (value) => {
+          if (!value) {
+            return "Vui lòng nhập mã OTP để kích hoạt tài khoản!";
+          }
+          if (!/^[0-9]{6}$/.test(value)) {
+            return "Mã OTP không hợp lệ (Phải bao gồm 6 chữ số)!";
+          }
+        },
+        preConfirm: async (otpValue) => {
+          try {
+            // Thực hiện gọi API verify ngay tại tiến trình preConfirm
+            const verifyResponse = await axios.post(
+              `${BASE_URL}/auth/verify-activation`,
+              {
+                email: email,
+                otp: otpValue,
+              },
+            );
+            // Trả dữ liệu thành công về cho khối .then() tiếp theo xử lý
+            return verifyResponse.data;
+          } catch (verifyError) {
+            console.error("Lỗi xác thực kích hoạt:", verifyError);
+            const serverMsg =
+              verifyError.response?.data?.message ||
+              "Mã OTP sai hoặc đã hết hạn sử dụng!";
+
+            // 🛑 CHỐT CHẶN QUAN TRỌNG: Hiển thị lỗi trực tiếp lên giao diện của Modal hiện tại, không đóng SweetAlert
+            Swal.showValidationMessage(`Lỗi: ${serverMsg}`);
+            return false; // Ngăn chặn Modal đóng lại
+          }
+        },
+      }).then((result) => {
+        // Khối lệnh này chỉ chạy nếu preConfirm hoàn tất thành công và trả ra dữ liệu hợp lệ
+        if (result.isConfirmed && result.value) {
+          Swal.fire({
+            icon: "success",
+            title: "Kích hoạt thành công!",
+            text:
+              result.value.message ||
+              "Tài khoản của bạn đã sẵn sàng hoạt động.",
+            confirmButtonColor: "#6138ff",
+          }).then(() => {
+            // Điều hướng an toàn sang trang đăng nhập
+            window.location.href = "login.html";
+          });
+        }
       });
     } catch (error) {
       console.error("Lỗi đăng ký:", error);
@@ -280,7 +334,6 @@ function handleRegisterPage() {
         errorMessage = error.response.data.message || "Đăng ký thất bại";
         const lowerMsg = errorMessage.toLowerCase();
 
-        // 🟢 Điều hướng text lỗi từ Server xuống đúng ô input bị trùng dữ liệu
         if (
           lowerMsg.includes("tên đăng nhập") ||
           lowerMsg.includes("username")

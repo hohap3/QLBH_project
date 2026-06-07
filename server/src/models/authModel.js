@@ -154,7 +154,7 @@ class AuthModel {
 
       // Kích hoạt tài khoản thành công (trangthai = true) và xóa OTP cũ
       await pool.query(
-        "UPDATE nguoidung SET trangthai = true, otp_code = NULL, otp_expired = NULL WHERE email = $2",
+        "UPDATE nguoidung SET trangthai = true, otp_code = NULL, otp_expired = NULL WHERE email = $1::text",
         [email],
       );
 

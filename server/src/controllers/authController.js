@@ -29,7 +29,7 @@ exports.register = async (req, res) => {
     const shortID = Date.now().toString().slice(-7);
     const randomID = Math.floor(Math.random() * 100);
 
-    // 🟢 TẠO MÃ OTP ĐỂ XÁC THỰC EMAIL ĐĂNG KÝ
+    // TẠO MÃ OTP ĐỂ XÁC THỰC EMAIL ĐĂNG KÝ
     const activationOtp = Math.floor(
       100000 + Math.random() * 900000,
     ).toString();
@@ -52,7 +52,7 @@ exports.register = async (req, res) => {
     // Tạo tài khoản ở trạng thái chờ kích hoạt (trangthai = false)
     await AuthModel.createND(newUser);
 
-    // 🟢 TIẾN HÀNH GỬI MAIL KÍCH HOẠT NGAY SAU KHI INSERT THÀNH CÔNG
+    // TIẾN HÀNH GỬI MAIL KÍCH HOẠT NGAY SAU KHI INSERT THÀNH CÔNG
     const mailOptions = {
       to: email,
       subject: "[HP STORE] - Xác nhận kích hoạt tài khoản mới",
@@ -85,18 +85,22 @@ exports.register = async (req, res) => {
   }
 };
 
-// 🟢 BỔ SUNG: 2. API Xác nhận kích thực tài khoản (Verify Email OTP)
+// 2. API Xác nhận kích thực tài khoản (Verify Email OTP)
 exports.verifyActivation = async (req, res) => {
   try {
     const { email, otp } = req.body;
 
-    if (!email || !otp) {
+    // Loại bỏ khoảng trắng thừa nếu có
+    const cleanEmail = email ? email.trim() : "";
+    const cleanOtp = otp ? otp.trim() : "";
+
+    if (!cleanEmail || !cleanOtp) {
       return res
         .status(400)
         .json({ message: "Thiếu dữ liệu Email hoặc mã OTP xác thực!" });
     }
 
-    const result = await AuthModel.activateAccount(email, otp);
+    const result = await AuthModel.activateAccount(cleanEmail, cleanOtp);
 
     if (!result.success) {
       return res.status(400).json({ message: result.message });
