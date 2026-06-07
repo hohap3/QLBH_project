@@ -126,6 +126,8 @@ function handleRegisterPage() {
     const confirmPassword = confirmPasswordInput.value;
     const terms = termsCheckbox.checked;
 
+    // --- [GIỮ NGUYÊN TOÀN BỘ LOGIC VALIDATION CLIENT CỦA BẠN Ở ĐÂY] ---
+
     // --- VALIDATION TẠI CLIENT ---
     if (!username) {
       showInputError(
@@ -240,54 +242,35 @@ function handleRegisterPage() {
       return;
     }
 
-    // --- GỬI DỮ LIỆU ĐĂNG KÝ LÊN SERVER ---
-    try {
-      Swal.fire({
-        title: "Đang xử lý...",
-        text: "Hệ thống đang khởi tạo tài khoản và gửi mail xác thực.",
-        allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading();
-        },
-      });
+    // --- [HẾT KHỐI VALIDATION CLIENT] ---
 
-      const response = await axios.post(`${BASE_URL}/auth/register`, {
-        fullname,
-        username,
-        email,
-        phone,
-        password,
-      });
+    // Tìm nút submit của form để kiểm tra trạng thái
+    const submitBtn = registerForm.querySelector('button[type="submit"]');
 
-      // 🟢 CẢI TIẾN: Sử dụng preConfirm để lồng tiến trình kiểm tra mã OTP chống đóng Modal
+    // 🟢 HÀM XỬ LÝ HIỂN THỊ MODAL NHẬP OTP (Tách ra để có thể tái sử dụng)
+    const openOtpModal = () => {
       Swal.fire({
         icon: "info",
         title: "Xác thực Email!",
-        text:
-          response.data.message ||
-          "Mã OTP kích hoạt gồm 6 số đã được gửi đến Email của bạn.",
+        text: `Mã OTP kích hoạt gồm 6 số đã được gửi đến Email: ${email}.`,
         input: "text",
         inputPlaceholder: "Nhập mã OTP 6 chữ số tại đây...",
         confirmButtonColor: "#6138ff",
         confirmButtonText: "Kích hoạt tài khoản",
-        allowOutsideClick: false,
-        showLoaderOnConfirm: true, // Hiển thị vòng xoay loading ngay trên nút xác nhận khi chờ API
+        allowOutsideClick: false, // Chống bấm ra ngoài tắt modal
+        allowEscapeKey: false, // Chống bấm nút ESC tắt modal
+        showLoaderOnConfirm: true,
         inputAttributes: {
           maxlength: "6",
           autocapitalize: "off",
           autocorrect: "off",
         },
         inputValidator: (value) => {
-          if (!value) {
-            return "Vui lòng nhập mã OTP để kích hoạt tài khoản!";
-          }
-          if (!/^[0-9]{6}$/.test(value)) {
-            return "Mã OTP không hợp lệ (Phải bao gồm 6 chữ số)!";
-          }
+          if (!value) return "Vui lòng nhập mã OTP để kích hoạt tài khoản!";
+          if (!/^[0-9]{6}$/.test(value)) return "Mã OTP phải bao gồm 6 chữ số!";
         },
         preConfirm: async (otpValue) => {
           try {
-            // Thực hiện gọi API verify ngay tại tiến trình preConfirm
             const verifyResponse = await axios.post(
               `${BASE_URL}/auth/verify-activation`,
               {
@@ -295,21 +278,17 @@ function handleRegisterPage() {
                 otp: otpValue,
               },
             );
-            // Trả dữ liệu thành công về cho khối .then() tiếp theo xử lý
             return verifyResponse.data;
           } catch (verifyError) {
             console.error("Lỗi xác thực kích hoạt:", verifyError);
             const serverMsg =
               verifyError.response?.data?.message ||
-              "Mã OTP sai hoặc đã hết hạn sử dụng!";
-
-            // 🛑 CHỐT CHẶN QUAN TRỌNG: Hiển thị lỗi trực tiếp lên giao diện của Modal hiện tại, không đóng SweetAlert
+              "Mã OTP sai hoặc đã hết hạn!";
             Swal.showValidationMessage(`Lỗi: ${serverMsg}`);
-            return false; // Ngăn chặn Modal đóng lại
+            return false; // Giữ nguyên giao diện không đóng
           }
         },
       }).then((result) => {
-        // Khối lệnh này chỉ chạy nếu preConfirm hoàn tất thành công và trả ra dữ liệu hợp lệ
         if (result.isConfirmed && result.value) {
           Swal.fire({
             icon: "success",
@@ -319,17 +298,50 @@ function handleRegisterPage() {
               "Tài khoản của bạn đã sẵn sàng hoạt động.",
             confirmButtonColor: "#6138ff",
           }).then(() => {
-            // Điều hướng an toàn sang trang đăng nhập
             window.location.href = "login.html";
           });
         }
       });
+    };
+
+    // 🟢 KIỂM TRA: Nếu nút đang ở trạng thái chờ kích hoạt, bấm vào mở lại thẳng hộp thoại OTP
+    if (submitBtn && submitBtn.getAttribute("data-state") === "pending-otp") {
+      openOtpModal();
+      return;
+    }
+
+    // --- LUỒNG ĐĂNG KÝ BƯỚC 1: GỬI DỮ LIỆU LÊN SERVER ---
+    try {
+      Swal.fire({
+        title: "Đang xử lý...",
+        text: "Hệ thống đang khởi tạo tài khoản và gửi mail xác thực.",
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
+      await axios.post(`${BASE_URL}/auth/register`, {
+        fullname,
+        username,
+        email,
+        phone,
+        password,
+      });
+
+      // 🟢 Thay đổi trạng thái nút Submit trên giao diện Form
+      if (submitBtn) {
+        submitBtn.setAttribute("data-state", "pending-otp");
+        submitBtn.innerHTML = `<i class="fa-solid fa-key me-2"></i> Nhập lại mã OTP xác thực`;
+        submitBtn.classList.remove("btn-primary"); // Thay đổi màu sắc tùy giao diện bạn dùng
+        submitBtn.classList.add("btn-warning", "text-dark");
+      }
+
+      // Khởi động hiển thị hộp thoại OTP lần đầu tiên
+      openOtpModal();
     } catch (error) {
       console.error("Lỗi đăng ký:", error);
       Swal.close();
 
       let errorMessage = "Không thể kết nối đến máy chủ!";
-
       if (error.response) {
         errorMessage = error.response.data.message || "Đăng ký thất bại";
         const lowerMsg = errorMessage.toLowerCase();
