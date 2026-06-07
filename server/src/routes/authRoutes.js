@@ -7,6 +7,7 @@ const { verifyToken } = require("../middleware/auth");
 
 // Tuyến đường đăng ký & đăng nhập
 router.post("/register", authController.register);
+router.post("/verify-activation", authController.verifyActivation);
 router.post("/login", authController.login);
 
 // forgot-password
