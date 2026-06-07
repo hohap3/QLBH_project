@@ -153,13 +153,13 @@ function handleRegisterPage() {
       return;
     }
 
-    const fullnameRegex =
-      /^[a-zA-ZÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểิếệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹ\s]+$/;
+    const fullnameRegex = /^[\p{L}\s]+$/u;
+
     if (!fullnameRegex.test(fullname)) {
       showInputError(
         fullnameError,
         fullnameInput,
-        "Họ và tên chỉ được chứa chữ cái và khoảng trắng!",
+        "Họ và tên chỉ được chứa chữ cái tiếng Việt và khoảng trắng!",
       );
       fullnameInput.focus();
       return;
