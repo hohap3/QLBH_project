@@ -7,6 +7,7 @@ let globalOrdersArray = [];
 
 document.addEventListener("DOMContentLoaded", () => {
   const userData = JSON.parse(localStorage.getItem("hpstore_user"));
+  const printBtn = document.getElementById("btn-print-invoice");
 
   if (!userData || !userData.token) {
     Swal.fire({
@@ -21,7 +22,41 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (userData.name) {
-    document.getElementById("sidebar-user-name").innerText = userData.name;
+    const sidebarUser = document.getElementById("sidebar-user-name");
+    if (sidebarUser) sidebarUser.innerText = userData.name;
+  }
+
+  // 🟢 Khối xử lý in hóa đơn chuyên nghiệp (In riêng vùng hóa đơn, không in toàn trang)
+  if (printBtn) {
+    printBtn.addEventListener("click", () => {
+      const invoiceContent =
+        document.getElementById("invoice-modal-body").innerHTML;
+      if (!invoiceContent) return;
+
+      const printWindow = window.open("", "_blank");
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Hóa đơn mua hàng - HP STORE</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+            <style>
+              body { padding: 40px; font-family: 'Segoe UI', Roboto, sans-serif; background: #fff; }
+              @media print { body { padding: 0; } .no-print { display: none; } }
+            </style>
+          </head>
+          <body>
+            ${invoiceContent}
+            <script>
+              window.onload = function() { 
+                window.print(); 
+                setTimeout(() => { window.close(); }, 500);
+              };
+            <\/script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    });
   }
 
   loadOrderHistoryFromServer(userData.token);
@@ -31,6 +66,8 @@ document.addEventListener("DOMContentLoaded", () => {
 // Hiệu ứng Skeleton Loading
 function showSkeletonLoading() {
   const listContainer = document.getElementById("order-history-list");
+  if (!listContainer) return;
+
   listContainer.innerHTML = Array(2)
     .fill(0)
     .map(
@@ -72,33 +109,50 @@ async function loadOrderHistoryFromServer(token) {
     updateSidebarCounters(globalOrdersArray);
     renderOrdersToUI(globalOrdersArray);
   } catch (error) {
-    console.error("Lỗi:", error);
-    document.getElementById("order-history-list").innerHTML = `
-      <div class="alert alert-danger border-0 shadow-sm p-4 rounded-4" role="alert">
-          <i class="fa-solid fa-triangle-exclamation me-2 fs-5"></i>
-          Có lỗi xảy ra trong quá trình kết nối dữ liệu hóa đơn. Vui lòng tải lại trang!
-      </div>
-    `;
+    console.error("Lỗi tải lịch sử đơn hàng:", error);
+    const listContainer = document.getElementById("order-history-list");
+    if (listContainer) {
+      listContainer.innerHTML = `
+        <div class="alert alert-danger border-0 shadow-sm p-4 rounded-4" role="alert">
+            <i class="fa-solid fa-triangle-exclamation me-2 fs-5"></i>
+            Có lỗi xảy ra trong quá trình kết nối dữ liệu hóa đơn. Vui lòng tải lại trang!
+        </div>
+      `;
+    }
   }
 }
 
+// 🟢 SỬA LOGIC: Đồng bộ mượt mà đếm đúng trạng thái từ DB trả về
 function updateSidebarCounters(orders) {
-  document.getElementById("count-all").innerText = orders.length;
-  document.getElementById("count-pending").innerText = orders.filter(
-    (o) => o.trangthai === "Chờ xác nhận",
-  ).length;
-  document.getElementById("count-processing").innerText = orders.filter(
-    (o) => o.trangthai === "Đang xử lý",
-  ).length;
-  document.getElementById("count-shipping").innerText = orders.filter(
-    (o) => o.trangthai === "Đang giao",
-  ).length;
-  document.getElementById("count-success").innerText = orders.filter(
-    (o) => o.trangthai === "Thành công",
-  ).length;
-  document.getElementById("count-canceled").innerText = orders.filter(
-    (o) => o.trangthai === "Đã hủy",
-  ).length;
+  const setBadge = (id, count) => {
+    const el = document.getElementById(id);
+    if (el) el.innerText = count;
+  };
+
+  setBadge("count-all", orders.length);
+  setBadge(
+    "count-pending",
+    orders.filter((o) => o.trangthai === "Chờ xác nhận").length,
+  );
+  setBadge(
+    "count-processing",
+    orders.filter((o) => o.trangthai === "Đang xử lý").length,
+  );
+  setBadge(
+    "count-shipping",
+    orders.filter((o) => o.trangthai === "Đang giao").length,
+  );
+  // Đồng bộ hoàn toàn chữ "Thành công" từ backend lên UI "Đã giao"
+  setBadge(
+    "count-success",
+    orders.filter(
+      (o) => o.trangthai === "Thành công" || o.trangthai === "Đã giao",
+    ).length,
+  );
+  setBadge(
+    "count-canceled",
+    orders.filter((o) => o.trangthai === "Đã hủy").length,
+  );
 }
 
 function setupFilterEvents() {
@@ -115,23 +169,28 @@ function setupFilterEvents() {
       if (selectedStatus === "Tất cả") {
         renderOrdersToUI(globalOrdersArray);
       } else {
-        const statusToFilter =
-          selectedStatus === "Đã giao" ? "Thành công" : selectedStatus;
-        const filtered = globalOrdersArray.filter(
-          (order) => order.trangthai === statusToFilter,
-        );
+        // Chuẩn hóa bộ lọc cho cả 2 trường hợp đặt tên trạng thái thành công
+        const filtered = globalOrdersArray.filter((order) => {
+          if (selectedStatus === "Đã giao") {
+            return (
+              order.trangthai === "Thành công" || order.trangthai === "Đã giao"
+            );
+          }
+          return order.trangthai === selectedStatus;
+        });
         renderOrdersToUI(filtered);
       }
     });
   });
 }
 
-// 🟢 HÀM RENDER ĐÃ CẬP NHẬT ĐƯỜNG DẪN HÌNH ẢNH CLOUDINARY
 function renderOrdersToUI(ordersList) {
   const listContainer = document.getElementById("order-history-list");
   const textTotal = document.getElementById("total-display-text");
 
-  textTotal.innerText = `Tìm thấy ${ordersList.length} đơn hàng tương ứng`;
+  if (textTotal)
+    textTotal.innerText = `Tìm thấy ${ordersList.length} đơn hàng tương ứng`;
+  if (!listContainer) return;
 
   if (ordersList.length === 0) {
     listContainer.innerHTML = `
@@ -160,31 +219,30 @@ function renderOrdersToUI(ordersList) {
 
       switch (order.trangthai) {
         case "Chờ xác nhận":
-          statusBadgeHTML = `<span class="badge-status status-pending" style="background-color: #fff3cd; color: #856404; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-clock-rotate-left"></i> Chờ xác nhận</span>`;
-
-          // 🟢 BỔ SUNG: Hiện nút Hủy đơn hàng khi đơn đang chờ xác nhận
+          statusBadgeHTML = `<span class="badge-status" style="background-color: #fff3cd; color: #856404; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-clock-rotate-left"></i> Chờ xác nhận</span>`;
           actionButtonsHTML = `
-      <button class="btn btn-outline-danger px-3" style="border-radius: 8px;" onclick="cancelOrder('${order.madonhang}')">
-          <i class="fa-solid fa-trash-can me-1"></i> Hủy đơn
-      </button>
-    `;
+            <button class="btn btn-outline-danger px-3" style="border-radius: 8px;" onclick="window.cancelOrder('${order.madonhang}')">
+                <i class="fa-solid fa-trash-can me-1"></i> Hủy đơn
+            </button>
+          `;
           break;
         case "Đang xử lý":
-          statusBadgeHTML = `<span class="badge-status status-processing" style="background-color: #e1f5fe; color: #0288d1; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý</span>`;
+          statusBadgeHTML = `<span class="badge-status" style="background-color: #e1f5fe; color: #0288d1; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý</span>`;
           break;
         case "Đang giao":
-          statusBadgeHTML = `<span class="badge-status status-shipping" style="background-color: #e3f2fd; color: #0d6efd; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-truck-fast"></i> Đang giao hàng</span>`;
+          statusBadgeHTML = `<span class="badge-status" style="background-color: #e3f2fd; color: #0d6efd; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-truck-fast"></i> Đang giao hàng</span>`;
           break;
         case "Thành công":
-          statusBadgeHTML = `<span class="badge-status status-success" style="background-color: #e8f5e9; color: #1b5e20; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-circle-check"></i> Thành công</span>`;
+        case "Đã giao":
+          statusBadgeHTML = `<span class="badge-status" style="background-color: #e8f5e9; color: #1b5e20; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-circle-check"></i> Thành công</span>`;
           actionButtonsHTML = `
-      <button class="btn btn-success px-3 text-white" style="border-radius: 8px;" onclick="viewInvoice('${order.madonhang}')">
-          <i class="fa-solid fa-file-invoice me-1"></i> Xuất hóa đơn
-      </button>
-    `;
+            <button class="btn btn-success px-3 text-white" style="border-radius: 8px;" onclick="window.viewInvoice('${order.madonhang}')">
+                <i class="fa-solid fa-file-invoice me-1"></i> Xuất hóa đơn
+            </button>
+          `;
           break;
         case "Đã hủy":
-          statusBadgeHTML = `<span class="badge-status status-canceled" style="background-color: #ffebee; color: #c62828; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-circle-xmark"></i> Đã hủy bỏ</span>`;
+          statusBadgeHTML = `<span class="badge-status" style="background-color: #ffebee; color: #c62828; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem;"><i class="fa-solid fa-circle-xmark"></i> Đã hủy bỏ</span>`;
           break;
         default:
           statusBadgeHTML = `<span class="badge-status bg-secondary text-white">${order.trangthai}</span>`;
@@ -192,24 +250,20 @@ function renderOrdersToUI(ordersList) {
 
       const productsHTML = (order.sanpham || [])
         .map((item) => {
-          // 🟢 CHECK HÌNH ẢNH HỢP LỆ
           const hasValidImg =
             item.hinhanh &&
             item.hinhanh.trim() !== "" &&
             item.hinhanh !== "NULL" &&
             item.hinhanh !== "null";
-
           let pathImg = DEFAULT_IMAGE;
 
           if (hasValidImg) {
-            // Nếu chuỗi hình ảnh đã là một URL đầy đủ (đường dẫn từ Cloudinary bắt đầu bằng http hoặc https)
             if (
               item.hinhanh.startsWith("http://") ||
               item.hinhanh.startsWith("https://")
             ) {
               pathImg = item.hinhanh;
             } else {
-              // Trường hợp backend chỉ lưu tên file cũ hoặc fallback về folder upload nội bộ
               pathImg = `https://qlbh-project.onrender.com/uploads/products/${item.hinhanh}`;
             }
           }
@@ -284,7 +338,7 @@ function renderOrdersToUI(ordersList) {
     .join("");
 }
 
-// HÀM XỬ LÝ HỦY ĐƠN HÀNG TỪ PHÍA KHÁCH HÀNG
+// 🟢 ĐỒNG BỘ WINDOW GLOBAL CHO ES MODULES AN TOÀN
 window.cancelOrder = async function (maDonHang) {
   const userData = JSON.parse(localStorage.getItem("hpstore_user"));
 
@@ -301,10 +355,9 @@ window.cancelOrder = async function (maDonHang) {
 
   if (confirmResult.isConfirmed) {
     try {
-      // Gọi API cập nhật trạng thái đơn sang "Đã hủy"
       const response = await axios.patch(
         `${BASE_URL}/orders/cancel/${maDonHang}`,
-        {}, // Body trống hoặc gửi kèm lý do hủy nếu cần
+        {},
         { headers: { Authorization: `Bearer ${userData.token}` } },
       );
 
@@ -314,7 +367,6 @@ window.cancelOrder = async function (maDonHang) {
           "Đơn hàng của bạn đã được hủy thành công.",
           "success",
         );
-        // Tải lại danh sách đơn hàng mới nhất từ server
         loadOrderHistoryFromServer(userData.token);
       } else {
         Swal.fire(
@@ -334,12 +386,12 @@ window.cancelOrder = async function (maDonHang) {
   }
 };
 
-// Hàm hiển thị Popup xem hóa đơn điện tử
 window.viewInvoice = function (maDonHang) {
   const order = globalOrdersArray.find((o) => o.madonhang === maDonHang);
   if (!order) return;
 
   const modalBody = document.getElementById("invoice-modal-body");
+  if (!modalBody) return;
 
   modalBody.innerHTML = `
     <div id="invoice-print-area" class="p-4" style="font-family: 'Segoe UI', Roboto, sans-serif; background: #fff;">
@@ -392,22 +444,33 @@ window.viewInvoice = function (maDonHang) {
   `;
 
   const btnDownload = document.getElementById("btn-download-pdf");
-  btnDownload.onclick = function () {
-    const element = document.getElementById("invoice-print-area");
+  if (btnDownload) {
+    btnDownload.onclick = function () {
+      const element = document.getElementById("invoice-print-area");
+      if (typeof html2pdf === "undefined") {
+        Swal.fire(
+          "Thông báo",
+          "Thư viện PDF đang tải, vui lòng thử lại sau vài giây!",
+          "warning",
+        );
+        return;
+      }
 
-    const options = {
-      margin: 10,
-      filename: `HoaDon_HPSTORE_${order.madonhang}.pdf`,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      const options = {
+        margin: 10,
+        filename: `HoaDon_HPSTORE_${order.madonhang}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      };
+
+      html2pdf().set(options).from(element).save();
     };
+  }
 
-    html2pdf().set(options).from(element).save();
-  };
-
-  const invoiceModal = new bootstrap.Modal(
-    document.getElementById("invoiceModal"),
-  );
-  invoiceModal.show();
+  const invoiceModalElement = document.getElementById("invoiceModal");
+  if (invoiceModalElement) {
+    const invoiceModal = new bootstrap.Modal(invoiceModalElement);
+    invoiceModal.show();
+  }
 };
