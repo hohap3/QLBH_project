@@ -197,6 +197,7 @@ export function handleLogout(e) {
       // 3. Xóa session đăng nhập tài khoản
       localStorage.removeItem("hpstore_user");
       localStorage.removeItem("current_employee_page");
+      localStorage.removeItem("current_admin_page");
 
       // Điều hướng về trang chủ
       window.location.href = "/";
