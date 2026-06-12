@@ -84,50 +84,67 @@ export async function initCustomerManager() {
         const isActive = kh.trangthai !== false;
 
         return `
-                <tr style="${!isActive ? "opacity: 0.6; background-color: #f8fafc;" : ""}">
-                    <td>
-                        <div class="d-flex align-items-center">
-                            <div class="avatar-circle" style="background-color: ${bgColor}">
-                                ${firstLetter}
-                            </div>
-                            <div>
-                                <div class="fw-bold mb-0">${kh.hoten} ${!isActive ? '<span class="badge bg-danger ms-1" style="font-size: 10px;">Bị khóa</span>' : ""}</div>
-                                <small class="text-muted">ID: #${kh.makh}</small>
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="text-muted small">${kh.email || "<i>Chưa cập nhật</i>"}</div>
-                        <div class="fw-medium small">${kh.sdt}</div>
-                    </td>
-                    <td>
-                        <div class="fw-bold text-dark">${kh.tongdonhang || 0} <small class="text-muted">đơn</small></div>
-                        <small class="text-success fw-semibold">🪙 ${kh.diemtichluy || 0}đ</small>
-                    </td>
-                    <td>
-                        <span class="text-muted small">${donGanNhat}</span>
-                    </td>
-                    <td>
-                        <span class="badge rounded-pill ${isVip ? "badge-vip" : "badge-normal"}">
-                            ${isVip ? '<i class="fa-solid fa-crown me-1"></i> VIP' : "Thường"}
-                        </span>
-                    </td>
-                    <td class="text-center">
-                        <button class="btn-action btn-view" onclick="viewDetails('${kh.makh}')" title="Xem chi tiết & Lịch sử">
-                            <i class="fa-regular fa-eye"></i>
-                        </button>
-                       
-                        <button class="btn-action ${isActive ? "btn-lock text-danger" : "btn-unlock text-success"}" 
-                                onclick="toggleCustomerStatus('${kh.makh}', ${isActive})" 
-                                title="${isActive ? "Khóa tài khoản" : "Mở khóa tài khoản"}">
-                            <i class="fa-solid ${isActive ? "fa-user-slash" : "fa-user-check"}"></i>
-                        </button>
-                    </td>
-                </tr>
-            `;
+          <tr style="${!isActive ? "opacity: 0.6; background-color: #f8fafc;" : ""}">
+            <td>
+              <div class="d-flex align-items-center">
+                <div class="avatar-circle" style="background-color: ${bgColor}">${firstLetter}</div>
+                <div>
+                  <div class="fw-bold mb-0">${kh.hoten} ${!isActive ? '<span class="badge bg-danger ms-1" style="font-size: 10px;">Bị khóa</span>' : ""}</div>
+                  <small class="text-muted">ID: #${kh.makh}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="text-muted small">${kh.email || "<i>Chưa cập nhật</i>"}</div>
+              <div class="fw-medium small">${kh.sdt}</div>
+            </td>
+            <td>
+              <div class="fw-bold text-dark">${kh.tongdonhang || 0} <small class="text-muted">đơn</small></div>
+              <small class="text-success fw-semibold">🪙 ${kh.diemtichluy || 0}đ</small>
+            </td>
+            <td><span class="text-muted small">${donGanNhat}</span></td>
+            <td>
+              <span class="badge rounded-pill ${isVip ? "badge-vip" : "badge-normal"}">
+                ${isVip ? '<i class="fa-solid fa-crown me-1"></i> VIP' : "Thường"}
+              </span>
+            </td>
+            <td class="text-center">
+              <button type="button" class="btn-action btn-view action-view-detail" data-id="${kh.makh}" title="Xem chi tiết & Lịch sử">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+               
+              <button type="button" class="btn-action ${isActive ? "btn-lock text-danger" : "btn-unlock text-success"} action-toggle-status" 
+                      data-id="${kh.makh}" data-active="${isActive}"
+                      title="${isActive ? "Khóa tài khoản" : "Mở khóa tài khoản"}">
+                <i class="fa-solid ${isActive ? "fa-user-slash" : "fa-user-check"}"></i>
+              </button>
+            </td>
+          </tr>
+        `;
       })
       .join("");
   };
+
+  // Lắng nghe sự kiện click trong bảng một cách an toàn
+  tableBody.addEventListener("click", (e) => {
+    const viewBtn = e.target.closest(".action-view-detail");
+    const toggleBtn = e.target.closest(".action-toggle-status");
+
+    if (viewBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const maKH = viewBtn.getAttribute("data-id");
+      window.viewDetails(maKH);
+    }
+
+    if (toggleBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const maKH = toggleBtn.getAttribute("data-id");
+      const isActive = toggleBtn.getAttribute("data-active") === "true";
+      window.toggleCustomerStatus(maKH, isActive);
+    }
+  });
 
   /**
    * 🟢 BỔ SUNG: Hàm render thanh điều hướng phân trang bằng CSS Bootstrap
@@ -145,28 +162,28 @@ export async function initCustomerManager() {
 
     let html = `<nav><ul class="pagination pagination-sm mb-0">`;
 
-    // Nút Trước (Previous)
+    // 1. Nút Trước (Previous)
     html += `
       <li class="page-item ${currentPage === 1 ? "disabled" : ""}">
-        <button class="page-link" data-page="${currentPage - 1}" aria-label="Previous">
+        <button type="button" class="page-link" data-page="${currentPage - 1}" aria-label="Previous">
           <span aria-hidden="true">&laquo;</span>
         </button>
       </li>
     `;
 
-    // Các số trang
+    // 2. Vòng lặp các số trang (Đã sửa: Bổ sung type="button")
     for (let i = 1; i <= totalPages; i++) {
       html += `
         <li class="page-item ${currentPage === i ? "active" : ""}">
-          <button class="page-link" data-page="${i}">${i}</button>
+          <button type="button" class="page-link" data-page="${i}">${i}</button>
         </li>
       `;
     }
 
-    // Nút Kế tiếp (Next)
+    // 3. Nút Kế tiếp (Next) (Đã sửa: Bổ sung type="button")
     html += `
       <li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
-        <button class="page-link" data-page="${currentPage + 1}" aria-label="Next">
+        <button type="button" class="page-link" data-page="${currentPage + 1}" aria-label="Next">
           <span aria-hidden="true">&raquo;</span>
         </button>
       </li>
@@ -175,9 +192,13 @@ export async function initCustomerManager() {
     html += `</ul></nav>`;
     paginationContainer.innerHTML = html;
 
-    // Gắn sự kiện click đổi trang cho các nút
+    // Gắn sự kiện click đổi trang cho các nút (Giữ nguyên logic chặn sủi bọt an toàn của bạn)
     paginationContainer.querySelectorAll(".page-link").forEach((btn) => {
       btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
         const targetPage = parseInt(
           e.currentTarget.getAttribute("data-page"),
           10,

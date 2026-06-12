@@ -1,27 +1,25 @@
 <div class="container py-4 px-4">
-  <!-- Header -->
   <div class="page-header">
     <div class="page-title">
       <h2>Quản lý khách hàng</h2>
-      <span
-        ><i class="fa-solid fa-circle text-danger" style="font-size: 8px"></i>
-        <span id="totalCount">0</span> khách hàng tại HP STORE</span
-      >
+      <span>
+        <i class="fa-solid fa-circle text-danger" style="font-size: 8px"></i>
+        <span id="totalCount">0</span> khách hàng tại HP STORE
+      </span>
     </div>
   </div>
 
-  <!-- Search -->
-  <div class="search-container position-relative">
+  <div class="search-container position-relative mb-3">
     <i class="fa-solid fa-magnifying-glass search-icon"></i>
     <input
       type="text"
       class="form-control search-input border-0"
       id="searchKH"
       placeholder="Tìm kiếm khách hàng..."
+      autocomplete="off"
     />
   </div>
 
-  <!-- Table -->
   <div class="content-card">
     <div class="table-responsive">
       <table class="table mb-0 align-middle">
@@ -35,15 +33,14 @@
             <th class="text-center">Hành động</th>
           </tr>
         </thead>
-        <tbody id="customerTableBody">
-          <!-- Dữ liệu render từ JS -->
-        </tbody>
+        <tbody id="customerTableBody"></tbody>
       </table>
-      <div
-        id="customerPaginationContainer"
-        class="d-flex justify-content-center mt-3"
-      ></div>
     </div>
+
+    <div
+      id="customerPaginationContainer"
+      class="d-flex justify-content-center pt-3 border-top"
+    ></div>
   </div>
 </div>
 
