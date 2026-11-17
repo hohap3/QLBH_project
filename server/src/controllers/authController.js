@@ -15,12 +15,26 @@ exports.register = async (req, res) => {
     }
 
     const duplicates = await AuthModel.checkDuplicate(username, email);
+    let existingUnactivatedMand = null;
+
     if (duplicates && duplicates.length > 0) {
-      const isUserTaken = duplicates.some((u) => u.tendangnhap === username);
-      if (isUserTaken) {
-        return res.status(400).json({ message: "Tên đăng nhập đã tồn tại!" });
+      // Nếu có bất kỳ bản ghi nào đã kích hoạt (trangthai = true), hoặc trùng chéo 2 bản ghi khác nhau -> Báo trùng
+      const hasActiveDuplicate = duplicates.some(
+        (u) => u.trangthai === true || u.trangthai === 1,
+      );
+
+      if (hasActiveDuplicate || duplicates.length > 1) {
+        const isUserTaken = duplicates.some((u) => u.tendangnhap === username);
+        if (isUserTaken) {
+          return res
+            .status(400)
+            .json({ message: "Tên đăng nhập đã tồn tại!" });
+        }
+        return res.status(400).json({ message: "Email này đã được sử dụng!" });
       }
-      return res.status(400).json({ message: "Email này đã được sử dụng!" });
+
+      // Nếu chỉ trùng 1 bản ghi đang chờ kích hoạt (trangthai = false) do lần trước gửi OTP lỗi/chưa nhập OTP
+      existingUnactivatedMand = duplicates[0].mand;
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -49,8 +63,12 @@ exports.register = async (req, res) => {
       otpExpired: expiredAt,
     };
 
-    // Tạo tài khoản ở trạng thái chờ kích hoạt (trangthai = false)
-    await AuthModel.createND(newUser);
+    // Tạo mới hoặc cập nhật lại OTP cho tài khoản đang chờ kích hoạt (trangthai = false)
+    if (existingUnactivatedMand) {
+      await AuthModel.updateUnactivatedND(existingUnactivatedMand, newUser);
+    } else {
+      await AuthModel.createND(newUser);
+    }
 
     // TIẾN HÀNH GỬI MAIL KÍCH HOẠT NGAY SAU KHI INSERT THÀNH CÔNG
     const mailOptions = {

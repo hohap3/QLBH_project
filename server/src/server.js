@@ -1,8 +1,9 @@
+const path = require("path");
 require("dotenv").config();
+require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 const app = require("./app"); // App đã chứa cors, json và routes
 const express = require("express");
 const { poolPromise } = require("../src/config/database");
-const path = require("path");
 
 // Kết nối Database trước, khởi động Server sau
 poolPromise

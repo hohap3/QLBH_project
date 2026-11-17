@@ -42,12 +42,48 @@ class AuthModel {
   static async checkDuplicate(username, email) {
     try {
       const result = await pool.query(
-        "SELECT tendangnhap, email FROM nguoidung WHERE tendangnhap = $1 OR email = $2",
+        "SELECT mand, tendangnhap, email, trangthai FROM nguoidung WHERE tendangnhap = $1 OR email = $2",
         [username, email],
       );
       return result.rows;
     } catch (error) {
       throw error;
+    }
+  }
+
+  // Cập nhật lại thông tin & OTP cho tài khoản chưa kích hoạt (trangthai = false) khi đăng ký lại
+  static async updateUnactivatedND(mand, data) {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        `UPDATE nguoidung
+         SET tendangnhap = $1, matkhauhash = $2, hoten = $3, email = $4, sdt = $5, otp_code = $6, otp_expired = $7
+         WHERE mand = $8`,
+        [
+          data.username,
+          data.passwordHash,
+          data.fullname,
+          data.email,
+          data.phone,
+          data.otpCode,
+          data.otpExpired,
+          mand,
+        ],
+      );
+      await client.query(
+        `UPDATE khachhang
+         SET hoten = $1, sdt = $2, email = $3, diachi = $4
+         WHERE mand = $5`,
+        [data.fullname, data.phone, data.email, data.diaChi || null, mand],
+      );
+      await client.query("COMMIT");
+      return { success: true };
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
     }
   }
 
